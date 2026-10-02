@@ -4,6 +4,8 @@ analyzer:
   exclude:
     - lib/src/rust/**
     - lib/l10n/generated/**
+    # Vendored cargokit; its build tool resolves its own packages at build time.
+    - rust_builder/**
   language:
     strict-casts: true
     strict-inference: true
