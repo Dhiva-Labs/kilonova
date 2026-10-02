@@ -18,3 +18,5 @@ updates:
       interval: weekly
     ignore:
       - dependency-name: flutter_rust_bridge
+      # Pinned by flutter_localizations in the Flutter SDK; moves with Flutter.
+      - dependency-name: intl
