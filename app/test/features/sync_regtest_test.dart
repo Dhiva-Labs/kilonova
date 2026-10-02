@@ -85,13 +85,13 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
       await pumpUntilFound(
         tester,
-        find.textContaining('Up to date at block'),
+        find.textContaining('Synced, block'),
         timeout: const Duration(seconds: 60),
       );
 
       expect(find.textContaining('Mined'), findsNWidgets(12));
       // Mined outputs stay locked for 60 blocks, so nothing is spendable.
-      expect(find.textContaining('can be spent now'), findsOneWidget);
+      expect(find.textContaining('spendable'), findsOneWidget);
       expect(find.text('0.0 XMR'), findsNothing);
     },
     skip: Platform.environment['KN_REGTEST'] != '1',
@@ -127,7 +127,7 @@ void main() {
       await pumpUntilFound(tester, find.text('Share and connect'));
       await tester.tap(find.text('Share and connect'));
       // Registered with the server; now pay it.
-      await pumpUntilFound(tester, find.textContaining('Up to date at block'));
+      await pumpUntilFound(tester, find.textContaining('Synced, block'));
       await tester.runAsync(() => _mine(address, 12));
 
       await pumpUntil(
@@ -178,7 +178,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
       await pumpUntilFound(
         tester,
-        find.textContaining('Up to date at block'),
+        find.textContaining('Synced, block'),
         timeout: const Duration(seconds: 90),
       );
 
@@ -215,16 +215,16 @@ void main() {
         find.text('Sent. It confirms when the next block is mined.'),
         timeout: const Duration(seconds: 30),
       );
-      await pumpUntilFound(tester, find.textContaining('Waiting for a block'));
+      await pumpUntilFound(tester, find.textContaining('Pending'));
 
       await tester.runAsync(() => _mine(burn, 1));
       await pumpUntil(
         tester,
-        () => find.textContaining('Waiting for a block').evaluate().isEmpty,
+        () => find.textContaining('Pending').evaluate().isEmpty,
         what: 'the spend to be confirmed',
         timeout: const Duration(seconds: 90),
       );
-      expect(find.textContaining('Sent'), findsWidgets);
+      expect(find.textContaining('To '), findsWidgets);
 
       // The sent transaction remembers who was paid and its key.
       await tester.tap(find.textContaining('To ').first);

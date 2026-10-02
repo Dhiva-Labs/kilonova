@@ -4,6 +4,8 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../platform/secure_window.dart';
 import '../../src/rust/api/wallets.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_field.dart';
 import '../../widgets/password_fields.dart';
 import '../../widgets/seed_grid.dart';
 import '../../widgets/wallet_error_text.dart';
@@ -51,20 +53,20 @@ class _TextDialogState extends State<_TextDialog> {
     final l = AppLocalizations.of(context);
     return AlertDialog(
       title: Text(widget.title),
-      content: TextField(
+      content: KnField(
         controller: _controller,
+        label: widget.hint,
         autofocus: true,
-        decoration: InputDecoration(labelText: widget.hint),
         onSubmitted: (v) => Navigator.of(context).pop(v),
       ),
       actions: [
-        TextButton(
+        KnButton.text(
+          l.cancelAction,
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.cancelAction),
         ),
-        FilledButton(
+        KnButton.primary(
+          l.saveAction,
           onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: Text(l.saveAction),
         ),
       ],
     );
@@ -175,13 +177,13 @@ class _WalletMenuState extends State<WalletMenu> {
               child: Text(toLws ? l.switchToLwsBody : l.switchToFullBody),
             ),
             actions: [
-              TextButton(
+              KnButton.text(
+                l.cancelAction,
                 onPressed: () => Navigator.of(context).pop(false),
-                child: Text(l.cancelAction),
               ),
-              FilledButton(
+              KnButton.primary(
+                l.switchAction,
                 onPressed: () => Navigator.of(context).pop(true),
-                child: Text(l.switchAction),
               ),
             ],
           ),
@@ -344,13 +346,13 @@ class _RevealSeedDialogState extends State<_RevealSeedDialog> {
       ),
       actions: [
         if (!revealed)
-          TextButton(
+          KnButton.text(
+            l.cancelAction,
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(l.cancelAction),
           ),
-        FilledButton(
+        KnButton.primary(
+          revealed ? l.doneAction : l.showSeedAction,
           onPressed: revealed ? () => Navigator.of(context).pop() : _reveal,
-          child: Text(revealed ? l.doneAction : l.showSeedAction),
         ),
       ],
     );
@@ -424,11 +426,11 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        KnButton.text(
+          l.cancelAction,
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l.cancelAction),
         ),
-        FilledButton(onPressed: _save, child: Text(l.saveAction)),
+        KnButton.primary(l.saveAction, onPressed: _save),
       ],
     );
   }
@@ -485,11 +487,11 @@ class _DeleteDialogState extends State<_DeleteDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        KnButton.text(
+          l.cancelAction,
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l.cancelAction),
         ),
-        FilledButton(onPressed: _delete, child: Text(l.deleteAction)),
+        KnButton.primary(l.deleteAction, onPressed: _delete),
       ],
     );
   }
@@ -549,11 +551,11 @@ class _ConfirmPasswordDialogState extends State<_ConfirmPasswordDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        KnButton.text(
+          l.cancelAction,
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.cancelAction),
         ),
-        FilledButton(onPressed: _confirm, child: Text(l.continueAction)),
+        KnButton.primary(l.continueAction, onPressed: _confirm),
       ],
     );
   }

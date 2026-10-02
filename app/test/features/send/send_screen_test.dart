@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kilonova/src/rust/api/network.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
+import 'package:kilonova/widgets/kn_button.dart';
 
 import '../../helpers/rust.dart';
 
@@ -30,7 +31,7 @@ Future<String> _openWallet(WidgetTester tester, String name) async {
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextField), _password);
   await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
-  await pumpUntilFound(tester, find.text('Balance'));
+  await pumpUntilFound(tester, find.text('BALANCE'));
   return address;
 }
 
@@ -129,7 +130,7 @@ void main() {
   ) async {
     useDesktopWindow(tester);
     final own = await _openWallet(tester, 'QR');
-    await tester.tap(find.byTooltip('Show QR code').first);
+    await tester.tap(find.widgetWithText(KnButton, 'Receive'));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('monero:$own'), findsOneWidget);
     await tester.enterText(find.byType(TextField).last, '0.5');
@@ -142,7 +143,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.bySemanticsLabel('monero:$own'), findsOneWidget);
-    await tester.tap(find.text('Close'));
+    // Dismiss the dialog by tapping the barrier outside it.
+    await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
   });
 

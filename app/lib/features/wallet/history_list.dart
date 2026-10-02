@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/sync.dart';
 import '../../theme/theme.dart';
-import '../../theme/tokens.dart';
 import '../../widgets/amount.dart';
+import '../../widgets/kn_card.dart';
+import '../../widgets/kn_icons.dart';
 
-/// Transactions, newest first.
+/// Transactions, newest first, as a card of rows. Empty state is one line,
+/// no card.
 class HistoryList extends StatelessWidget {
   const HistoryList({super.key, required this.items, this.onOpen});
 
@@ -19,103 +20,79 @@ class HistoryList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final text = Theme.of(context).textTheme;
     if (items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: KnSpace.md),
-        child: Text(l.historyEmpty, style: text.bodyMedium),
+      return Text(
+        l.historyEmpty,
+        style: Theme.of(context).textTheme.bodyMedium,
       );
     }
-    return Column(
-      children: [
-        for (final item in items) ...[
-          _HistoryTile(
-            item: item,
-            onOpen: onOpen == null ? null : () => onOpen!(item),
-          ),
-          const Divider(),
-        ],
-      ],
+    return KnCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: withDividers([
+          for (final item in items)
+            _HistoryRow(
+              item: item,
+              onTap: onOpen == null ? null : () => onOpen!(item),
+            ),
+        ]),
+      ),
     );
   }
 }
 
-class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({required this.item, this.onOpen});
+class _HistoryRow extends StatelessWidget {
+  const _HistoryRow({required this.item, this.onTap});
 
   final HistoryItem item;
-  final VoidCallback? onOpen;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final c = context.kn;
-    final text = Theme.of(context).textTheme;
     final color = item.incoming ? c.received : c.text;
-    final kind = item.miner
-        ? l.historyMined
-        : item.incoming
-        ? l.historyReceived
-        : l.historySent;
-    final tags = [
-      kind,
-      if (item.locked) l.historyLocked,
-      if (item.pending)
-        l.historyPending
-      else
-        l.historyBlock(item.height.toString()),
-    ].join(' · ');
+    final leading = item.pending
+        ? Icon(Icons.schedule, size: 20, color: c.textSecondary)
+        : KnIcon(
+            item.incoming ? KnIcons.receive : KnIcons.send,
+            color: color,
+          );
+    final rightSide = item.pending
+        ? l.historyPending
+        : l.historyBlock(item.height.toString());
     final sentTo = item.sentTo;
-    final detail =
-        item.note ?? (sentTo == null ? null : l.historyTo(_short(sentTo)));
+    final base =
+        item.note ??
+        (item.miner
+            ? l.historyMined
+            : item.incoming
+            ? l.historyReceived
+            : sentTo == null
+            ? l.historySent
+            : l.historyTo(_short(sentTo)));
+    final secondLine = item.locked ? l.historyDetailLocked(base) : base;
 
-    return InkWell(
-      onTap: onOpen,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: KnSpace.sm),
-        child: Row(
-          children: [
-            Icon(
-              item.incoming ? Icons.south_west : Icons.north_east,
-              size: 20,
+    return KnRow(
+      leading: leading,
+      title: Row(
+        children: [
+          Expanded(
+            child: AmountText(
+              item.amount,
+              prefix: item.incoming ? '+' : '-',
               color: color,
-              semanticLabel: kind,
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
-            const SizedBox(width: KnSpace.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AmountText(
-                    item.amount,
-                    prefix: item.incoming ? '+' : '-',
-                    color: color,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(tags, style: text.bodySmall),
-                  if (detail != null)
-                    Text(
-                      detail,
-                      style: text.bodySmall,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: l.historyCopyTx,
-              icon: const Icon(Icons.copy_outlined, size: 18),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: item.txHash));
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(content: Text(l.txCopiedNotice)));
-              },
-            ),
-          ],
-        ),
+          ),
+          Text(
+            rightSide,
+            style: monoStyle(context, size: 13, color: c.textSecondary),
+          ),
+        ],
       ),
+      subtitle: Text(secondLine, maxLines: 1, overflow: TextOverflow.ellipsis),
+      onTap: onTap,
     );
   }
 

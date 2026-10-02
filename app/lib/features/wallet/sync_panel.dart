@@ -7,29 +7,21 @@ import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/amount.dart';
 import '../../widgets/error_line.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_card.dart';
 import '../../widgets/sync_orbit.dart';
 import '../settings/lws_servers_screen.dart';
 import '../settings/price_feed.dart';
 import 'lws_consent_dialog.dart';
 
-/// Balance and sync status for an open wallet.
-class SyncPanel extends StatelessWidget {
-  const SyncPanel({
-    super.key,
-    required this.wallet,
-    required this.event,
-    required this.onRetry,
-    this.prices,
-  });
+/// The balance: total, fiat, spendable (when it differs) and pool incoming.
+class BalanceBlock extends StatelessWidget {
+  const BalanceBlock({super.key, required this.wallet, this.prices});
 
   final OpenWallet wallet;
-  final SyncEvent? event;
 
   /// Shows the balance in the user's currency, if prices are on.
   final PriceFeed? prices;
-
-  /// Starts sync again, after an error or a settings change.
-  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -38,14 +30,13 @@ class SyncPanel extends StatelessWidget {
     final c = context.kn;
     final balance = wallet.balance();
     final summary = wallet.summary();
-    final e = event;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l.balanceTitle, style: text.labelMedium),
-        const SizedBox(height: KnSpace.xs),
-        AmountText(balance.total, size: 28),
+        Eyebrow(l.balanceTitle),
+        const SizedBox(height: KnSpace.sm),
+        AmountText(balance.total, style: text.displayLarge),
         if (prices != null)
           ListenableBuilder(
             listenable: prices!,
@@ -55,21 +46,14 @@ class SyncPanel extends StatelessWidget {
                   ? const SizedBox.shrink()
                   : Padding(
                       padding: const EdgeInsets.only(top: KnSpace.xs),
-                      child: Text(
-                        l.fiatApprox(fiat),
-                        style: monoStyle(
-                          context,
-                          size: 13,
-                          color: c.textSecondary,
-                        ),
-                      ),
+                      child: Text(l.fiatApprox(fiat), style: text.bodySmall),
                     );
             },
           ),
         if (balance.unlocked != balance.total) ...[
           const SizedBox(height: KnSpace.xs),
           Text(
-            l.spendableAmount(formatXmr(balance.unlocked)),
+            l.spendableAmount(formatXmrGrouped(balance.unlocked)),
             style: monoStyle(context, size: 13, color: c.textSecondary),
           ),
         ],
@@ -84,23 +68,16 @@ class SyncPanel extends StatelessWidget {
           const SizedBox(height: KnSpace.sm),
           Text(l.viewOnlyBalanceNote, style: text.bodySmall),
         ],
-        const SizedBox(height: KnSpace.md),
-        _SyncStatus(wallet: wallet, event: e, onRetry: onRetry),
-        if (e != null && e.rejectedOutputs > 0) ...[
-          const SizedBox(height: KnSpace.sm),
-          ErrorLine(l.syncLwsRejected(e.rejectedOutputs)),
-        ],
-        if (e != null && e.importPending) ...[
-          const SizedBox(height: KnSpace.sm),
-          Text(l.syncLwsImportPending, style: text.bodySmall),
-        ],
       ],
     );
   }
 }
 
-class _SyncStatus extends StatelessWidget {
-  const _SyncStatus({
+/// The sync status line: the orbit, the status in mono, and any prompt or
+/// error that follows it.
+class SyncLine extends StatelessWidget {
+  const SyncLine({
+    super.key,
     required this.wallet,
     required this.event,
     required this.onRetry,
@@ -108,6 +85,8 @@ class _SyncStatus extends StatelessWidget {
 
   final OpenWallet wallet;
   final SyncEvent? event;
+
+  /// Starts sync again, after an error or a settings change.
   final VoidCallback onRetry;
 
   Future<void> _review(BuildContext context) async {
@@ -136,8 +115,9 @@ class _SyncStatus extends StatelessWidget {
     final e = event;
     final failure = e?.failure;
 
+    Widget body;
     if (e != null && e.phase == SyncPhase.failed && failure != null) {
-      return switch (failure) {
+      body = switch (failure) {
         SyncFailure.lwsConsentNeeded => _Action(
           message: l.syncLwsConsentNeeded(_host(e.node ?? '')),
           action: l.syncLwsReview,
@@ -178,33 +158,51 @@ class _SyncStatus extends StatelessWidget {
           onPressed: () => _setServer(context),
         ),
       };
+    } else {
+      final (progress, label) = switch (e?.phase) {
+        null => (0.0, l.syncStarting),
+        SyncPhase.connecting => (0.0, l.syncConnecting(_host(e!.node))),
+        SyncPhase.scanning => (
+          e!.tip == BigInt.zero ? 0.0 : e.scanned / e.tip,
+          l.syncScanning(_group(e.scanned), _group(e.tip)),
+        ),
+        SyncPhase.synced => (1.0, l.syncSynced(_group(e!.tip))),
+        SyncPhase.stopped || SyncPhase.failed => (0.0, l.syncStopped),
+      };
+      body = Row(
+        children: [
+          Semantics(
+            value: '${(progress * 100).round()}%',
+            child: SyncOrbit(progress: progress, size: 20),
+          ),
+          const SizedBox(width: KnSpace.sm),
+          Expanded(
+            child: Text(
+              label,
+              style: monoStyle(context, size: 13, color: c.textSecondary),
+            ),
+          ),
+          if (e?.phase == SyncPhase.stopped)
+            KnButton.text(l.syncRetry, onPressed: onRetry),
+        ],
+      );
     }
 
-    final (progress, label) = switch (e?.phase) {
-      null => (0.0, l.syncStarting),
-      SyncPhase.connecting => (0.0, l.syncConnecting(_host(e!.node))),
-      SyncPhase.scanning => (
-        e!.tip == BigInt.zero ? 0.0 : e.scanned / e.tip,
-        l.syncScanning(_group(e.scanned), _group(e.tip)),
-      ),
-      SyncPhase.synced => (1.0, l.syncSynced(_group(e!.tip))),
-      SyncPhase.stopped || SyncPhase.failed => (0.0, l.syncStopped),
-    };
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(
-          value: '${(progress * 100).round()}%',
-          child: SyncOrbit(progress: progress),
-        ),
-        const SizedBox(width: KnSpace.sm),
-        Expanded(
-          child: Text(
-            label,
-            style: monoStyle(context, size: 13, color: c.textSecondary),
+        body,
+        if (e != null && e.rejectedOutputs > 0) ...[
+          const SizedBox(height: KnSpace.sm),
+          ErrorLine(l.syncLwsRejected(e.rejectedOutputs)),
+        ],
+        if (e != null && e.importPending) ...[
+          const SizedBox(height: KnSpace.sm),
+          Text(
+            l.syncLwsImportPending,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-        ),
-        if (e?.phase == SyncPhase.stopped)
-          TextButton(onPressed: onRetry, child: Text(l.syncRetry)),
+        ],
       ],
     );
   }
@@ -238,7 +236,7 @@ class _Action extends StatelessWidget {
         else
           Text(message, style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: KnSpace.xs),
-        TextButton(onPressed: onPressed, child: Text(action)),
+        KnButton.text(action, onPressed: onPressed),
       ],
     );
   }
