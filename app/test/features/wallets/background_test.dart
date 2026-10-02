@@ -63,9 +63,10 @@ void main() {
     );
     await desktop.reload();
     final third = await _wallet('Desktop');
+    final thirdId = third.summary().id;
     await desktop.opened(third);
     desktop.paused();
-    expect(desktop.openWallet(third.summary().id), isNull);
+    expect(desktop.openWallet(thirdId), isNull);
     registry.lockAll();
     desktop.lockAll();
     await setPreferences(
