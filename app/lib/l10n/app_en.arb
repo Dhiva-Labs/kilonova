@@ -161,7 +161,7 @@
   "biometricFailed": "Biometric unlock did not work. Use the password.",
   "biometricOffAfterPasswordChange": "Password changed. Biometric unlock was turned off; turn it on again from the wallet menu.",
   "balanceTitle": "Balance",
-  "spendableAmount": "{amount} XMR can be spent now",
+  "spendableAmount": "{amount} XMR spendable",
   "@spendableAmount": {
     "placeholders": {
       "amount": {
@@ -316,7 +316,7 @@
   "sendAction": "Send",
   "sendTitle": "Send",
   "pasteAction": "Paste",
-  "sendAddressField": "Recipient address",
+  "sendAddressField": "To",
   "sendAmountField": "Amount",
   "sendAddressMissing": "Enter an address",
   "sendAddressInvalid": "Not a valid address for this wallet's network",
@@ -547,5 +547,7 @@
   "sendHighFeeWarning": "The fee is more than 5% of what you are sending.",
   "settingsNetworkSection": "Network",
   "settingsOptionsSection": "Options",
-  "settingsAboutSection": "About"
+  "settingsAboutSection": "About",
+  "sendAddressHint": "Monero address or payment request",
+  "sendSendingLabel": "Sending"
 }

@@ -53,20 +53,14 @@ void main() {
 
     await tester.tap(find.text('Add'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Ana');
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Recipient address'),
-      stagenet,
-    );
+    await tester.enterText(fieldWithLabel('Name'), 'Ana');
+    await tester.enterText(fieldWithLabel('To'), stagenet);
     await tester.tap(find.text('Save'));
     await pumpUntilFound(
       tester,
       find.text('This is not a valid address for this network.'),
     );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Recipient address'),
-      friend,
-    );
+    await tester.enterText(fieldWithLabel('To'), friend);
     await tester.tap(find.text('Save'));
     await pumpUntilFound(tester, find.text('Ana'));
     await tester.pageBack();
@@ -79,7 +73,7 @@ void main() {
     await tester.tap(find.text('Ana'));
     await tester.pumpAndSettle();
     final field = tester.widget<TextField>(
-      find.widgetWithText(TextField, 'Recipient address'),
+      fieldWithLabel('To'),
     );
     expect(field.controller!.text, friend);
   });

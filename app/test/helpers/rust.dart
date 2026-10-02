@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kilonova/app.dart';
@@ -12,6 +12,7 @@ import 'package:kilonova/src/rust/api/network.dart';
 import 'package:kilonova/src/rust/api/nodes.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
 import 'package:kilonova/src/rust/frb_generated.dart';
+import 'package:kilonova/widgets/kn_field.dart';
 
 /// Loads the debug build of the Rust core and points the wallet store at a
 /// fresh temporary directory. Each test file runs in its own process, so
@@ -138,4 +139,18 @@ class FakeNotifier implements Notifier {
 
   @override
   Future<void> stopKeepAlive() async => keptAlive = false;
+}
+
+/// The [TextField] inside the [KnField] labelled [label] (label above the
+/// field), or a plain [TextField]/[TextFormField] with that label (label
+/// inside). Always resolves to the actual input, so both `enterText` and
+/// `tester.widget<TextField>` work on the result.
+Finder fieldWithLabel(String label) {
+  final kn = find.widgetWithText(KnField, label);
+  if (kn.evaluate().isNotEmpty) {
+    return find.descendant(of: kn, matching: find.byType(TextField));
+  }
+  final field = find.widgetWithText(TextField, label);
+  if (field.evaluate().isNotEmpty) return field;
+  return find.widgetWithText(TextFormField, label);
 }

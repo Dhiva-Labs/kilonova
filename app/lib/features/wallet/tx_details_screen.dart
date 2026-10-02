@@ -10,6 +10,9 @@ import '../../src/rust/api/wallets.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/amount.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_card.dart';
+import '../../widgets/kn_field.dart';
 import '../../widgets/password_fields.dart';
 import '../../widgets/wallet_error_text.dart';
 import '../book/address_book_screen.dart';
@@ -93,7 +96,7 @@ class _TxDetailsScreenState extends State<TxDetailsScreen> {
             children: [
               AmountText(
                 item.amount,
-                size: 24,
+                size: text.headlineSmall!.fontSize,
                 prefix: item.incoming ? '+' : '-',
                 color: item.incoming ? c.received : c.text,
               ),
@@ -106,29 +109,24 @@ class _TxDetailsScreenState extends State<TxDetailsScreen> {
                 style: text.bodySmall,
               ),
               const SizedBox(height: KnSpace.lg),
-              Text(l.txIdLabel, style: text.labelMedium),
-              const SizedBox(height: KnSpace.xs),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: SelectableText(
-                      item.txHash,
-                      style: monoStyle(context, size: 12),
-                    ),
-                  ),
-                  IconButton(
+                  Expanded(child: Eyebrow(l.txIdLabel)),
+                  KnIconButton(
+                    icon: const Icon(Icons.copy_outlined),
                     tooltip: l.historyCopyTx,
-                    icon: const Icon(Icons.copy_outlined, size: 18),
                     onPressed: () => _copy(item.txHash, l.txCopiedNotice),
                   ),
                 ],
               ),
+              const SizedBox(height: KnSpace.xs),
+              SelectableText(item.txHash, style: monoStyle(context, size: 13)),
               const SizedBox(height: KnSpace.lg),
-              TextField(
+              KnField(
                 controller: _note,
-                maxLines: 3,
-                minLines: 1,
-                decoration: InputDecoration(labelText: l.txNoteField),
+                label: l.txNoteField,
+                multiline: true,
                 onChanged: (_) => setState(() => _noteSaved = false),
                 onSubmitted: (_) => _saveNote(),
               ),
@@ -136,71 +134,83 @@ class _TxDetailsScreenState extends State<TxDetailsScreen> {
                 const SizedBox(height: KnSpace.sm),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: _saveNote,
-                    child: Text(l.txNoteSaveAction),
-                  ),
+                  child: KnButton.text(l.txNoteSaveAction, onPressed: _saveNote),
                 ),
               ],
               if (_details.destinations.isNotEmpty) ...[
                 const SizedBox(height: KnSpace.lg),
-                Text(l.txRecipientsLabel, style: text.labelMedium),
-                const Divider(),
-                for (final p in _details.destinations) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: KnSpace.sm),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
+                Eyebrow(l.txRecipientsLabel),
+                const SizedBox(height: KnSpace.sm),
+                KnCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: withDividers([
+                      for (final p in _details.destinations)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KnSpace.md,
+                            vertical: KnSpace.md,
+                          ),
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              AmountText(p.amount),
-                              const SizedBox(height: 2),
-                              if (contacts[p.address] != null)
-                                Text(
-                                  contacts[p.address]!,
-                                  style: text.labelLarge,
-                                ),
-                              SelectableText(
-                                p.address,
-                                style: monoStyle(
-                                  context,
-                                  size: 12,
-                                  color: c.textSecondary,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    AmountText(p.amount),
+                                    const SizedBox(height: 2),
+                                    if (contacts[p.address] != null)
+                                      Text(
+                                        contacts[p.address]!,
+                                        style: text.bodyMedium,
+                                      ),
+                                    Text(
+                                      p.address,
+                                      style: monoStyle(
+                                        context,
+                                        size: 13,
+                                        color: c.textSecondary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              if (contacts[p.address] == null)
+                                KnButton.text(
+                                  l.bookSaveRecipientAction,
+                                  onPressed: () async {
+                                    await showContactDialog(
+                                      context,
+                                      wallet: widget.wallet,
+                                      address: p.address,
+                                    );
+                                    if (mounted) setState(() {});
+                                  },
+                                ),
                             ],
                           ),
                         ),
-                        if (contacts[p.address] == null)
-                          TextButton(
-                            onPressed: () async {
-                              await showContactDialog(
-                                context,
-                                wallet: widget.wallet,
-                                address: p.address,
-                              );
-                              if (mounted) setState(() {});
-                            },
-                            child: Text(l.bookSaveRecipientAction),
-                          ),
-                      ],
-                    ),
+                    ]),
                   ),
-                  const Divider(),
-                ],
+                ),
               ],
               if (_details.hasTxKey) ...[
                 const SizedBox(height: KnSpace.lg),
-                Text(l.txKeyHelp, style: text.bodySmall),
-                const SizedBox(height: KnSpace.sm),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: _showKey,
-                    child: Text(l.txKeyShowAction),
+                KnCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.txKeyHelp, style: text.bodySmall),
+                      const SizedBox(height: KnSpace.sm),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: KnButton.text(
+                          l.txKeyShowAction,
+                          onPressed: _showKey,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -314,20 +324,17 @@ class _TxKeyDialogState extends State<_TxKeyDialog> {
       ),
       actions: [
         if (key == null && _biometric)
-          TextButton(
-            onPressed: _revealWithBiometric,
-            child: Text(l.biometricUnlockAction),
-          ),
+          KnButton.text(l.biometricUnlockAction, onPressed: _revealWithBiometric),
         if (key == null)
-          TextButton(onPressed: _reveal, child: Text(l.txKeyShowAction)),
+          KnButton.text(l.txKeyShowAction, onPressed: _reveal),
         if (key != null)
-          TextButton(
+          KnButton.text(
+            l.copyAction,
             onPressed: () => Clipboard.setData(ClipboardData(text: key)),
-            child: Text(l.copyAction),
           ),
-        TextButton(
+        KnButton.text(
+          l.closeAction,
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.closeAction),
         ),
       ],
     );

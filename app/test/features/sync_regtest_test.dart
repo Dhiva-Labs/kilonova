@@ -185,10 +185,10 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Send'));
       await tester.pumpAndSettle();
       await tester.enterText(
-        find.widgetWithText(TextField, 'Recipient address'),
+        fieldWithLabel('To'),
         payee,
       );
-      await tester.enterText(find.widgetWithText(TextField, 'Amount'), '1.5');
+      await tester.enterText(fieldWithLabel('Amount'), '1.5');
       await tester.tap(find.text('Review'));
       await pumpUntilFound(
         tester,
@@ -229,10 +229,11 @@ void main() {
       // The sent transaction remembers who was paid and its key.
       await tester.tap(find.textContaining('To ').first);
       await tester.pumpAndSettle();
-      expect(find.text('Paid to'), findsOneWidget);
+      // Eyebrow labels render upper case.
+      expect(find.text('PAID TO'), findsOneWidget);
       expect(find.text(payee), findsOneWidget);
       await tester.enterText(
-        find.widgetWithText(TextField, 'Note, only on this device'),
+        fieldWithLabel('Note, only on this device'),
         'test payment',
       );
       await tester.pump();
