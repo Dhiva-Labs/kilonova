@@ -244,6 +244,10 @@ an unaudited pre-release before these.
   until M6 completes.
 
 ### Later
+
+What Kilonova can do that other wallets do not, ordered by value for
+effort, is in [docs/ROADMAP.md](docs/ROADMAP.md).
+
 - Hardware wallets (Ledger, Trezor), multisig, macOS/iOS.
 - **FCMP++ migration:** new transaction construction, no decoys. Track
   monero-oxide and monero-lws and ship before the hard fork activates.

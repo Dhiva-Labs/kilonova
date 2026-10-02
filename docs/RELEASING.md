@@ -24,7 +24,9 @@ and fails rather than publish an APK signed with something else:
 | `KN_KEY_ALIAS` | key alias |
 | `KN_KEY_PASSWORD` | key password |
 
-Create the key once, keep an offline backup, and never commit it:
+Create the key once, keep an offline backup, and never commit it. The
+keystore is PKCS12, so the key password and the store password are the
+same value; set both secrets to it:
 
 ```sh
 keytool -genkeypair -v -keystore release.jks -alias kilonova \
