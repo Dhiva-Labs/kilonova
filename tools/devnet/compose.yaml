@@ -2,6 +2,7 @@
 #
 #   docker compose --profile stagenet up -d
 #   docker compose --profile testnet up -d
+#   docker compose --profile regtest up -d     (private chain for tests)
 #
 # Ports are bound to 127.0.0.1 only. See README.md in this folder.
 
@@ -95,3 +96,40 @@ services:
       - "127.0.0.1:28444:28444"
     volumes:
       - ./data/testnet/lws:/data
+
+  # A private chain where tests mine blocks on demand. Unrestricted RPC so
+  # tests can call generateblocks and pop_blocks.
+  monerod-regtest:
+    <<: *monerod
+    profiles: [regtest]
+    restart: "no"
+    command:
+      - --regtest
+      - --offline
+      - --fixed-difficulty=1
+      - --data-dir=/data
+      - --no-igd
+      - --rpc-bind-ip=0.0.0.0
+      - --rpc-bind-port=18081
+      - --confirm-external-bind
+    ports:
+      - "127.0.0.1:18181:18081"
+    tmpfs:
+      - /data:uid=${KN_UID:-1000},gid=${KN_GID:-1000}
+
+  # Monero's reference wallet on the same chain, so tests can compare.
+  wallet-rpc-regtest:
+    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.5.1@sha256:09ff81f470d6d37811e3fde808c5cd1158a8cd2c42abbfb935b33f26f91e879d
+    profiles: [regtest]
+    depends_on: [monerod-regtest]
+    environment:
+      RPC_EXPOSE_UNAUTHENTICATED: "1"
+    command:
+      - --daemon-address=monerod-regtest:18081
+      - --trusted-daemon
+      - --allow-mismatched-daemon-version
+      - --disable-rpc-login
+      - --wallet-dir=/home/monero/wallet
+      - --rpc-bind-port=18083
+    ports:
+      - "127.0.0.1:18183:18083"

@@ -1,0 +1,21 @@
+{
+  "note": "Community public nodes, run by third parties. Checked weekly by CI; update through a PR.",
+  "mainnet": [
+    "https://xmr-node.cakewallet.com:18081",
+    "http://node.monerodevs.org:18089",
+    "http://nodes.hashvault.pro:18081",
+    "http://xmr.stormycloud.org:18089",
+    "http://monero.stackwallet.com:18081",
+    "http://node.xmr.rocks:18089"
+  ],
+  "stagenet": [
+    "http://stagenet.xmr-tw.org:38081",
+    "http://node.monerodevs.org:38089",
+    "http://node2.monerodevs.org:38089"
+  ],
+  "testnet": [
+    "http://testnet.xmr-tw.org:28081",
+    "http://node.monerodevs.org:28089",
+    "http://node2.monerodevs.org:28089"
+  ]
+}

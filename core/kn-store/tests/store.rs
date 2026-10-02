@@ -247,3 +247,48 @@ fn a_file_swapped_between_wallets_is_detected() {
         Err(StoreError::Corrupt(_))
     ));
 }
+
+#[test]
+fn sync_cache_round_trips_and_follows_the_password() {
+    let (dir, store) = store();
+    let mut wallet = store
+        .create("W", SyncMode::Full, seed_data(Network::Mainnet).0, b"pw", 0)
+        .unwrap();
+    assert!(store.load_cache(&wallet).unwrap().is_none());
+
+    store.save_cache(&wallet, b"scanned to 1234").unwrap();
+    let raw = fs::read(dir.path().join(format!("{}.knc", wallet.entry.id))).unwrap();
+    assert!(!String::from_utf8_lossy(&raw).contains("scanned"));
+    assert_eq!(
+        store.load_cache(&wallet).unwrap().unwrap().as_slice(),
+        b"scanned to 1234"
+    );
+
+    store.change_password(&mut wallet, b"new").unwrap();
+    let reopened = store.unlock(&wallet.entry.id, b"new").unwrap();
+    assert_eq!(
+        store.load_cache(&reopened).unwrap().unwrap().as_slice(),
+        b"scanned to 1234"
+    );
+
+    store.delete(&wallet.entry.id).unwrap();
+    assert!(!dir.path().join(format!("{}.knc", wallet.entry.id)).exists());
+}
+
+#[test]
+fn a_cache_from_another_wallet_is_refused() {
+    let (dir, store) = store();
+    let a = store
+        .create("A", SyncMode::Full, seed_data(Network::Mainnet).0, b"pw", 0)
+        .unwrap();
+    let b = store
+        .create("B", SyncMode::Full, seed_data(Network::Mainnet).0, b"pw", 0)
+        .unwrap();
+    store.save_cache(&b, b"b's history").unwrap();
+    fs::copy(
+        dir.path().join(format!("{}.knc", b.entry.id)),
+        dir.path().join(format!("{}.knc", a.entry.id)),
+    )
+    .unwrap();
+    assert!(matches!(store.load_cache(&a), Err(StoreError::Corrupt(_))));
+}

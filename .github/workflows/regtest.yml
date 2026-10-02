@@ -1,0 +1,58 @@
+name: Regtest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'core/**'
+      - 'tools/devnet/**'
+      - '.github/workflows/regtest.yml'
+  pull_request:
+    paths:
+      - 'core/**'
+      - 'tools/devnet/**'
+      - '.github/workflows/regtest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regtest-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  regtest:
+    name: Sync against regtest
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pinned toolchain
+        working-directory: core
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: core
+      - name: Start regtest monerod and wallet-rpc
+        working-directory: tools/devnet
+        run: |
+          KN_UID=$(id -u) KN_GID=$(id -g) docker compose --profile regtest up -d
+          for i in $(seq 1 60); do
+            curl -sf -X POST http://127.0.0.1:18181/json_rpc \
+              -d '{"jsonrpc":"2.0","id":"0","method":"get_info"}' >/dev/null &&
+            curl -sf -X POST http://127.0.0.1:18183/json_rpc \
+              -d '{"jsonrpc":"2.0","id":"0","method":"get_version"}' >/dev/null && exit 0
+            sleep 2
+          done
+          docker compose --profile regtest logs
+          exit 1
+      - name: Scan, spend detection and reorg against monero-wallet-rpc
+        working-directory: core
+        run: cargo test -p kn-sync --test regtest -- --ignored --test-threads 1
+      - name: Logs
+        if: failure()
+        working-directory: tools/devnet
+        run: docker compose --profile regtest logs --tail 200
