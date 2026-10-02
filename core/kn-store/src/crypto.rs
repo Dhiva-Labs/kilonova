@@ -138,9 +138,18 @@ impl SealingKey {
     }
 }
 
-/// Decrypts a wallet file, returning the plaintext and the key to write it
-/// back with.
-pub fn open(file: &[u8], password: &[u8]) -> Result<(Zeroizing<Vec<u8>>, SealingKey), StoreError> {
+impl SealingKey {
+    /// Decrypts a file sealed with this key, such as the wallet's sync cache.
+    pub fn open(&self, file: &[u8]) -> Result<Zeroizing<Vec<u8>>, StoreError> {
+        let (salt, params, nonce) = parse_header(file)?;
+        if salt != self.salt || params != self.params {
+            return Err(StoreError::WrongPasswordOrDamaged);
+        }
+        decrypt(&self.key, nonce, file)
+    }
+}
+
+fn parse_header(file: &[u8]) -> Result<([u8; SALT_LEN], KdfParams, &[u8]), StoreError> {
     if file.len() < HEADER_LEN + 16 || &file[..4] != MAGIC {
         return Err(StoreError::Corrupt("not a Kilonova wallet file"));
     }
@@ -160,11 +169,12 @@ pub fn open(file: &[u8], password: &[u8]) -> Result<(Zeroizing<Vec<u8>>, Sealing
         ));
     }
     let salt: [u8; SALT_LEN] = file[18..18 + SALT_LEN].try_into().expect("salt length");
-    let nonce = &file[18 + SALT_LEN..HEADER_LEN];
+    Ok((salt, params, &file[18 + SALT_LEN..HEADER_LEN]))
+}
 
-    let key = SealingKey::derive_with_salt(password, salt, params)?;
-    let cipher = XChaCha20Poly1305::new(key.key.as_ref().into());
-    let plaintext = cipher
+fn decrypt(key: &[u8; 32], nonce: &[u8], file: &[u8]) -> Result<Zeroizing<Vec<u8>>, StoreError> {
+    let cipher = XChaCha20Poly1305::new(key.into());
+    cipher
         .decrypt(
             XNonce::from_slice(nonce),
             Payload {
@@ -172,8 +182,17 @@ pub fn open(file: &[u8], password: &[u8]) -> Result<(Zeroizing<Vec<u8>>, Sealing
                 aad: &file[..HEADER_LEN],
             },
         )
-        .map_err(|_| StoreError::WrongPasswordOrDamaged)?;
-    Ok((Zeroizing::new(plaintext), key))
+        .map(Zeroizing::new)
+        .map_err(|_| StoreError::WrongPasswordOrDamaged)
+}
+
+/// Decrypts a wallet file, returning the plaintext and the key to write it
+/// back with.
+pub fn open(file: &[u8], password: &[u8]) -> Result<(Zeroizing<Vec<u8>>, SealingKey), StoreError> {
+    let (salt, params, nonce) = parse_header(file)?;
+    let key = SealingKey::derive_with_salt(password, salt, params)?;
+    let plaintext = decrypt(&key.key, nonce, file)?;
+    Ok((plaintext, key))
 }
 
 #[cfg(test)]

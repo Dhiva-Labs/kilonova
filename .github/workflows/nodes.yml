@@ -1,0 +1,36 @@
+name: Public nodes
+
+# Checks that every node in core/kn-sync/src/nodes.json answers on its
+# network and is synced. Runs weekly and when the list changes.
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  push:
+    branches: [main]
+    paths:
+      - 'core/kn-sync/src/nodes.json'
+  pull_request:
+    paths:
+      - 'core/kn-sync/src/nodes.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  nodes:
+    name: Bundled nodes answer
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pinned toolchain
+        working-directory: core
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: core
+      - working-directory: core
+        run: cargo test -p kn-sync --test public_nodes -- --ignored

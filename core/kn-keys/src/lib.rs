@@ -247,6 +247,27 @@ impl WalletKeys {
         Ok(self.view_pair.subaddress(network.into(), sub).to_string())
     }
 
+    /// The view pair, for scanning. Holds the private view key, not the
+    /// spend key.
+    #[must_use]
+    pub fn view_pair(&self) -> ViewPair {
+        self.view_pair.clone()
+    }
+
+    /// The key image of an output this wallet owns: `(b + offset) * Hp(P)`,
+    /// where `b` is the private spend key, `offset` the output's key offset
+    /// and `P` its one-time key. Seeing this key image in a transaction input
+    /// means the output was spent.
+    ///
+    /// `None` for view-only wallets, which cannot know when they spend.
+    #[must_use]
+    pub fn key_image(&self, output_key: Point, key_offset: Scalar) -> Option<[u8; 32]> {
+        let spend = self.spend.as_ref()?;
+        let secret = Zeroizing::new(**spend + key_offset.into());
+        let generator = Point::biased_hash(output_key.compress().to_bytes()).into();
+        Some((*secret * generator).compress().to_bytes())
+    }
+
     /// The private spend key as hex, for export. `None` if view-only.
     #[must_use]
     pub fn secret_spend_key_hex(&self) -> Option<Zeroizing<String>> {

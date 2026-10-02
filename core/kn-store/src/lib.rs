@@ -5,6 +5,7 @@
 //! ```text
 //! wallets.json        registry: id, name, network, mode, view-only flag
 //! <id>.knw            one encrypted file per wallet (see `crypto`)
+//! <id>.knc            the wallet's sync cache, sealed with the same key
 //! ```
 //!
 //! The registry holds no secrets, balances or addresses, so the app can list
@@ -31,6 +32,7 @@ use crypto::SealingKey;
 
 const REGISTRY_FILE: &str = "wallets.json";
 const WALLET_EXTENSION: &str = "knw";
+const CACHE_EXTENSION: &str = "knc";
 const PAYLOAD_VERSION: u32 = 1;
 
 #[derive(Debug, thiserror::Error)]
@@ -289,13 +291,77 @@ impl Store {
         wallet: &mut UnlockedWallet,
         new_password: &[u8],
     ) -> Result<(), StoreError> {
+        // The cache is sealed with the wallet key, so it moves to the new
+        // key too. A cache that cannot be read is dropped; sync rebuilds it.
+        let cache = self.load_cache(wallet).ok().flatten();
         let sealing = SealingKey::derive(new_password, self.kdf)?;
         let previous = std::mem::replace(&mut wallet.sealing, sealing);
         if let Err(e) = self.write_wallet(wallet) {
             wallet.sealing = previous;
             return Err(e);
         }
-        Ok(())
+        match cache {
+            Some(bytes) => self.save_cache(wallet, &bytes),
+            None => self.remove_cache(&wallet.entry.id),
+        }
+    }
+
+    /// Stores the wallet's sync cache, encrypted with the wallet's key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on I/O failure.
+    pub fn save_cache(&self, wallet: &UnlockedWallet, cache: &[u8]) -> Result<(), StoreError> {
+        let id = wallet.entry.id.as_bytes();
+        let mut plaintext = Zeroizing::new(Vec::with_capacity(id.len() + 1 + cache.len()));
+        plaintext.extend_from_slice(id);
+        plaintext.push(b'\n');
+        plaintext.extend_from_slice(cache);
+        write_atomic(
+            &self.cache_path(&wallet.entry.id),
+            &wallet.sealing.seal(&plaintext),
+        )
+    }
+
+    /// Reads the wallet's sync cache. `None` if there is none yet.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError::Corrupt`] if the cache belongs to another wallet or
+    /// cannot be decrypted; callers should then sync from scratch.
+    pub fn load_cache(
+        &self,
+        wallet: &UnlockedWallet,
+    ) -> Result<Option<Zeroizing<Vec<u8>>>, StoreError> {
+        let file = match fs::read(self.cache_path(&wallet.entry.id)) {
+            Ok(file) => file,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+        let plaintext = wallet
+            .sealing
+            .open(&file)
+            .map_err(|_| StoreError::Corrupt("sync cache cannot be read"))?;
+        let id = wallet.entry.id.as_bytes();
+        if plaintext.len() <= id.len()
+            || &plaintext[..id.len()] != id
+            || plaintext[id.len()] != b'\n'
+        {
+            return Err(StoreError::Corrupt("sync cache belongs to another wallet"));
+        }
+        Ok(Some(Zeroizing::new(plaintext[id.len() + 1..].to_vec())))
+    }
+
+    /// Deletes the sync cache, for example after switching sync mode.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on I/O failure.
+    pub fn remove_cache(&self, id: &str) -> Result<(), StoreError> {
+        match fs::remove_file(self.cache_path(id)) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
+            _ => Ok(()),
+        }
     }
 
     /// Renames a wallet in the registry.
@@ -333,6 +399,7 @@ impl Store {
             return Err(StoreError::NotFound);
         }
         self.write_registry(&entries)?;
+        self.remove_cache(id)?;
         match fs::remove_file(self.wallet_path(id)) {
             Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
             _ => Ok(()),
@@ -344,6 +411,10 @@ impl Store {
             .into_iter()
             .find(|e| e.id == id)
             .ok_or(StoreError::NotFound)
+    }
+
+    fn cache_path(&self, id: &str) -> PathBuf {
+        self.dir.join(format!("{id}.{CACHE_EXTENSION}"))
     }
 
     fn wallet_path(&self, id: &str) -> PathBuf {
