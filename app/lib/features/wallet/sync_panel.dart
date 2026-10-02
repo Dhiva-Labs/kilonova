@@ -8,6 +8,8 @@ import '../../theme/tokens.dart';
 import '../../widgets/amount.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/sync_orbit.dart';
+import '../settings/lws_servers_screen.dart';
+import 'lws_consent_dialog.dart';
 
 /// Balance and sync status for an open wallet.
 class SyncPanel extends StatelessWidget {
@@ -20,6 +22,8 @@ class SyncPanel extends StatelessWidget {
 
   final OpenWallet wallet;
   final SyncEvent? event;
+
+  /// Starts sync again, after an error or a settings change.
   final VoidCallback onRetry;
 
   @override
@@ -29,7 +33,7 @@ class SyncPanel extends StatelessWidget {
     final c = context.kn;
     final balance = wallet.balance();
     final summary = wallet.summary();
-    final lwsPending = event?.failure == SyncFailure.lwsNotAvailable;
+    final e = event;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,23 +53,49 @@ class SyncPanel extends StatelessWidget {
           Text(l.viewOnlyBalanceNote, style: text.bodySmall),
         ],
         const SizedBox(height: KnSpace.md),
-        if (lwsPending)
-          Text(
-            l.syncLwsNotYet,
-            style: text.bodyMedium!.copyWith(color: c.textSecondary),
-          )
-        else
-          _SyncStatus(event: event, onRetry: onRetry),
+        _SyncStatus(wallet: wallet, event: e, onRetry: onRetry),
+        if (e != null && e.rejectedOutputs > 0) ...[
+          const SizedBox(height: KnSpace.sm),
+          ErrorLine(l.syncLwsRejected(e.rejectedOutputs)),
+        ],
+        if (e != null && e.importPending) ...[
+          const SizedBox(height: KnSpace.sm),
+          Text(l.syncLwsImportPending, style: text.bodySmall),
+        ],
       ],
     );
   }
 }
 
 class _SyncStatus extends StatelessWidget {
-  const _SyncStatus({required this.event, required this.onRetry});
+  const _SyncStatus({
+    required this.wallet,
+    required this.event,
+    required this.onRetry,
+  });
 
+  final OpenWallet wallet;
   final SyncEvent? event;
   final VoidCallback onRetry;
+
+  Future<void> _review(BuildContext context) async {
+    final server = await wallet.lwsConsentNeeded();
+    if (server == null || !context.mounted) return;
+    final agreed = await showLwsConsentDialog(context, server);
+    if (!agreed) return;
+    await wallet.grantLwsConsent(server: server);
+    onRetry();
+  }
+
+  Future<void> _setServer(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            LwsServersScreen(initialNetwork: wallet.summary().network),
+      ),
+    );
+    onRetry();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,20 +105,41 @@ class _SyncStatus extends StatelessWidget {
     final failure = e?.failure;
 
     if (e != null && e.phase == SyncPhase.failed && failure != null) {
-      final message = switch (failure) {
-        SyncFailure.nodeUnreachable => l.syncNodeUnreachable,
-        SyncFailure.wrongNetwork => l.syncWrongNetwork,
-        SyncFailure.badNode => l.syncBadNode,
-        SyncFailure.lwsNotAvailable => l.syncLwsNotYet,
+      return switch (failure) {
+        SyncFailure.lwsConsentNeeded => _Action(
+          message: l.syncLwsConsentNeeded(_host(e.node ?? '')),
+          action: l.syncLwsReview,
+          onPressed: () => _review(context),
+          error: false,
+        ),
+        SyncFailure.lwsServerNotSet => _Action(
+          message: l.syncLwsServerNotSet,
+          action: l.syncLwsSetServer,
+          onPressed: () => _setServer(context),
+          error: false,
+        ),
+        SyncFailure.nodeUnreachable => ErrorLine(l.syncNodeUnreachable),
+        SyncFailure.wrongNetwork => _Action(
+          message: l.syncWrongNetwork,
+          action: l.syncRetry,
+          onPressed: onRetry,
+        ),
+        SyncFailure.badNode => _Action(
+          message: l.syncBadNode,
+          action: l.syncRetry,
+          onPressed: onRetry,
+        ),
+        SyncFailure.lwsDenied => _Action(
+          message: l.syncLwsDenied,
+          action: l.syncRetry,
+          onPressed: onRetry,
+        ),
+        SyncFailure.lwsCreationRefused => _Action(
+          message: l.syncLwsCreationRefused,
+          action: l.syncLwsSetServer,
+          onPressed: () => _setServer(context),
+        ),
       };
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ErrorLine(message),
-          if (failure != SyncFailure.nodeUnreachable)
-            TextButton(onPressed: onRetry, child: Text(l.syncRetry)),
-        ],
-      );
     }
 
     final (progress, label) = switch (e?.phase) {
@@ -122,6 +173,37 @@ class _SyncStatus extends StatelessWidget {
 
   static String _host(String? url) =>
       url == null ? '' : Uri.tryParse(url)?.host ?? url;
+}
+
+/// A message with one action. Errors get the error icon; prompts for the
+/// user to do something do not.
+class _Action extends StatelessWidget {
+  const _Action({
+    required this.message,
+    required this.action,
+    required this.onPressed,
+    this.error = true,
+  });
+
+  final String message;
+  final String action;
+  final VoidCallback onPressed;
+  final bool error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (error)
+          ErrorLine(message)
+        else
+          Text(message, style: Theme.of(context).textTheme.bodyMedium),
+        const SizedBox(height: KnSpace.xs),
+        TextButton(onPressed: onPressed, child: Text(action)),
+      ],
+    );
+  }
 }
 
 /// 3412880 -> 3,412,880.

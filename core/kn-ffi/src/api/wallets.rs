@@ -50,7 +50,9 @@ impl From<KeyError> for WalletError {
             KeyError::BadChecksum => Self::BadChecksum,
             KeyError::UnsupportedPolyseed => Self::UnsupportedPolyseed,
             KeyError::MalformedKey => Self::MalformedKey,
-            KeyError::NonCanonicalKey | KeyError::BadSubaddressIndex => Self::InvalidKey,
+            KeyError::NonCanonicalKey | KeyError::BadSubaddressIndex | KeyError::NotOurs => {
+                Self::InvalidKey
+            }
             KeyError::BadAddress(_) => Self::BadAddress,
             KeyError::ViewKeyMismatch => Self::ViewKeyMismatch,
             KeyError::NotStandardAddress => Self::NotStandardAddress,
@@ -204,6 +206,8 @@ pub fn check_seed(words: String) -> Result<SeedFormat, WalletError> {
 }
 
 /// Creates or restores a wallet from a 25-word or 16-word seed.
+/// `created_here` is true for a seed generated just now, which has no
+/// earlier history.
 ///
 /// # Errors
 ///
@@ -215,6 +219,7 @@ pub fn create_wallet_from_seed(
     words: String,
     password: String,
     restore_height: Option<u64>,
+    created_here: bool,
 ) -> Result<OpenWallet, WalletError> {
     let words = Zeroizing::new(words);
     let (_, mnemonic) = WalletKeys::from_mnemonic(&words)?;
@@ -226,6 +231,7 @@ pub fn create_wallet_from_seed(
     );
     data.birthday = mnemonic.birthday;
     data.restore_height = restore_height;
+    data.created_here = created_here;
     create(&name, mode, data, password)
 }
 
@@ -472,6 +478,55 @@ impl OpenWallet {
         })
     }
 
+    /// The light wallet server this LWS-mode wallet would sync from, if the
+    /// owner has not yet agreed to share the view key with it. `None` when
+    /// consent is already given, no server is set, or the wallet uses full
+    /// sync.
+    ///
+    /// # Errors
+    ///
+    /// Fails if the wallet has been locked.
+    pub fn lws_consent_needed(&self) -> Result<Option<String>, WalletError> {
+        self.with(|w| {
+            if w.entry.mode != kn_store::SyncMode::Lws {
+                return Ok(None);
+            }
+            let server = super::nodes::lws_server(w.entry.network.into())
+                .map_err(|_| WalletError::Storage)?;
+            Ok(server.filter(|s| w.data.lws_consent.as_deref() != Some(s.as_str())))
+        })
+    }
+
+    /// Records that the owner agreed to share this wallet's private view
+    /// key with `server`, and saves the wallet.
+    ///
+    /// # Errors
+    ///
+    /// Fails if the wallet has been locked or cannot be saved.
+    pub fn grant_lws_consent(&self, server: String) -> Result<(), WalletError> {
+        self.with(|w| {
+            w.data.lws_consent = Some(server);
+            Ok(store()?.save(w)?)
+        })
+    }
+
+    /// Switches between full sync and a light wallet server. Stops sync and
+    /// clears what was scanned; start sync again afterwards.
+    ///
+    /// # Errors
+    ///
+    /// Fails if the wallet has been locked or cannot be saved.
+    pub fn set_sync_mode(&self, mode: SyncMode) -> Result<(), WalletError> {
+        self.inner.sync.stop();
+        self.with(|w| {
+            store()?.set_mode(&w.entry.id, mode.into())?;
+            w.entry.mode = mode.into();
+            Ok(())
+        })?;
+        self.inner.sync.reset(&self.inner);
+        Ok(())
+    }
+
     /// Wipes the keys now instead of waiting for Dart to release the object.
     #[frb(sync)]
     pub fn lock(&self) {
@@ -540,6 +595,7 @@ mod tests {
             phrase.clone(),
             "pw".into(),
             None,
+            true,
         )
         .unwrap();
         let summary = wallet.summary().unwrap();

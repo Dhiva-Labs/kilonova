@@ -79,26 +79,31 @@ pub struct Http {
     base: Arc<str>,
 }
 
+/// The HTTP client every Kilonova network request uses: rustls on ring
+/// with Mozilla's roots, timeouts, and no identifying user agent.
+pub(crate) fn http_client() -> Result<reqwest::Client, SyncError> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let mut roots = rustls::RootCertStore::empty();
+    roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    let tls = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    reqwest::Client::builder()
+        .tls_backend_preconfigured(tls)
+        .connect_timeout(Duration::from_secs(15))
+        .timeout(Duration::from_mins(2))
+        .user_agent("")
+        .build()
+        .map_err(|e| SyncError::Node(format!("could not set up HTTP: {e}")))
+}
+
 impl Http {
     /// # Errors
     ///
     /// Fails only if the TLS stack cannot be set up.
     pub fn new(node: &NodeUrl) -> Result<Self, SyncError> {
-        let _ = rustls::crypto::ring::default_provider().install_default();
-        let mut roots = rustls::RootCertStore::empty();
-        roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-        let tls = rustls::ClientConfig::builder()
-            .with_root_certificates(roots)
-            .with_no_client_auth();
-        let client = reqwest::Client::builder()
-            .tls_backend_preconfigured(tls)
-            .connect_timeout(Duration::from_secs(15))
-            .timeout(Duration::from_mins(2))
-            .user_agent("")
-            .build()
-            .map_err(|e| SyncError::Node(format!("could not set up HTTP: {e}")))?;
         Ok(Self {
-            client,
+            client: http_client()?,
             base: node.as_str().into(),
         })
     }

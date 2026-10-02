@@ -71,6 +71,33 @@ pub enum KeyError {
     NotStandardAddress,
     #[error("subaddress index out of range")]
     BadSubaddressIndex,
+    #[error("the output does not belong to this wallet")]
+    NotOurs,
+}
+
+/// An output a light wallet server says this wallet received, as the server
+/// reports it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ClaimedOutput {
+    /// The transaction public key used for this output (`R`).
+    pub tx_pub_key: [u8; 32],
+    /// The output's position in its transaction.
+    pub index_in_tx: u64,
+    /// The one-time output key (`P`).
+    pub output_key: [u8; 32],
+    /// Account and index the server says it was sent to.
+    pub subaddress: (u32, u32),
+}
+
+/// What the wallet derived for a claimed output it really owns.
+#[derive(Clone, Debug)]
+pub struct VerifiedOutput {
+    /// `P = (b + key_offset) * G`.
+    pub key_offset: Scalar,
+    /// Mask of a compact (post-2019) `RingCT` commitment for this output.
+    pub compact_mask: Scalar,
+    /// `None` for view-only wallets.
+    pub key_image: Option<[u8; 32]>,
 }
 
 /// A seed phrase and what it encodes beyond the keys.
@@ -268,6 +295,76 @@ impl WalletKeys {
         let secret = Zeroizing::new(**spend + key_offset.into());
         let generator = Point::biased_hash(output_key.compress().to_bytes()).into();
         Some((*secret * generator).compress().to_bytes())
+    }
+
+    /// Checks that a light wallet server's claimed output really belongs to
+    /// this wallet, and derives what spending and spend detection need.
+    ///
+    /// The derivation is the one wallet2 and monero-oxide use: with
+    /// `s = Hs(8aR || varint(index))`, the output key must equal
+    /// `s*G + B` for the primary address, or `s*G + D` for subaddress
+    /// `(account, index)` where `D = B + Hs("SubAddr" || a || account ||
+    /// index)*G`.
+    ///
+    /// # Errors
+    ///
+    /// [`KeyError::NotOurs`] if the keys do not match, including when the
+    /// server names the wrong subaddress.
+    pub fn verify_claimed_output(&self, claim: &ClaimedOutput) -> Result<VerifiedOutput, KeyError> {
+        let tx_pub = curve25519_dalek::edwards::CompressedEdwardsY(claim.tx_pub_key)
+            .decompress()
+            .ok_or(KeyError::NotOurs)?;
+        let output_key = curve25519_dalek::edwards::CompressedEdwardsY(claim.output_key)
+            .decompress()
+            .ok_or(KeyError::NotOurs)?;
+
+        // 8aR || varint(index)
+        let mut derivation = Zeroizing::new(
+            (*self.view * tx_pub)
+                .mul_by_cofactor()
+                .compress()
+                .to_bytes()
+                .to_vec(),
+        );
+        let mut index = claim.index_in_tx;
+        loop {
+            let byte = (index & 0x7f).to_le_bytes()[0];
+            index >>= 7;
+            if index == 0 {
+                derivation.push(byte);
+                break;
+            }
+            derivation.push(byte | 0x80);
+        }
+        let shared: DalekScalar = Scalar::hash(derivation.as_slice()).into();
+
+        let (account, minor) = claim.subaddress;
+        let subaddress_offset = if (account, minor) == (0, 0) {
+            DalekScalar::ZERO
+        } else {
+            let mut data = Zeroizing::new(b"SubAddr\0".to_vec());
+            data.extend_from_slice(self.view.as_bytes());
+            data.extend_from_slice(&account.to_le_bytes());
+            data.extend_from_slice(&minor.to_le_bytes());
+            Scalar::hash(data.as_slice()).into()
+        };
+        let key_offset = shared + subaddress_offset;
+
+        let spend_public: curve25519_dalek::EdwardsPoint = self.view_pair.spend().into();
+        if &key_offset * ED25519_BASEPOINT_TABLE + spend_public != output_key {
+            return Err(KeyError::NotOurs);
+        }
+
+        let mut mask_data = Zeroizing::new(b"commitment_mask".to_vec());
+        mask_data.extend_from_slice(shared.as_bytes());
+        let compact_mask = Scalar::hash(mask_data.as_slice());
+
+        let key_offset = Scalar::from(key_offset);
+        Ok(VerifiedOutput {
+            key_image: self.key_image(Point::from(output_key), key_offset),
+            key_offset,
+            compact_mask,
+        })
     }
 
     /// The private spend key as hex, for export. `None` if view-only.

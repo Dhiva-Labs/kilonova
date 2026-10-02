@@ -69,6 +69,7 @@ class _RestoreWalletScreenState extends State<RestoreWalletScreen> {
           words: _secret.text,
           password: _password.text,
           restoreHeight: height,
+          createdHere: false,
         ),
         RestoreMethod.spendKey => createWalletFromSpendKey(
           name: _name.text,

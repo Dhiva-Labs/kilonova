@@ -7,8 +7,8 @@ import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `failed`, `hex_string`, `load`, `new`, `run`, `snapshot`, `stop`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `SyncHandle`
+// These functions are ignored because they are not marked as `pub`: `emit`, `fail`, `failed`, `full_round`, `go`, `hex_string`, `is_current`, `load`, `lock_current`, `lock_state`, `lws_round`, `new`, `record`, `reset`, `snapshot`, `starting_state`, `stop`, `stopped`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Run`, `Setup`, `SyncHandle`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// A block height to record as the restore height of a wallet created now,
@@ -30,7 +30,7 @@ class HistoryItem {
   /// True while the received funds cannot be spent yet.
   final bool locked;
 
-  /// Account and index of the first receiving subaddress, if incoming.
+  /// Index of the first receiving subaddress in its account, if incoming.
   final int? subaddressIndex;
 
   const HistoryItem({
@@ -72,15 +72,23 @@ class HistoryItem {
 class SyncEvent {
   final SyncPhase phase;
 
-  /// Next block to scan.
+  /// Blocks scanned so far.
   final BigInt scanned;
 
-  /// Blocks the node has.
+  /// Blocks the node (or the server's node) has.
   final BigInt tip;
 
-  /// The node being used, while connecting.
+  /// The node or server being used, while connecting.
   final String? node;
   final SyncFailure? failure;
+
+  /// LWS only: outputs the server reported that are not this wallet's
+  /// and were ignored.
+  final int rejectedOutputs;
+
+  /// LWS only: the server is still importing history from before the
+  /// wallet was registered.
+  final bool importPending;
 
   const SyncEvent({
     required this.phase,
@@ -88,6 +96,8 @@ class SyncEvent {
     required this.tip,
     this.node,
     this.failure,
+    required this.rejectedOutputs,
+    required this.importPending,
   });
 
   @override
@@ -96,7 +106,9 @@ class SyncEvent {
       scanned.hashCode ^
       tip.hashCode ^
       node.hashCode ^
-      failure.hashCode;
+      failure.hashCode ^
+      rejectedOutputs.hashCode ^
+      importPending.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -107,22 +119,35 @@ class SyncEvent {
           scanned == other.scanned &&
           tip == other.tip &&
           node == other.node &&
-          failure == other.failure;
+          failure == other.failure &&
+          rejectedOutputs == other.rejectedOutputs &&
+          importPending == other.importPending;
 }
 
 /// Why sync stopped with an error.
 enum SyncFailure {
-  /// The node could not be reached or misbehaved; it retries on its own.
+  /// The node or server could not be reached or misbehaved; it retries on
+  /// its own.
   nodeUnreachable,
 
-  /// The selected node serves another network.
+  /// The selected node or server serves another network.
   wrongNetwork,
 
   /// The selected node address is invalid.
   badNode,
 
-  /// Light wallet server sync is not available yet.
-  lwsNotAvailable,
+  /// An LWS-mode wallet, but no light wallet server is set for its
+  /// network.
+  lwsServerNotSet,
+
+  /// The owner has not yet agreed to share the view key with the server.
+  lwsConsentNeeded,
+
+  /// The server refused this wallet.
+  lwsDenied,
+
+  /// The server does not accept new wallets.
+  lwsCreationRefused,
 }
 
 enum SyncPhase { connecting, scanning, synced, failed, stopped }

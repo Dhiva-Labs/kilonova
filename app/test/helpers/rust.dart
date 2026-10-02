@@ -77,6 +77,24 @@ Future<void> pumpUntilFound(
   throw TestFailure('Timed out waiting for $finder. On screen: $texts');
 }
 
+/// Pumps like [pumpUntilFound] until [condition] holds.
+Future<void> pumpUntil(
+  WidgetTester tester,
+  bool Function() condition, {
+  String? what,
+  Duration timeout = const Duration(seconds: 20),
+}) async {
+  final end = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(end)) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    if (condition()) return;
+  }
+  throw TestFailure('Timed out waiting for ${what ?? 'condition'}');
+}
+
 /// Sets a desktop-sized window so the two-pane layout is used.
 void useDesktopWindow(WidgetTester tester) {
   tester.view.physicalSize = const Size(1280, 900);

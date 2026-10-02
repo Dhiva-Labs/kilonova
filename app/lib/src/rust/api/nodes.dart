@@ -8,7 +8,7 @@ import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `current_node`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 /// Bundled and user-added nodes for `network`, with the selected one marked.
 ///
@@ -51,6 +51,65 @@ Future<void> selectNode({required Network network, required String url}) =>
 /// [`NodeError::WrongNetwork`] or [`NodeError::Unreachable`].
 Future<NodeHealth> checkNode({required Network network, required String url}) =>
     RustLib.instance.api.crateApiNodesCheckNode(network: network, url: url);
+
+/// The light wallet server LWS-mode wallets on `network` use, if one is
+/// set. Kilonova never picks one.
+///
+/// # Errors
+///
+/// Fails if the settings cannot be read.
+Future<String?> lwsServer({required Network network}) =>
+    RustLib.instance.api.crateApiNodesLwsServer(network: network);
+
+/// Sets the light wallet server for `network`. Returns the normalized URL.
+///
+/// # Errors
+///
+/// [`NodeError::BadUrl`] for anything that is not `host:port` or an
+/// http(s) URL.
+Future<String> setLwsServer({required Network network, required String url}) =>
+    RustLib.instance.api.crateApiNodesSetLwsServer(network: network, url: url);
+
+/// Forgets the light wallet server for `network`.
+///
+/// # Errors
+///
+/// Fails if the settings cannot be written.
+Future<void> clearLwsServer({required Network network}) =>
+    RustLib.instance.api.crateApiNodesClearLwsServer(network: network);
+
+/// Contacts a light wallet server and checks its network where it says.
+/// Sends no keys.
+///
+/// # Errors
+///
+/// [`NodeError::WrongNetwork`] or [`NodeError::Unreachable`].
+Future<LwsHealth> checkLwsServer({
+  required Network network,
+  required String url,
+}) => RustLib.instance.api.crateApiNodesCheckLwsServer(
+  network: network,
+  url: url,
+);
+
+/// What a light wallet server reported when checked.
+class LwsHealth {
+  final BigInt height;
+  final String? serverType;
+
+  const LwsHealth({required this.height, this.serverType});
+
+  @override
+  int get hashCode => height.hashCode ^ serverType.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LwsHealth &&
+          runtimeType == other.runtimeType &&
+          height == other.height &&
+          serverType == other.serverType;
+}
 
 /// A node as listed in settings.
 class NodeChoice {

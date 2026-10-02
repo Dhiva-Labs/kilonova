@@ -74,6 +74,7 @@ enum _WalletAction {
   showSeed,
   rename,
   changePassword,
+  switchMode,
   biometricOn,
   biometricOff,
   lock,
@@ -155,6 +156,32 @@ class _WalletMenuState extends State<WalletMenu> {
         } else {
           _notice(l.passwordChangedNotice);
         }
+      case _WalletAction.switchMode:
+        final toLws = summary.mode == SyncMode.full;
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(l.switchModeTitle),
+            content: SizedBox(
+              width: 440,
+              child: Text(toLws ? l.switchToLwsBody : l.switchToFullBody),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(l.cancelAction),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(l.switchAction),
+              ),
+            ],
+          ),
+        );
+        if (!(confirmed ?? false)) return;
+        await wallet.setSyncMode(mode: toLws ? SyncMode.lws : SyncMode.full);
+        await registry.reload();
+        registry.startSync(summary.id);
       case _WalletAction.biometricOn:
         final password = await showDialog<String>(
           context: context,
@@ -200,6 +227,14 @@ class _WalletMenuState extends State<WalletMenu> {
         PopupMenuItem(
           value: _WalletAction.changePassword,
           child: Text(l.changePasswordAction),
+        ),
+        PopupMenuItem(
+          value: _WalletAction.switchMode,
+          child: Text(
+            wallet.summary().mode == SyncMode.full
+                ? l.switchToLwsAction
+                : l.switchToFullAction,
+          ),
         ),
         if (_biometricAvailable)
           _biometricOn
