@@ -167,6 +167,9 @@ bottom.
 M0 is the direct commit; everything after is one or more PRs from the fork.
 
 ### M0: Scaffold
+
+**Status: done.**
+
 - Flutter shell for Android, Linux and Windows; Rust workspace;
   flutter_rust_bridge proven end to end on all three.
 - Theme tokens + fonts per section 6; design lints wired into CI.
@@ -178,6 +181,9 @@ M0 is the direct commit; everything after is one or more PRs from the fork.
 - `tools/devnet/`: stagenet + testnet monerod and monero-lws.
 
 ### M1: Keys, wallet files and multi-wallet
+
+**Status: done.** Windows Hello unlock is not done yet.
+
 - Create / restore from 25-word mnemonic and Polyseed, restore from keys,
   view-only wallets.
 - Subaddresses with labels.
@@ -187,6 +193,9 @@ M0 is the direct commit; everything after is one or more PRs from the fork.
 - Test vectors against monero-wallet-cli for every network.
 
 ### M2: Full-mode sync
+
+**Status: done.**
+
 - monerod RPC: `get_info`, `get_blocks.bin`, `get_transaction_pool`.
 - Scanner with subaddress lookahead, key images, spent tracking, reorgs,
   restore height.
@@ -194,11 +203,17 @@ M0 is the direct commit; everything after is one or more PRs from the fork.
 - **Decision point:** monero-oxide vs wallet2 for full mode (ADR-0002).
 
 ### M3: LWS-mode sync
+
+**Status: done.** Not yet tested against MyMonero's hosted API, which needs an account; monero-lws is tested on every push.
+
 - `login`, `import_request`, `get_address_info`, `get_address_txs`,
   `get_unspent_outs`; local key-image verification.
 - Per-wallet mode switch with cache rebuild. LWS server URL entered by the user per network (own monero-lws or a provider like MyMonero); no default server. Compatibility tests against monero-lws on devnet and against MyMonero's API on mainnet with a view-only test wallet.
 
 ### M4: Sending
+
+**Status: done.** The full-mode ⇄ LWS-mode test runs on the regtest devnet in CI rather than on stagenet.
+
 - Build + sign in `kn-tx`, fee priorities, multiple destinations, sweep.
 - Decoys: gamma via `get_output_distribution` (full),
   `get_random_outs` (LWS, documented trade-off).
@@ -206,11 +221,21 @@ M0 is the direct commit; everything after is one or more PRs from the fork.
 - Stagenet end-to-end: full-mode wallet ⇄ LWS-mode wallet.
 
 ### M5: Receive and daily use
+
+**Status: done.** Background sync is Android only; desktops sync while the app is open.
+
 - Receive with QR and amount request, address book, tx notes, tx proofs.
 - Background sync for "keep synced" wallets, incoming-tx notifications.
 - Opt-in fiat price display (off by default; listed in the privacy policy).
 
 ### M6: Hardening and v1.0
+
+**Status: in progress.** Done: fuzz targets with a weekly CI run, release
+packaging (split APKs, .deb, tarball, Windows installer and zip, draft
+releases with checksums), F-Droid metadata. Open: external review, Windows
+code signing, Snap/Flatpak/PPA uploads, F-Droid submission. 0.1.0 ships as
+an unaudited pre-release before these.
+
 - External review of `kn-keys`, `kn-tx`, `kn-store`, `lws`.
 - Fuzzing of RPC/LWS parsers.
 - Packaging: Android (reproducible build, F-Droid metadata, GitHub APK),

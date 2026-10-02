@@ -26,17 +26,41 @@ Kilonova can sync two ways, chosen per wallet:
 It holds multiple wallets side by side, and each wallet belongs to one
 network: mainnet, stagenet or testnet.
 
-> **Status: early development.** This is milestone M0, the project scaffold.
-> Kilonova cannot create wallets or move funds yet, and it has not been
-> audited. Do not use it with real funds. See [PLAN.md](PLAN.md) for the
-> roadmap.
+> **Not audited.** Kilonova works end to end (sync, send, receive) and is
+> tested against Monero's reference wallet, but it has not had an external
+> security review. Do not keep more in it than you can afford to lose.
+> Stagenet and testnet are there to try it without risk.
+
+## What it does
+
+- Several wallets on mainnet, stagenet and testnet: create, or restore from
+  a 25-word or Polyseed seed, a spend key, or as view-only.
+- Full sync from a node you choose, including payments waiting in the pool.
+- Light wallet server sync with consent per server; every output the server
+  reports is checked with your own keys.
+- Send to several recipients or send everything; review what the signed
+  transaction pays before confirming with your password or fingerprint.
+- QR codes and amount requests; camera scanning on Android, image files on
+  desktop.
+- Address book, transaction notes and payment proofs.
+- Tor or SOCKS5 proxy for all traffic, onion nodes, pinned certificates for
+  your own node.
+- Optional, off by default: prices in your currency, payment notifications,
+  background sync on Android.
+
+## Download
+
+Builds for Android, Linux (.deb and tarball) and Windows (installer and zip)
+are on the [releases page](https://github.com/Dhiva-Labs/kilonova/releases),
+with `SHA256SUMS`. How releases are made is in
+[docs/RELEASING.md](docs/RELEASING.md).
 
 ## How it is built
 
 | Part | Technology | Location |
 |---|---|---|
 | Interface | Flutter | [`app/`](app) |
-| Wallet core | Rust; wallet logic uses [monero-oxide](https://github.com/monero-oxide/monero-oxide) from M1 | [`core/`](core) |
+| Wallet core | Rust, on [monero-oxide](https://github.com/monero-oxide/monero-oxide) | [`core/`](core) |
 | Bridge | flutter_rust_bridge 2.13 | [`core/kn-ffi`](core/kn-ffi), [`app/lib/src/rust`](app/lib/src/rust) (generated) |
 | Local test networks | Docker Compose: monerod + monero-lws | [`tools/devnet`](tools/devnet) |
 
@@ -66,9 +90,7 @@ build, through cargokit.
 Run the checks CI runs:
 
 ```sh
-cd core && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test && cargo build
-cd ../app && flutter analyze && flutter test
-cd .. && dart run tools/design_lint/bin/design_lint.dart
+tools/check.sh             # add --regtest with tools/devnet running
 ```
 
 ## Contributing
