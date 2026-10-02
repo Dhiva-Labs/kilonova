@@ -58,7 +58,7 @@ impl LwsServer {
     /// Fails only if the TLS stack cannot be set up.
     pub fn new(url: &NodeUrl) -> Result<Self, SyncError> {
         Ok(Self {
-            client: http_client()?,
+            client: http_client(url)?,
             base: url.as_str().into(),
         })
     }

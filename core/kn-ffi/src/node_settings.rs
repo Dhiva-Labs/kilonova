@@ -21,7 +21,14 @@ pub(crate) struct PerNetwork {
     pub(crate) lws: Option<String>,
 }
 
-pub(crate) type Settings = BTreeMap<String, PerNetwork>;
+#[derive(Default, Serialize, Deserialize)]
+pub(crate) struct Settings {
+    #[serde(flatten)]
+    pub(crate) networks: BTreeMap<String, PerNetwork>,
+    /// SOCKS5 proxy for all traffic, as `socks5h://host:port`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) proxy: Option<String>,
+}
 
 pub(crate) fn key(network: Network) -> &'static str {
     match network {

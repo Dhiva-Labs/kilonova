@@ -10,7 +10,9 @@
 
 use std::sync::LazyLock;
 
-use kn_sync::{NodeUrl, SyncError, bundled_nodes, check_lws, connect};
+use kn_sync::{
+    NodeUrl, ProxyUrl, SyncError, bundled_nodes, check_lws, check_proxy, connect, set_proxy,
+};
 use rand_core::{OsRng, RngCore};
 
 use super::network::Network;
@@ -34,6 +36,10 @@ pub enum NodeError {
     Unreachable,
     Storage,
     NotInitialized,
+    /// Not a valid proxy address.
+    BadProxy,
+    /// An onion address without a Tor proxy set.
+    NeedsTor,
 }
 
 impl From<SyncError> for NodeError {
@@ -41,6 +47,8 @@ impl From<SyncError> for NodeError {
         match e {
             SyncError::BadNodeUrl => Self::BadUrl,
             SyncError::WrongNetwork => Self::WrongNetwork,
+            SyncError::BadProxyUrl => Self::BadProxy,
+            SyncError::NeedsProxy => Self::NeedsTor,
             SyncError::Node(_)
             | SyncError::Cancelled
             | SyncError::LwsDenied
@@ -70,7 +78,10 @@ pub struct NodeHealth {
 /// picked at random and remembered, so users spread across them.
 pub(crate) fn current_node(network: Network) -> Result<NodeUrl, NodeError> {
     let mut settings = load()?;
-    let entry = settings.entry(key(network).to_owned()).or_default();
+    let entry = settings
+        .networks
+        .entry(key(network).to_owned())
+        .or_default();
     if let Some(url) = &entry.selected
         && let Ok(url) = NodeUrl::parse(url)
     {
@@ -93,6 +104,7 @@ pub fn nodes(network: Network) -> Result<Vec<NodeChoice>, NodeError> {
     let selected = current_node(network)?;
     let settings = load()?;
     let custom = settings
+        .networks
         .get(key(network))
         .map(|n| n.custom.clone())
         .unwrap_or_default();
@@ -125,7 +137,10 @@ pub fn nodes(network: Network) -> Result<Vec<NodeChoice>, NodeError> {
 pub fn add_node(network: Network, url: String) -> Result<String, NodeError> {
     let url = NodeUrl::parse(&url)?.as_str().to_owned();
     let mut settings = load()?;
-    let entry = settings.entry(key(network).to_owned()).or_default();
+    let entry = settings
+        .networks
+        .entry(key(network).to_owned())
+        .or_default();
     if !entry.custom.contains(&url) {
         entry.custom.push(url.clone());
     }
@@ -142,7 +157,10 @@ pub fn add_node(network: Network, url: String) -> Result<String, NodeError> {
 /// Fails if the settings cannot be written.
 pub fn remove_node(network: Network, url: String) -> Result<(), NodeError> {
     let mut settings = load()?;
-    let entry = settings.entry(key(network).to_owned()).or_default();
+    let entry = settings
+        .networks
+        .entry(key(network).to_owned())
+        .or_default();
     entry.custom.retain(|u| *u != url);
     if entry.selected.as_deref() == Some(url.as_str()) {
         entry.selected = None;
@@ -160,7 +178,10 @@ pub fn select_node(network: Network, url: String) -> Result<(), NodeError> {
     let url = parsed.as_str().to_owned();
     let bundled = bundled_nodes(network.into()).contains(&parsed);
     let mut settings = load()?;
-    let entry = settings.entry(key(network).to_owned()).or_default();
+    let entry = settings
+        .networks
+        .entry(key(network).to_owned())
+        .or_default();
     // An address that is neither bundled nor already added becomes the
     // user's own node, so the list always shows what is selected.
     if !bundled && !entry.custom.contains(&url) {
@@ -191,7 +212,10 @@ pub fn check_node(network: Network, url: String) -> Result<NodeHealth, NodeError
 ///
 /// Fails if the settings cannot be read.
 pub fn lws_server(network: Network) -> Result<Option<String>, NodeError> {
-    Ok(load()?.get(key(network)).and_then(|n| n.lws.clone()))
+    Ok(load()?
+        .networks
+        .get(key(network))
+        .and_then(|n| n.lws.clone()))
 }
 
 /// Sets the light wallet server for `network`. Returns the normalized URL.
@@ -203,7 +227,11 @@ pub fn lws_server(network: Network) -> Result<Option<String>, NodeError> {
 pub fn set_lws_server(network: Network, url: String) -> Result<String, NodeError> {
     let url = NodeUrl::parse(&url)?.as_str().to_owned();
     let mut settings = load()?;
-    settings.entry(key(network).to_owned()).or_default().lws = Some(url.clone());
+    settings
+        .networks
+        .entry(key(network).to_owned())
+        .or_default()
+        .lws = Some(url.clone());
     save(&settings)?;
     Ok(url)
 }
@@ -215,7 +243,11 @@ pub fn set_lws_server(network: Network, url: String) -> Result<String, NodeError
 /// Fails if the settings cannot be written.
 pub fn clear_lws_server(network: Network) -> Result<(), NodeError> {
     let mut settings = load()?;
-    settings.entry(key(network).to_owned()).or_default().lws = None;
+    settings
+        .networks
+        .entry(key(network).to_owned())
+        .or_default()
+        .lws = None;
     save(&settings)
 }
 
@@ -239,6 +271,49 @@ pub fn check_lws_server(network: Network, url: String) -> Result<LwsHealth, Node
         height: info.height,
         server_type: info.server_type,
     })
+}
+
+/// The SOCKS5 proxy (for example Tor) all traffic goes through, if any.
+///
+/// # Errors
+///
+/// Fails if the settings cannot be read.
+pub fn network_proxy() -> Result<Option<String>, NodeError> {
+    Ok(load()?.proxy)
+}
+
+/// Sends all traffic through `url` from now on, or directly with `None`,
+/// and remembers the choice. Returns the normalized address. Restart sync
+/// afterwards.
+///
+/// # Errors
+///
+/// [`NodeError::BadProxy`] for an invalid address.
+pub fn set_network_proxy(url: Option<String>) -> Result<Option<String>, NodeError> {
+    let parsed = url.as_deref().map(ProxyUrl::parse).transpose()?;
+    let mut settings = load()?;
+    settings.proxy = parsed.as_ref().map(|p| p.as_str().to_owned());
+    save(&settings)?;
+    set_proxy(parsed);
+    Ok(settings.proxy)
+}
+
+/// Checks that a SOCKS5 proxy answers at `url`, without sending anything
+/// through it.
+///
+/// # Errors
+///
+/// [`NodeError::BadProxy`] or [`NodeError::Unreachable`].
+pub fn check_network_proxy(url: String) -> Result<String, NodeError> {
+    let parsed = ProxyUrl::parse(&url)?;
+    RUNTIME.block_on(check_proxy(&parsed))?;
+    Ok(parsed.as_str().to_owned())
+}
+
+/// Applies the saved proxy. Called once the store is open.
+pub(crate) fn apply_saved_proxy() {
+    let saved = load().ok().and_then(|s| s.proxy);
+    set_proxy(saved.as_deref().and_then(|p| ProxyUrl::parse(p).ok()));
 }
 
 #[cfg(test)]
@@ -297,5 +372,24 @@ mod tests {
         assert_eq!(lws_server(Network::Testnet).unwrap(), None);
         clear_lws_server(Network::Stagenet).unwrap();
         assert_eq!(lws_server(Network::Stagenet).unwrap(), None);
+
+        // One proxy for everything, normalized to resolve names remotely.
+        assert_eq!(network_proxy().unwrap(), None);
+        assert_eq!(
+            set_network_proxy(Some("127.0.0.1:9050".into())).unwrap(),
+            Some("socks5h://127.0.0.1:9050".into())
+        );
+        assert_eq!(
+            network_proxy().unwrap().as_deref(),
+            Some("socks5h://127.0.0.1:9050")
+        );
+        assert_eq!(
+            set_network_proxy(Some("http://x:1".into())),
+            Err(NodeError::BadProxy)
+        );
+        assert_eq!(set_network_proxy(None).unwrap(), None);
+        assert_eq!(network_proxy().unwrap(), None);
+        // The other settings survive.
+        assert_eq!(nodes(Network::Testnet).unwrap(), after);
     }
 }

@@ -154,6 +154,9 @@ enum SyncFailure {
 
   /// The server does not accept new wallets.
   lwsCreationRefused,
+
+  /// The node or server is an onion address and no Tor proxy is set.
+  needsTor,
 }
 
 enum SyncPhase { connecting, scanning, synced, failed, stopped }

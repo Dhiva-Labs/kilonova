@@ -160,6 +160,7 @@ pub fn init_wallet_store(dir: String) -> Result<(), WalletError> {
     let store = Store::open(dir)?;
     // A concurrent caller may have won the race; either store is equivalent.
     let _ = STORE.set(Mutex::new(store));
+    super::nodes::apply_saved_proxy();
     Ok(())
 }
 

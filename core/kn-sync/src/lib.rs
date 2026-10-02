@@ -13,7 +13,9 @@ mod scan;
 mod state;
 
 pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, lws_sync};
-pub use node::{Http, NodeStatus, NodeUrl, bundled_nodes, connect};
+pub use node::{
+    Http, NodeStatus, NodeUrl, ProxyUrl, bundled_nodes, check_proxy, connect, proxy, set_proxy,
+};
 pub use restore_height::approximate_height;
 pub use scan::{Progress, SUBADDRESS_LOOKAHEAD, sync};
 pub use state::{
@@ -35,6 +37,10 @@ pub enum SyncError {
     LwsDenied,
     #[error("the light wallet server does not accept new wallets")]
     LwsCreationRefused,
+    #[error("not a valid proxy; use host:port or socks5h://host:port")]
+    BadProxyUrl,
+    #[error("onion addresses need a Tor proxy")]
+    NeedsProxy,
 }
 
 impl From<monero_interface::InterfaceError> for SyncError {

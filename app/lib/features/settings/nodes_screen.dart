@@ -15,6 +15,8 @@ String nodeErrorMessage(BuildContext context, NodeError error) {
     NodeError.wrongNetwork => l.nodeErrorWrongNetwork,
     NodeError.unreachable => l.nodeErrorUnreachable,
     NodeError.storage || NodeError.notInitialized => l.nodeErrorStorage,
+    NodeError.badProxy => l.nodeErrorBadProxy,
+    NodeError.needsTor => l.nodeErrorNeedsTor,
   };
 }
 

@@ -46,6 +46,8 @@ pub enum SyncFailure {
     LwsDenied,
     /// The server does not accept new wallets.
     LwsCreationRefused,
+    /// The node or server is an onion address and no Tor proxy is set.
+    NeedsTor,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -516,9 +518,10 @@ impl Run<'_> {
             SyncError::Cancelled => return None,
             SyncError::Node(_) => SyncFailure::NodeUnreachable,
             SyncError::WrongNetwork => SyncFailure::WrongNetwork,
-            SyncError::BadNodeUrl => SyncFailure::BadNode,
+            SyncError::BadNodeUrl | SyncError::BadProxyUrl => SyncFailure::BadNode,
             SyncError::LwsDenied => SyncFailure::LwsDenied,
             SyncError::LwsCreationRefused => SyncFailure::LwsCreationRefused,
+            SyncError::NeedsProxy => SyncFailure::NeedsTor,
         };
         self.emit(SyncEvent::failed(failure));
         (failure == SyncFailure::NodeUnreachable).then_some(FOLLOW_INTERVAL)

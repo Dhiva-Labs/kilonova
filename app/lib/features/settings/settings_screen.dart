@@ -5,6 +5,7 @@ import 'about_screen.dart';
 import 'lws_servers_screen.dart';
 import 'nodes_screen.dart';
 import 'privacy_screen.dart';
+import 'proxy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -35,6 +36,14 @@ class SettingsScreen extends StatelessWidget {
             subtitle: Text(l.lwsSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => open(const LwsServersScreen()),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.vpn_lock_outlined),
+            title: Text(l.proxyTitle),
+            subtitle: Text(l.proxySubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => open(const ProxyScreen()),
           ),
           const Divider(),
           ListTile(

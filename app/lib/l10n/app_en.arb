@@ -403,5 +403,26 @@
         "type": "String"
       }
     }
+  },
+  "proxyTitle": "Proxy and Tor",
+  "proxySubtitle": "Send all traffic through Tor or another SOCKS5 proxy",
+  "proxyHelp": "With a proxy set, every connection Kilonova makes (to nodes, light wallet servers and anything else) goes through it, and host names are looked up by the proxy. Nodes and servers then see the proxy's address instead of yours.",
+  "proxyTorHelp": "For Tor, run Orbot on Android or the Tor service on Linux and Windows, then use 127.0.0.1:9050. Onion addresses (.onion) work only through Tor.",
+  "proxyField": "SOCKS5 proxy, as host:port",
+  "proxySaveAction": "Check and use",
+  "proxyUseTorAction": "Fill in Tor's address",
+  "proxyOffAction": "Connect directly",
+  "proxyOff": "Not set. Kilonova connects directly.",
+  "proxyOn": "All traffic goes through {proxy}",
+  "proxyChecking": "Checking that the proxy answers",
+  "nodeErrorBadProxy": "Not a proxy address. Use host:port, for example 127.0.0.1:9050.",
+  "nodeErrorNeedsTor": "This is an onion address. Set a Tor proxy first, under Proxy and Tor.",
+  "syncNeedsTor": "This node or server is an onion address. Set a Tor proxy under Settings, Proxy and Tor.",
+  "@proxyOn": {
+    "placeholders": {
+      "proxy": {
+        "type": "String"
+      }
+    }
   }
 }

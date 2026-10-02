@@ -1,7 +1,8 @@
 //! Talking to a monerod node: the HTTP transport monero-oxide drives, and
 //! the bundled list of public nodes.
 
-use std::{sync::Arc, time::Duration};
+use std::sync::{Arc, PoisonError, RwLock};
+use std::time::Duration;
 
 use kn_keys::Network;
 use monero_daemon_rpc::{HttpTransport, MoneroDaemon};
@@ -44,6 +45,103 @@ impl NodeUrl {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    /// Whether this is a Tor onion service, reachable only through a proxy.
+    #[must_use]
+    pub fn is_onion(&self) -> bool {
+        reqwest::Url::parse(&self.0)
+            .ok()
+            .and_then(|u| u.host_str().map(|h| h.rsplit('.').next() == Some("onion")))
+            .unwrap_or(false)
+    }
+}
+
+/// A SOCKS5 proxy such as Tor, as `socks5h://host:port`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProxyUrl(String);
+
+impl ProxyUrl {
+    /// Accepts `host:port` or a `socks5://` / `socks5h://` URL. Host names
+    /// are always resolved by the proxy (`socks5h`), so DNS lookups do not
+    /// leak around it.
+    ///
+    /// # Errors
+    ///
+    /// [`SyncError::BadProxyUrl`] for anything else.
+    pub fn parse(input: &str) -> Result<Self, SyncError> {
+        let input = input.trim().trim_end_matches('/');
+        let rest = input
+            .strip_prefix("socks5h://")
+            .or_else(|| input.strip_prefix("socks5://"))
+            .unwrap_or(input);
+        if rest.contains("://") {
+            return Err(SyncError::BadProxyUrl);
+        }
+        let url = format!("socks5h://{rest}");
+        let parsed = reqwest::Url::parse(&url).map_err(|_| SyncError::BadProxyUrl)?;
+        if parsed.host_str().is_none_or(str::is_empty)
+            || parsed.port().is_none()
+            || parsed.path() != "/" && !parsed.path().is_empty()
+            || parsed.query().is_some()
+        {
+            return Err(SyncError::BadProxyUrl);
+        }
+        Ok(Self(url))
+    }
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Checks that a SOCKS5 proxy answers at `proxy`, with the protocol's
+/// greeting only: nothing is sent to any other host.
+///
+/// # Errors
+///
+/// [`SyncError::Node`] if nothing answers or it is not a SOCKS5 proxy that
+/// accepts connections without a password.
+pub async fn check_proxy(proxy: &ProxyUrl) -> Result<(), SyncError> {
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    let url = reqwest::Url::parse(proxy.as_str()).map_err(|_| SyncError::BadProxyUrl)?;
+    let host = url.host_str().ok_or(SyncError::BadProxyUrl)?;
+    let port = url.port().ok_or(SyncError::BadProxyUrl)?;
+    let unreachable = |e: std::io::Error| SyncError::Node(format!("proxy: {e}"));
+    let exchange = async {
+        let mut stream = tokio::net::TcpStream::connect((host, port))
+            .await
+            .map_err(unreachable)?;
+        // Version 5, one method offered: no authentication.
+        stream.write_all(&[5, 1, 0]).await.map_err(unreachable)?;
+        let mut reply = [0u8; 2];
+        stream.read_exact(&mut reply).await.map_err(unreachable)?;
+        if reply == [5, 0] {
+            Ok(())
+        } else {
+            Err(SyncError::Node(
+                "not a SOCKS5 proxy without a password".into(),
+            ))
+        }
+    };
+    tokio::time::timeout(Duration::from_secs(10), exchange)
+        .await
+        .map_err(|_| SyncError::Node("proxy did not answer".into()))?
+}
+
+static PROXY: RwLock<Option<ProxyUrl>> = RwLock::new(None);
+
+/// Sends every later request, to nodes and light wallet servers alike,
+/// through `proxy`, or directly with `None`. Clients already built keep
+/// their setting; the app restarts sync after changing it.
+pub fn set_proxy(proxy: Option<ProxyUrl>) {
+    *PROXY.write().unwrap_or_else(PoisonError::into_inner) = proxy;
+}
+
+/// The proxy set with [`set_proxy`].
+#[must_use]
+pub fn proxy() -> Option<ProxyUrl> {
+    PROXY.read().unwrap_or_else(PoisonError::into_inner).clone()
 }
 
 /// Community nodes shipped with the app, for `network`. Run by third
@@ -79,16 +177,27 @@ pub struct Http {
     base: Arc<str>,
 }
 
-/// The HTTP client every Kilonova network request uses: rustls on ring
-/// with Mozilla's roots, timeouts, and no identifying user agent.
-pub(crate) fn http_client() -> Result<reqwest::Client, SyncError> {
+/// The HTTP client every Kilonova network request to `target` uses: rustls
+/// on ring with Mozilla's roots, timeouts, no identifying user agent, and
+/// the proxy from [`set_proxy`] (system proxy settings are ignored, so
+/// traffic goes exactly where the user chose).
+pub(crate) fn http_client(target: &NodeUrl) -> Result<reqwest::Client, SyncError> {
+    let proxy = proxy();
+    if proxy.is_none() && target.is_onion() {
+        return Err(SyncError::NeedsProxy);
+    }
     let _ = rustls::crypto::ring::default_provider().install_default();
     let mut roots = rustls::RootCertStore::empty();
     roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
     let tls = rustls::ClientConfig::builder()
         .with_root_certificates(roots)
         .with_no_client_auth();
-    reqwest::Client::builder()
+    let builder = match proxy {
+        Some(p) => reqwest::Client::builder()
+            .proxy(reqwest::Proxy::all(p.as_str()).map_err(|_| SyncError::BadProxyUrl)?),
+        None => reqwest::Client::builder().no_proxy(),
+    };
+    builder
         .tls_backend_preconfigured(tls)
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_mins(2))
@@ -103,7 +212,7 @@ impl Http {
     /// Fails only if the TLS stack cannot be set up.
     pub fn new(node: &NodeUrl) -> Result<Self, SyncError> {
         Ok(Self {
-            client: http_client()?,
+            client: http_client(node)?,
             base: node.as_str().into(),
         })
     }

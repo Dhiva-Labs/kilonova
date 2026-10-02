@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `current_node`
+// These functions are ignored because they are not marked as `pub`: `apply_saved_proxy`, `current_node`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 /// Bundled and user-added nodes for `network`, with the selected one marked.
@@ -92,6 +92,33 @@ Future<LwsHealth> checkLwsServer({
   url: url,
 );
 
+/// The SOCKS5 proxy (for example Tor) all traffic goes through, if any.
+///
+/// # Errors
+///
+/// Fails if the settings cannot be read.
+Future<String?> networkProxy() =>
+    RustLib.instance.api.crateApiNodesNetworkProxy();
+
+/// Sends all traffic through `url` from now on, or directly with `None`,
+/// and remembers the choice. Returns the normalized address. Restart sync
+/// afterwards.
+///
+/// # Errors
+///
+/// [`NodeError::BadProxy`] for an invalid address.
+Future<String?> setNetworkProxy({String? url}) =>
+    RustLib.instance.api.crateApiNodesSetNetworkProxy(url: url);
+
+/// Checks that a SOCKS5 proxy answers at `url`, without sending anything
+/// through it.
+///
+/// # Errors
+///
+/// [`NodeError::BadProxy`] or [`NodeError::Unreachable`].
+Future<String> checkNetworkProxy({required String url}) =>
+    RustLib.instance.api.crateApiNodesCheckNetworkProxy(url: url);
+
 /// What a light wallet server reported when checked.
 class LwsHealth {
   final BigInt height;
@@ -139,7 +166,19 @@ class NodeChoice {
           selected == other.selected;
 }
 
-enum NodeError { badUrl, wrongNetwork, unreachable, storage, notInitialized }
+enum NodeError {
+  badUrl,
+  wrongNetwork,
+  unreachable,
+  storage,
+  notInitialized,
+
+  /// Not a valid proxy address.
+  badProxy,
+
+  /// An onion address without a Tor proxy set.
+  needsTor,
+}
 
 /// What a node reported when checked.
 class NodeHealth {

@@ -75,7 +75,9 @@ or font/CDN providers. Fonts and icons are bundled with the app.
 ## Reducing what others can learn
 
 - Run your own Monero node, or your own monero-lws server.
-- Turn on the Tor/SOCKS5 proxy setting.
+- Turn on Settings, Proxy and Tor. Every connection then goes through Tor (or
+  your SOCKS5 proxy), host names are looked up through it, and onion nodes
+  can be used.
 - Leave fiat prices off.
 
 ## Permissions
