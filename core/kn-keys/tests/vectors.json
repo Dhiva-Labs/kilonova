@@ -1,0 +1,213 @@
+{
+  "generator": "tools/vectors/gen_key_vectors.py",
+  "reference": "monero-wallet-rpc v0.18.5.1",
+  "networks": [
+    {
+      "network": "mainnet",
+      "classic": {
+        "spend_key": "0b051095a44a4f7a06a52c1f9cb1fdd8ce21dc3ef27579503636ba73ba305c05",
+        "view_key": "06d9db29f91f7d8673fce92fe9b695cbb8058a572e9aa27306d0fb1074535409",
+        "address": "49a9LSmHX3z1ovkrokqz5rWUndxVpBZepYL7DvZWMcewWGwDT9NqVc6fNWXFjusuyC8J33bk2hrZk3zUA2MzXSwXHsjc811",
+        "subaddresses": [
+          {
+            "account": 0,
+            "index": 1,
+            "address": "85AZ3ngYSa1XHTXnE1SQjwHbzGkKbFwN1FHkgsypAnZM8F1VnCRE7BCgWdioA57iprTNzKJnmpxNH5e6MBVtQmRhGkrLB4g"
+          },
+          {
+            "account": 0,
+            "index": 2,
+            "address": "8Aegh58f4SU2eeZxSbmukL9UA8DPmZsHnRtAeo6rSdtW6kTPtSi5Rx4dZec2busxuK52AZycfqLxgT7ryMJ8mZP92jFuynY"
+          },
+          {
+            "account": 1,
+            "index": 0,
+            "address": "83e8MKnrYfiFX8wu5nFqxwLEvZBXHp3KJfKGgg97BEhAaqPWkFXfiAGF9r1LG7KybCTKxBUx8ntcJNrazDCRa2RT1FQDipV"
+          },
+          {
+            "account": 1,
+            "index": 1,
+            "address": "88hWq4wFpgDbhhmMKiY1su57zpfaSfa9a8ru1z4UUzREXBeinC67kifaXu4K6RG2V6Wkzx7EKX6NZE6AGKARAugeQ1rEcex"
+          },
+          {
+            "account": 2,
+            "index": 5,
+            "address": "8BpLrbH6oB38C57LkH8ddBJYFBUJat6d7Er2wNjwydMYEQz33e1V4EV1LCKq8Xr8SWQcoNcduiAkTPgBedvQC3TjD4ffKCp"
+          }
+        ],
+        "mnemonic": "educated casket riots wanted batch nexus dwelt angled cuffs soprano scrub oilfield august western dormant selfish italics rustled rustled biplane nautical deodorant dodge dwelt biplane"
+      },
+      "polyseed": {
+        "spend_key": "5d876c1944c529d5574ebea59e0da7f1cb03f2e1e5af2597128f35af88112f0e",
+        "view_key": "3a7e4d55f5c6b9c547fce2fce684e24ac95421a186c763617eda869fcedbd20d",
+        "address": "46dBwJFCES9PEh8qngMTy3Gsii7yXxZQiGntZjST5HKdLBW4CsCgftiSHFootN9wnw5xsJkSdJG2ag2Wbd2dRegvL1pLHYr",
+        "subaddresses": [
+          {
+            "account": 0,
+            "index": 1,
+            "address": "8521JxAGBepZMkKeCTFP7AK1bN2SPv64bCjFTC9vvAPsbhzmnzDidcdYqPB7MPNsgiEGD9fzSRfoESW5ndAGGSygTSWAJx1"
+          },
+          {
+            "account": 0,
+            "index": 2,
+            "address": "88C9TCNWfxZgrXx9EQs95t7vygVP77wvPYUjZ71NgPDEhtyTtxmHcqv63tqpRrrQBTfudqLThd7AkBDefgswf6ia129UZaT"
+          },
+          {
+            "account": 1,
+            "index": 0,
+            "address": "89Ea6cd75WC6Y2ix3mkNA7BUnG3JXDhmz2kQh6MWQqziNUZxuB9BLZgSTaJ46s4XZwiFEJWRgoLWzGWVN1Fvvs8qEdRqxcQ"
+          },
+          {
+            "account": 1,
+            "index": 1,
+            "address": "8Ayec98mzkfjcqk3cPpAH7b556Ktzi6pzQBaDPzkNEsxPKwZuFXwjLhAZP49QtTnez9yPr4BeSf27aWBhQAR8ePP9pmAabi"
+          },
+          {
+            "account": 2,
+            "index": 5,
+            "address": "869N1KdgDGHbrwpH5SsdwtJ4MNCFfGkq54ku42Wf7nXN7FfeVAecox57hncohLg6QoUiyyt1nwb6K2up3auGB8byPdhWCmJ"
+          }
+        ],
+        "words": "comic blanket chair inject end snow rural improve cereal better initial replace ribbon brother gather unaware"
+      }
+    },
+    {
+      "network": "stagenet",
+      "classic": {
+        "spend_key": "a855668e0c5f97c21747113939c70e87360f31a1d2e037e27761afd12cbba102",
+        "view_key": "d55003f0ebe56cd576c68a23453e31bc23fdbee0cd8505637e73f7ee4dc08b05",
+        "address": "5265XfWXb5C6EA8jt2jtD6DhAEmhiibgHWc7w4EYZHLkiWDR9RnbJmQ5mcakNgD38qgjTMkcLnLMjPtdowutgynu7mHZj6m",
+        "subaddresses": [
+          {
+            "account": 0,
+            "index": 1,
+            "address": "74QnYrGQwyBPsxu5R6m3PGEGxWcj9nFz4Jj8tBvw9bWi5G8ySmRkqaiLT6m4xSUnovTznhtbk3b4eeen1uHznMnN7UW5GCD"
+          },
+          {
+            "account": 0,
+            "index": 2,
+            "address": "7B5dTjFiEptVZJa3uosdGk1deo6LrbcGkHFEwy6cUBQscB9WCCKgWEh7EDSz9343HuGA9mTGQeJJzLUZRcXaSkHaBCTyLsJ"
+          },
+          {
+            "account": 1,
+            "index": 0,
+            "address": "72RQGMoAVV3QtQs3xVYh3NKSdHNazxMTWE1UurCeQazr6dkKsxnQoZURdPQpDFhtRoUPf9XcC6xmPArnm4YSeEN26NAdNKk"
+          },
+          {
+            "account": 1,
+            "index": 1,
+            "address": "73jrRtuo2pc6ouUv1DRDiGXeHuxpPvty5eWzpA3Z1TsiBcNBFZXqoG5cAx5jNzfMuyaSdrtk4zqWaNhJ8BQXV7o97UJZsNY"
+          },
+          {
+            "account": 2,
+            "index": 5,
+            "address": "75XmQixDrGzFdD9RfWn4QtL6QiwuuaPzQBW5Df7hFF9nbmf7JRBBkzETkLMoab9qY79Jad4CGbE3xYwCUi53pt8Y4H7tY7q"
+          }
+        ],
+        "mnemonic": "meant cider reduce pulp lodge epoxy nephew rapid vacation vane wayside leopard zinger touchy listen saga enmity cafe saved gone cottage sensible kickoff lair touchy"
+      },
+      "polyseed": {
+        "spend_key": "5d876c1944c529d5574ebea59e0da7f1cb03f2e1e5af2597128f35af88112f0e",
+        "view_key": "3a7e4d55f5c6b9c547fce2fce684e24ac95421a186c763617eda869fcedbd20d",
+        "address": "56qE29A9t3FPEh8qngMTy3Gsii7yXxZQiGntZjST5HKdLBW4CsCgftiSHFootN9wnw5xsJkSdJG2ag2Wbd2dRegvL1nhDte",
+        "subaddresses": [
+          {
+            "account": 0,
+            "index": 1,
+            "address": "74oyE7FJY3iZMkKeCTFP7AK1bN2SPv64bCjFTC9vvAPsbhzmnzDidcdYqPB7MPNsgiEGD9fzSRfoESW5ndAGGSygTQQXhfA"
+          },
+          {
+            "account": 0,
+            "index": 2,
+            "address": "77z7NMTZ2MTgrXx9EQs95t7vygVP77wvPYUjZ71NgPDEhtyTtxmHcqv63tqpRrrQBTfudqLThd7AkBDefgswf6ia13ECQyo"
+          },
+          {
+            "account": 1,
+            "index": 0,
+            "address": "792Y1mi9Ru66Y2ix3mkNA7BUnG3JXDhmz2kQh6MWQqziNUZxuB9BLZgSTaJ46s4XZwiFEJWRgoLWzGWVN1Fvvs8qEawRu3c"
+          },
+          {
+            "account": 1,
+            "index": 1,
+            "address": "7AmcXJDpM9Zjcqk3cPpAH7b556Ktzi6pzQBaDPzkNEsxPKwZuFXwjLhAZP49QtTnez9yPr4BeSf27aWBhQAR8ePP9qgG1jx"
+          },
+          {
+            "account": 2,
+            "index": 5,
+            "address": "75wKvUiiZfBbrwpH5SsdwtJ4MNCFfGkq54ku42Wf7nXN7FfeVAecox57hncohLg6QoUiyyt1nwb6K2up3auGB8byPcfb8AU"
+          }
+        ],
+        "words": "comic blanket chair inject end snow rural improve cereal better initial replace ribbon brother gather unaware"
+      }
+    },
+    {
+      "network": "testnet",
+      "classic": {
+        "spend_key": "cb36c472a7177ec69680a45f3688272340bd6c94d2683da9383a58f8910ce80f",
+        "view_key": "ed9e6f62c83767594d289a3346ba434ae65601399c295e6e7514745ab2531606",
+        "address": "9snwgmb86XcaudczNy13GqenzvmPX8grX85xYHJErWegKJhQjSbTjTHZBkWFGPGA9fTtL6jbcy6wwFd74vutCR3uD3gHzzV",
+        "subaddresses": [
+          {
+            "account": 0,
+            "index": 1,
+            "address": "BgX5JmFcG1JSYMGEfYb3stabRyU4kqdiqfCN5h5Uq8si33PFjvqQqLMGuDB2axue5dDHqB6dA4wJZTiNkKEyCHEJSnM7uvn"
+          },
+          {
+            "account": 0,
+            "index": 2,
+            "address": "BdZihmEW83U3dfXrD3HMuHfbm1a48my1C3QeQoTrKLRcAqssoqY7Jkr9ehvN1Pu3bvdyPCHDKhJra1PMJYDsM8MRKAWipVM"
+          },
+          {
+            "account": 1,
+            "index": 0,
+            "address": "BgNV2UVpVu4KV6YjrCk6ikYhG1FVVWmnW7puw8vdi6EyAWtopmaEwV3SsyGVKSTh6hAtHxNTLwx3GJ64QVKCf3QFBNnwXc5"
+          },
+          {
+            "account": 1,
+            "index": 1,
+            "address": "Bb9mKWw3WDfUBPynTHg4wN2E8c3Hb2LkA8A4nhhjQ7iqGbQ7xZ5uipdJQC6355hUBgB1hbzZGiYAmc3om9gaJ2ZzDYkAheH"
+          },
+          {
+            "account": 2,
+            "index": 5,
+            "address": "BZ2eWGxqb9c8RowiTxNHdD554FHWjNPMeUE624VtbKM2PEbs2DkLhaieuywUpK8PfWVaB4weNaFosGLkBYQB6Jp8FvLadpW"
+          }
+        ],
+        "mnemonic": "snout arrow lunar dawn scamper megabyte utility taunts dormant megabyte omega safety dove assorted pencil limits jaws befit novelty logic knuckle blip anvil biweekly snout"
+      },
+      "polyseed": {
+        "spend_key": "5d876c1944c529d5574ebea59e0da7f1cb03f2e1e5af2597128f35af88112f0e",
+        "view_key": "3a7e4d55f5c6b9c547fce2fce684e24ac95421a186c763617eda869fcedbd20d",
+        "address": "9xAjRYuTWoFPEh8qngMTy3Gsii7yXxZQiGntZjST5HKdLBW4CsCgftiSHFootN9wnw5xsJkSdJG2ag2Wbd2dRegvL3PmGL3",
+        "subaddresses": [
+          {
+            "account": 0,
+            "index": 1,
+            "address": "Bak8buMcxGgZMkKeCTFP7AK1bN2SPv64bCjFTC9vvAPsbhzmnzDidcdYqPB7MPNsgiEGD9fzSRfoESW5ndAGGSygTVq2ZSX"
+          },
+          {
+            "account": 0,
+            "index": 2,
+            "address": "BdvGk9ZsSaRgrXx9EQs95t7vygVP77wvPYUjZ71NgPDEhtyTtxmHcqv63tqpRrrQBTfudqLThd7AkBDefgswf6ia11v7spJ"
+          },
+          {
+            "account": 1,
+            "index": 0,
+            "address": "BexhPZpTr846Y2ix3mkNA7BUnG3JXDhmz2kQh6MWQqziNUZxuB9BLZgSTaJ46s4XZwiFEJWRgoLWzGWVN1Fvvs8qEYo3KNH"
+          },
+          {
+            "account": 1,
+            "index": 1,
+            "address": "Bghmu6L8mNXjcqk3cPpAH7b556Ktzi6pzQBaDPzkNEsxPKwZuFXwjLhAZP49QtTnez9yPr4BeSf27aWBhQAR8ePP9rNcUnR"
+          },
+          {
+            "account": 2,
+            "index": 5,
+            "address": "BbsVJGq2yt9brwpH5SsdwtJ4MNCFfGkq54ku42Wf7nXN7FfeVAecox57hncohLg6QoUiyyt1nwb6K2up3auGB8byPdMHNDj"
+          }
+        ],
+        "words": "comic blanket chair inject end snow rural improve cereal better initial replace ribbon brother gather unaware"
+      }
+    }
+  ]
+}

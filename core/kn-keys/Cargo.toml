@@ -1,0 +1,28 @@
+[package]
+name = "kn-keys"
+description = "Seeds, keys and addresses for Kilonova wallets"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+curve25519-dalek = { version = "4", default-features = false, features = ["alloc", "zeroize", "precomputed-tables"] }
+monero-wallet = { version = "=0.2.0", default-features = false, features = ["std", "compile-time-generators"] }
+# Not used from crates.io: the published releases predate the 2025 Polyseed
+# birthday-encoding and key-derivation fixes. Pinned to an exact commit.
+monero-seed = { git = "https://github.com/kayabaNerve/monero-wallet-util", rev = "797fe701a6f9e99ae614c49479bb981de1afe8ec" }
+polyseed = { git = "https://github.com/kayabaNerve/monero-wallet-util", rev = "797fe701a6f9e99ae614c49479bb981de1afe8ec" }
+rand_core = { version = "0.6", features = ["getrandom"] }
+thiserror = "2"
+zeroize = "1.8"
+
+[dev-dependencies]
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[lints]
+workspace = true

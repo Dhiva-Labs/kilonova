@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["kn-ffi"]
+members = ["kn-ffi", "kn-keys"]
 
 [workspace.package]
 version = "0.1.0"
