@@ -1,11 +1,16 @@
 import 'package:flutter/foundation.dart';
 
+import '../../platform/biometric_unlock.dart';
 import '../../src/rust/api/network.dart';
 import '../../src/rust/api/wallets.dart';
 
 /// The wallet list and the wallets currently unlocked, shared by every
 /// screen. Unlocked wallets are locked when the app goes to the background.
 class WalletRegistry extends ChangeNotifier {
+  WalletRegistry({this.biometric = const BiometricUnlock()});
+
+  final BiometricUnlock biometric;
+
   List<WalletSummary> _all = const [];
   final Map<String, OpenWallet> _open = {};
 
@@ -43,6 +48,7 @@ class WalletRegistry extends ChangeNotifier {
 
   Future<void> removed(String id) async {
     _open.remove(id)?.lock();
+    await biometric.disable(id);
     await reload();
   }
 

@@ -142,5 +142,23 @@
         "type": "int"
       }
     }
-  }
+  },
+  "biometricUnlockAction": "Unlock with fingerprint or face",
+  "biometricPromptTitle": "Unlock {name}",
+  "@biometricPromptTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "biometricEnableAction": "Turn on biometric unlock",
+  "biometricDisableAction": "Turn off biometric unlock",
+  "biometricEnablePrompt": "Enter the password once. After that you can unlock this wallet with a fingerprint or face.",
+  "biometricEnableTitle": "Confirm to turn on biometric unlock",
+  "biometricEnabledNotice": "Biometric unlock is on",
+  "biometricDisabledNotice": "Biometric unlock is off",
+  "biometricInvalidated": "New fingerprints or faces were added to this device, so biometric unlock was turned off. Unlock with the password.",
+  "biometricFailed": "Biometric unlock did not work. Use the password.",
+  "biometricOffAfterPasswordChange": "Password changed. Biometric unlock was turned off; turn it on again from the wallet menu."
 }

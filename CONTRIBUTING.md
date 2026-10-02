@@ -102,6 +102,18 @@ cd app && flutter_rust_bridge_codegen generate
 
 CI fails if the generated files are out of date.
 
+### Android biometric unlock
+
+`app/integration_test/biometric_android_test.dart` exercises the real
+Keystore and BiometricPrompt. On an emulator, set a PIN
+(`adb shell locksettings set-pin 1234`), enroll a fingerprint in Settings
+using `adb emu finger touch 1`, then run the test while touching the sensor
+from a second terminal:
+
+```sh
+while true; do adb emu finger touch 1; sleep 2; done
+```
+
 ### Text and translations
 
 All user-facing strings live in `app/lib/l10n/app_en.arb`. Never hard-code

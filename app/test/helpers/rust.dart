@@ -5,6 +5,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kilonova/app.dart';
 import 'package:kilonova/features/wallets/wallet_registry.dart';
+import 'package:kilonova/platform/biometric_unlock.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
 import 'package:kilonova/src/rust/frb_generated.dart';
 
@@ -30,8 +31,11 @@ Future<void> initRustForTests() async {
 }
 
 /// Builds the app around a freshly loaded wallet registry.
-Future<Widget> testApp(WidgetTester tester) async {
-  final registry = WalletRegistry();
+Future<Widget> testApp(
+  WidgetTester tester, {
+  BiometricUnlock biometric = const BiometricUnlock(),
+}) async {
+  final registry = WalletRegistry(biometric: biometric);
   await tester.runAsync(registry.reload);
   return KilonovaApp(registry: registry);
 }
@@ -48,7 +52,8 @@ Future<void> pumpUntilFound(
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
-    await tester.pump();
+    // Advance the fake clock too, so animations (snackbars, routes) move.
+    await tester.pump(const Duration(milliseconds: 50));
     if (finder.evaluate().isNotEmpty) return;
   }
   throw TestFailure('Timed out waiting for $finder');
