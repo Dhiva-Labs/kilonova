@@ -58,7 +58,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Password rules.
-    final pw = find.byType(TextFormField);
+    final pw = find.byType(TextField);
     await tester.enterText(pw.at(0), 'short');
     await tester.enterText(pw.at(1), 'short');
     await tester.tap(find.widgetWithText(FilledButton, 'Create wallet'));

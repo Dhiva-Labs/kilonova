@@ -53,15 +53,20 @@ class PriceFeed extends ChangeNotifier {
     }
   }
 
-  /// `atomic` XMR in the chosen currency, formatted, or null.
+  /// `atomic` XMR in the chosen currency, formatted, or null. Uses the
+  /// currency's symbol where it has one (`$428,151.17`); otherwise the code
+  /// follows the number (`428,151.17 INR`) rather than being glued to it.
   String? format(BigInt atomic) {
     final price = _price;
     final currency = _currency;
     if (price == null || currency == null) return null;
     final value = atomic.toDouble() / 1e12 * price;
-    return NumberFormat.currency(
-      name: currency.toUpperCase(),
+    final code = currency.toUpperCase();
+    final withSymbol = NumberFormat.simpleCurrency(
+      name: code,
       decimalDigits: 2,
-    ).format(value);
+    );
+    if (withSymbol.currencySymbol != code) return withSymbol.format(value);
+    return '${NumberFormat.decimalPatternDigits(decimalDigits: 2).format(value)} $code';
   }
 }

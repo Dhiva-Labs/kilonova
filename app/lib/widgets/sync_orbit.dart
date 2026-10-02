@@ -6,7 +6,8 @@ import '../theme/theme.dart';
 
 /// The sync indicator from docs/DESIGN.md: a thin orbit with a gold arc for
 /// progress and a dot at its end. Purely progress-driven, so it never
-/// animates on its own.
+/// animates on its own. The stroke is 1.5px at 20px and scales with
+/// [size].
 class SyncOrbit extends StatelessWidget {
   const SyncOrbit({super.key, required this.progress, this.size = 28});
 
@@ -41,9 +42,10 @@ class _OrbitPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final stroke = size.width * 0.09;
+    final stroke = size.width * 1.5 / 20;
     final center = size.center(Offset.zero);
-    final radius = size.width / 2 - stroke;
+    // Leave room for the dot, which is wider than the ring.
+    final radius = size.width / 2 - stroke * 1.4;
     final rect = Rect.fromCircle(center: center, radius: radius);
     final line = Paint()
       ..style = PaintingStyle.stroke
@@ -58,7 +60,7 @@ class _OrbitPainter extends CustomPainter {
     final end = -pi / 2 + sweep;
     canvas.drawCircle(
       center + Offset(cos(end), sin(end)) * radius,
-      stroke * 1.2,
+      stroke * 1.4,
       Paint()..color = arc,
     );
   }

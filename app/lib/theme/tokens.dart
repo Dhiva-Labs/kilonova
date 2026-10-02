@@ -9,6 +9,7 @@ class KnColors {
   const KnColors({
     required this.bg,
     required this.surface,
+    required this.surfaceRaised,
     required this.border,
     required this.text,
     required this.textSecondary,
@@ -26,6 +27,10 @@ class KnColors {
 
   /// Cards, sheets and dialogs.
   final Color surface;
+
+  /// Hovered and selected rows, secondary button fills and code blocks.
+  /// One step up from [surface], still opaque.
+  final Color surfaceRaised;
 
   /// 1px dividers. Never used as a card outline color.
   final Color border;
@@ -61,6 +66,7 @@ class KnColors {
   static const light = KnColors(
     bg: Color(0xFFF6F7F9),
     surface: Color(0xFFFFFFFF),
+    surfaceRaised: Color(0xFFEEF0F4),
     border: Color(0xFFDDE1E8),
     text: Color(0xFF121722),
     textSecondary: Color(0xFF5A6275),
@@ -76,6 +82,7 @@ class KnColors {
   static const dark = KnColors(
     bg: Color(0xFF0B0F17),
     surface: Color(0xFF131926),
+    surfaceRaised: Color(0xFF1A2130),
     border: Color(0xFF1F2633),
     text: Color(0xFFE8ECF4),
     textSecondary: Color(0xFF9AA3B5),
@@ -102,6 +109,13 @@ abstract final class KnSpace {
   static const md = 16.0;
   static const lg = 24.0;
   static const xl = 40.0;
+}
+
+/// Corner radii. Buttons and inputs use [sm]; cards, dialogs, sheets and
+/// menus use [md]. Nothing else is rounded.
+abstract final class KnRadius {
+  static const sm = 6.0;
+  static const md = 8.0;
 }
 
 /// QR codes keep these colors in both themes: scanners read dark modules

@@ -30,6 +30,20 @@ void main() {
           }
         });
       }
+      // Hovered and selected rows, secondary buttons and disabled buttons
+      // put text straight on surfaceRaised; secondary buttons hover to
+      // border.
+      test('text on surfaceRaised meets AAA, other text AA', () {
+        expect(contrast(c.text, c.surfaceRaised), greaterThanOrEqualTo(7));
+        for (final fg in [c.textSecondary, c.accent, c.received, c.error]) {
+          expect(contrast(fg, c.surfaceRaised), greaterThanOrEqualTo(4.5));
+        }
+        expect(contrast(c.text, c.border), greaterThanOrEqualTo(7));
+      });
+      test('surfaceRaised is distinct from surface and bg', () {
+        expect(c.surfaceRaised, isNot(c.surface));
+        expect(c.surfaceRaised, isNot(c.bg));
+      });
       test('text on accent fills meets AA, at rest and on hover', () {
         expect(contrast(c.onAccent, c.accent), greaterThanOrEqualTo(4.5));
         expect(contrast(c.onAccent, c.accentHover), greaterThanOrEqualTo(4.5));
@@ -44,6 +58,7 @@ void main() {
         for (final color in [
           c.bg,
           c.surface,
+          c.surfaceRaised,
           c.border,
           c.text,
           c.textSecondary,

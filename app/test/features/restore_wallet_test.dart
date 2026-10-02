@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:kilonova/widgets/kn_field.dart';
+
 import '../helpers/rust.dart';
 
 /// The stagenet wallet monero-wallet-rpc created for kn-keys' vectors.
@@ -28,7 +30,11 @@ Future<void> openRestore(WidgetTester tester) async {
 
 /// The form is taller than the window; bring each target into view first.
 Future<void> fill(WidgetTester tester, String label, String value) async {
-  final field = find.widgetWithText(TextFormField, label);
+  // Fields with the label above (KnField) or inside (TextFormField).
+  final kn = find.widgetWithText(KnField, label);
+  final field = kn.evaluate().isNotEmpty
+      ? kn
+      : find.widgetWithText(TextFormField, label);
   await tester.ensureVisible(field);
   await tester.enterText(field, value);
 }

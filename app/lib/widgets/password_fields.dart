@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import '../theme/tokens.dart';
+import 'kn_field.dart';
 
 const minPasswordLength = 8;
 
@@ -24,22 +25,18 @@ class NewPasswordFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextFormField(
+        KnField(
           controller: password,
-          obscureText: true,
-          enableSuggestions: false,
-          autocorrect: false,
-          decoration: InputDecoration(labelText: label ?? l.passwordLabel),
+          label: label ?? l.passwordLabel,
+          obscure: true,
           validator: (v) =>
               (v ?? '').length < minPasswordLength ? l.passwordTooShort : null,
         ),
         const SizedBox(height: KnSpace.md),
-        TextFormField(
+        KnField(
           controller: confirm,
-          obscureText: true,
-          enableSuggestions: false,
-          autocorrect: false,
-          decoration: InputDecoration(labelText: l.passwordConfirmLabel),
+          label: l.passwordConfirmLabel,
+          obscure: true,
           validator: (v) => v != password.text ? l.passwordMismatch : null,
         ),
       ],
@@ -66,17 +63,13 @@ class PasswordField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return KnField(
       controller: controller,
+      label: label ?? AppLocalizations.of(context).passwordLabel,
+      error: errorText,
+      obscure: true,
       autofocus: autofocus,
-      obscureText: true,
-      enableSuggestions: false,
-      autocorrect: false,
       onSubmitted: onSubmitted,
-      decoration: InputDecoration(
-        labelText: label ?? AppLocalizations.of(context).passwordLabel,
-        errorText: errorText,
-      ),
     );
   }
 }
