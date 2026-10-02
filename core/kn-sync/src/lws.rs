@@ -302,26 +302,13 @@ pub async fn lws_sync(
         }
     }
 
-    let by_key_image: HashMap<[u8; 32], usize> = outputs
-        .iter()
-        .enumerate()
-        .filter_map(|(i, o): (usize, &OwnedOutput)| o.key_image.map(|ki| (ki, i)))
-        .collect();
-    for tx in txs.transactions.iter().filter(|t| !t.mempool) {
-        let (Some(height), Some(hash)) = (tx.height, hex32(&tx.hash)) else {
-            continue;
-        };
-        for candidate in &tx.spent_outputs {
-            if let Some(&i) = hex32(&candidate.key_image).and_then(|ki| by_key_image.get(&ki)) {
-                outputs[i].spent = Some(Spend { tx: hash, height });
-            }
-        }
-    }
+    mark_spends(&mut outputs, &txs.transactions, state);
 
     // The server reports the index of the last block; full mode and the
     // rest of the app count blocks.
     let scanned = info.scanned_block_height + 1;
     state.outputs = outputs;
+    state.expire_pending(info.blockchain_height + 1);
     state.next_height = scanned;
     state.recent.clear();
     Ok(LwsReport {
@@ -330,6 +317,41 @@ pub async fn lws_sync(
         rejected_outputs,
         import_pending,
     })
+}
+
+/// Marks outputs spent where a confirmed transaction's candidate key image
+/// matches the one derived locally, and keeps this wallet's own pending
+/// spends that the server has not seen in a block yet.
+fn mark_spends(outputs: &mut [OwnedOutput], transactions: &[LwsTx], state: &SyncState) {
+    let by_key_image: HashMap<[u8; 32], usize> = outputs
+        .iter()
+        .enumerate()
+        .filter_map(|(i, o): (usize, &OwnedOutput)| o.key_image.map(|ki| (ki, i)))
+        .collect();
+    for tx in transactions.iter().filter(|t| !t.mempool) {
+        let (Some(height), Some(hash)) = (tx.height, hex32(&tx.hash)) else {
+            continue;
+        };
+        for candidate in &tx.spent_outputs {
+            if let Some(&i) = hex32(&candidate.key_image).and_then(|ki| by_key_image.get(&ki)) {
+                outputs[i].spent = Some(Spend {
+                    tx: hash,
+                    height,
+                    pending: false,
+                });
+            }
+        }
+    }
+
+    // Spends sent from this wallet that the server has not seen in a block
+    // yet stay pending, as in full mode.
+    for (key_image, spend) in state.pending_spends() {
+        if let Some(&i) = by_key_image.get(&key_image)
+            && outputs[i].spent.is_none()
+        {
+            outputs[i].spent = Some(spend);
+        }
+    }
 }
 
 /// Verifies one reported output and turns it into a wallet output, or

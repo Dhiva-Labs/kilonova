@@ -83,6 +83,7 @@ pub async fn sync(
             },
         );
         if state.next_height >= tip {
+            state.expire_pending(tip);
             return Ok(());
         }
         let end = (state.next_height + BATCH).min(tip) - 1;
@@ -119,6 +120,7 @@ fn scan_block(
                 state.outputs[i].spent = Some(Spend {
                     tx: *tx_hash,
                     height,
+                    pending: false,
                 });
             }
         }
