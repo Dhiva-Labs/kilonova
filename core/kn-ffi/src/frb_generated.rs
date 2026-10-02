@@ -2355,9 +2355,11 @@ impl SseDecode for crate::api::sync::WalletBalance {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_total = <u64>::sse_decode(deserializer);
         let mut var_unlocked = <u64>::sse_decode(deserializer);
+        let mut var_incoming = <u64>::sse_decode(deserializer);
         return crate::api::sync::WalletBalance {
             total: var_total,
             unlocked: var_unlocked,
+            incoming: var_incoming,
         };
     }
 }
@@ -2963,6 +2965,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::sync::WalletBalance {
         [
             self.total.into_into_dart().into_dart(),
             self.unlocked.into_into_dart().into_dart(),
+            self.incoming.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3552,6 +3555,7 @@ impl SseEncode for crate::api::sync::WalletBalance {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u64>::sse_encode(self.total, serializer);
         <u64>::sse_encode(self.unlocked, serializer);
+        <u64>::sse_encode(self.incoming, serializer);
     }
 }
 

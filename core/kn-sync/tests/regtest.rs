@@ -88,6 +88,9 @@ fn other_address() -> String {
         .primary_address(Network::Mainnet)
 }
 
+// One end-to-end scenario, step by step; splitting it would hide the order
+// the steps depend on.
+#[allow(clippy::too_many_lines)]
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs the regtest devnet; see the file header"]
 async fn scans_spends_and_survives_a_reorg() {
@@ -135,16 +138,55 @@ async fn scans_spends_and_survives_a_reorg() {
         reference_balance["balance"].as_u64().unwrap()
     );
 
-    // The reference wallet spends from this seed; Kilonova must notice.
+    // The reference wallet spends from this seed, paying a second Kilonova
+    // wallet; both must notice, first in the pool, then in a block.
+    let (receiver, _) = WalletKeys::generate(SeedFormat::Classic);
+    let mut receiver_state = SyncState::starting_at(chain_height().await);
     let sent: u64 = 1_000_000_000_000;
     let transfer = wallet_rpc(
         "transfer",
-        json!({"destinations": [{"amount": sent, "address": other_address()}]}),
+        json!({"destinations": [{"amount": sent,
+                                 "address": receiver.address(Network::Mainnet, 0, 4).unwrap()}]}),
     )
     .await;
     let fee = transfer["fee"].as_u64().unwrap();
     let tx = transfer["tx_hash"].as_str().unwrap().to_owned();
+
+    sync_from(&receiver, &mut receiver_state).await;
+    let waiting = receiver_state.history();
+    assert_eq!(waiting.len(), 1);
+    assert!(waiting[0].pending && waiting[0].direction == Direction::Incoming);
+    assert_eq!(
+        (waiting[0].amount, &waiting[0].subaddresses[..]),
+        (sent, &[(0, 4)][..])
+    );
+    assert_eq!(receiver_state.balance(chain_height().await).incoming, sent);
+    assert_eq!(receiver_state.balance(chain_height().await).total, 0);
+
+    sync_from(&keys, &mut state).await;
+    let pending = state
+        .history()
+        .into_iter()
+        .find(|h| h.direction == Direction::Outgoing)
+        .expect("a spend from another device shows while in the pool");
+    assert!(pending.pending);
+    assert_eq!(hex::encode(pending.tx), tx);
+    assert_eq!(pending.amount, sent + fee, "change in the pool is netted");
+    assert!(
+        state
+            .history()
+            .iter()
+            .all(|h| h.direction == Direction::Outgoing || !h.pending),
+        "the change is not shown as a separate incoming payment"
+    );
+
     mine(&other_address(), 1).await;
+    sync_from(&receiver, &mut receiver_state).await;
+    let mined = receiver_state.history();
+    assert_eq!(mined.len(), 1);
+    assert!(!mined[0].pending);
+    assert_eq!(receiver_state.balance(chain_height().await).total, sent);
+    assert_eq!(receiver_state.balance(chain_height().await).incoming, 0);
     sync_from(&keys, &mut state).await;
 
     let history = state.history();
@@ -153,6 +195,7 @@ async fn scans_spends_and_survives_a_reorg() {
         .find(|h| h.direction == Direction::Outgoing)
         .expect("the spend shows up as outgoing");
     assert_eq!(hex::encode(outgoing.tx), tx);
+    assert!(!outgoing.pending);
     assert_eq!(outgoing.amount, sent + fee);
     let after = state.balance(chain_height().await);
     assert_eq!(after.total, balance.total - sent - fee);

@@ -163,10 +163,17 @@ class WalletBalance {
   final BigInt total;
   final BigInt unlocked;
 
-  const WalletBalance({required this.total, required this.unlocked});
+  /// Incoming payments waiting in the transaction pool; not in `total`.
+  final BigInt incoming;
+
+  const WalletBalance({
+    required this.total,
+    required this.unlocked,
+    required this.incoming,
+  });
 
   @override
-  int get hashCode => total.hashCode ^ unlocked.hashCode;
+  int get hashCode => total.hashCode ^ unlocked.hashCode ^ incoming.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -174,5 +181,6 @@ class WalletBalance {
       other is WalletBalance &&
           runtimeType == other.runtimeType &&
           total == other.total &&
-          unlocked == other.unlocked;
+          unlocked == other.unlocked &&
+          incoming == other.incoming;
 }

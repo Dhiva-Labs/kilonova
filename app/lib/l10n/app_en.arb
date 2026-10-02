@@ -395,5 +395,13 @@
   "scanTitle": "Scan a QR code",
   "scanHelp": "Point the camera at a Monero address or payment request. The image is read on this device and not stored.",
   "scanNoCode": "No QR code found in that image.",
-  "scanNotMonero": "That QR code is not a Monero address or payment request."
+  "scanNotMonero": "That QR code is not a Monero address or payment request.",
+  "incomingAmount": "+{amount} XMR waiting for a block",
+  "@incomingAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  }
 }

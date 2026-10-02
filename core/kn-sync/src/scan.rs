@@ -7,14 +7,14 @@ use kn_keys::WalletKeys;
 use monero_daemon_rpc::MoneroDaemon;
 use monero_interface::{
     ProvidesBlockchain as _, ProvidesBlockchainMeta as _, ProvidesScannableBlocks as _,
-    ScannableBlock,
+    ProvidesTransactions as _, ScannableBlock,
 };
 use monero_wallet::{Scanner, address::SubaddressIndex, transaction::Input};
 
 use crate::{
     SyncError,
     node::Http,
-    state::{OwnedOutput, Spend, SyncState},
+    state::{OwnedOutput, PoolPayment, Spend, SyncState},
 };
 
 /// Blocks fetched per request. Small enough that progress moves and a
@@ -84,6 +84,9 @@ pub async fn sync(
         );
         if state.next_height >= tip {
             state.expire_pending(tip);
+            // The pool is a convenience: a node that will not show it does
+            // not stop sync.
+            let _ = scan_pool(daemon, &mut scanner, state, &owned, tip).await;
             return Ok(());
         }
         let end = (state.next_height + BATCH).min(tip) - 1;
@@ -145,6 +148,96 @@ fn scan_block(
         });
     }
     state.record_block(height, hash);
+    Ok(())
+}
+
+/// Most pool transactions looked at per sync. Mainnet pools rarely hold
+/// more; beyond this the wallet waits for the payment to be mined.
+const POOL_LIMIT: usize = 500;
+
+/// Records payments to this wallet in the node's transaction pool, and
+/// marks outputs that pool transactions spend (sent from another device
+/// with the same seed) as pending spends.
+async fn scan_pool(
+    daemon: &MoneroDaemon<Http>,
+    scanner: &mut Scanner,
+    state: &mut SyncState,
+    owned: &HashMap<[u8; 32], usize>,
+    tip: u64,
+) -> Result<(), SyncError> {
+    #[derive(serde::Deserialize)]
+    struct Hashes {
+        #[serde(default)]
+        tx_hashes: Vec<String>,
+    }
+    let reply = daemon
+        .rpc_call("get_transaction_pool_hashes", None, 1 << 20)
+        .await?;
+    let hashes: Vec<[u8; 32]> = serde_json::from_str::<Hashes>(&reply)
+        .map_err(|e| SyncError::Node(format!("pool: {e}")))?
+        .tx_hashes
+        .iter()
+        .filter_map(|h| hex::decode(h).ok()?.try_into().ok())
+        .take(POOL_LIMIT)
+        .collect();
+    if hashes.is_empty() {
+        state.pool.clear();
+        return Ok(());
+    }
+    let transactions = daemon
+        .pruned_transactions(&hashes)
+        .await
+        .map_err(|e| SyncError::Node(format!("pool: {e:?}")))?;
+    for (tx, hash) in transactions.iter().zip(&hashes) {
+        let spent: Vec<[u8; 32]> = tx
+            .prefix()
+            .inputs
+            .iter()
+            .filter_map(|input| match input {
+                Input::ToKey { key_image, .. } => Some(key_image.to_bytes()),
+                Input::Gen(_) => None,
+            })
+            .filter(|ki| owned.contains_key(ki))
+            .collect();
+        state.mark_pending(&spent, *hash, tip);
+    }
+
+    // The scanner only reads blocks, so the pool transactions ride in the
+    // latest block in place of its own. Output positions on the chain are
+    // unknown until mined, which is fine: these outputs are only shown.
+    let mut carrier = daemon.scannable_block_by_number(to_usize(tip - 1)?).await?;
+    carrier.block.transactions.clone_from(&hashes);
+    carrier.transactions = transactions;
+    carrier.output_index_for_first_ringct_output = Some(0);
+    let found = scanner
+        .scan(carrier)
+        .map_err(|e| SyncError::Node(format!("pool could not be scanned: {e}")))?;
+
+    let mut payments: Vec<PoolPayment> = Vec::new();
+    for output in found.ignore_additional_timelock() {
+        let tx = output.transaction();
+        if !hashes.contains(&tx) {
+            continue; // the carrier block's miner output
+        }
+        let index = output
+            .subaddress()
+            .map_or((0, 0), |s| (s.account(), s.address()));
+        let amount = output.commitment().amount;
+        match payments.iter_mut().find(|p| p.tx == tx) {
+            Some(p) => {
+                p.amount += amount;
+                if !p.subaddresses.contains(&index) {
+                    p.subaddresses.push(index);
+                }
+            }
+            None => payments.push(PoolPayment {
+                tx,
+                amount,
+                subaddresses: vec![index],
+            }),
+        }
+    }
+    state.pool = payments;
     Ok(())
 }
 

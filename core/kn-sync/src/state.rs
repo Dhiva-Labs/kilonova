@@ -71,6 +71,8 @@ pub struct Balance {
     pub total: u64,
     /// The part that can be spent now.
     pub unlocked: u64,
+    /// Incoming in the transaction pool, not part of `total` until mined.
+    pub incoming: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -88,11 +90,24 @@ pub struct HistoryEntry {
     /// Received amount for incoming; amount that left the wallet (spent
     /// minus change returned to it) for outgoing. Atomic units.
     pub amount: u64,
-    /// Outgoing and not yet in a block.
+    /// Not yet in a block: sent from this wallet, or an incoming payment
+    /// seen in the transaction pool.
     pub pending: bool,
     /// Account/index pairs that received funds in this transaction.
     pub subaddresses: Vec<(u32, u32)>,
     pub miner: bool,
+}
+
+/// A payment to this wallet seen in the node's transaction pool, not yet in
+/// a block. Shown, never spent or counted as balance.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PoolPayment {
+    #[serde(with = "hex32")]
+    pub tx: [u8; 32],
+    /// Atomic units.
+    pub amount: u64,
+    /// Account/index pairs that receive it.
+    pub subaddresses: Vec<(u32, u32)>,
 }
 
 /// Everything sync has learned about one wallet.
@@ -104,6 +119,9 @@ pub struct SyncState {
     #[serde(with = "recent_hex")]
     pub recent: VecDeque<(u64, [u8; 32])>,
     pub outputs: Vec<OwnedOutput>,
+    /// Payments waiting in the transaction pool, as of the last sync.
+    #[serde(default)]
+    pub pool: Vec<PoolPayment>,
 }
 
 impl SyncState {
@@ -184,6 +202,7 @@ impl SyncState {
                 balance.unlocked += o.amount();
             }
         }
+        balance.incoming = self.pool.iter().map(|p| p.amount).sum();
         balance
     }
 
@@ -221,10 +240,18 @@ impl SyncState {
                 e.1 += o.amount();
             }
         }
+        // Payments still in the pool; change of this wallet's own pending
+        // transactions arrives the same way.
+        let mut pool: BTreeMap<[u8; 32], &PoolPayment> =
+            self.pool.iter().map(|p| (p.tx, p)).collect();
         let mut history: Vec<HistoryEntry> = Vec::new();
         for (tx, (height, amount_spent, pending)) in spent {
             // Change comes back as outputs of the spending transaction.
-            let change = received.remove(&tx).map_or(0, |r| r.amount);
+            let change = received
+                .remove(&tx)
+                .map(|r| r.amount)
+                .or_else(|| pool.remove(&tx).map(|p| p.amount))
+                .unwrap_or(0);
             history.push(HistoryEntry {
                 tx,
                 height,
@@ -236,6 +263,19 @@ impl SyncState {
             });
         }
         history.extend(received.into_values());
+        history.extend(
+            pool.into_values()
+                .filter(|p| !self.outputs.iter().any(|o| o.output.transaction() == p.tx))
+                .map(|p| HistoryEntry {
+                    tx: p.tx,
+                    height: self.next_height,
+                    direction: Direction::Incoming,
+                    amount: p.amount,
+                    pending: true,
+                    subaddresses: p.subaddresses.clone(),
+                    miner: false,
+                }),
+        );
         history.sort_by(|a, b| b.height.cmp(&a.height).then(a.tx.cmp(&b.tx)));
         history
     }

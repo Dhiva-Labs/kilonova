@@ -2121,11 +2121,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   WalletBalance dco_decode_wallet_balance(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return WalletBalance(
       total: dco_decode_u_64(arr[0]),
       unlocked: dco_decode_u_64(arr[1]),
+      incoming: dco_decode_u_64(arr[2]),
     );
   }
 
@@ -2652,7 +2653,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_total = sse_decode_u_64(deserializer);
     var var_unlocked = sse_decode_u_64(deserializer);
-    return WalletBalance(total: var_total, unlocked: var_unlocked);
+    var var_incoming = sse_decode_u_64(deserializer);
+    return WalletBalance(
+      total: var_total,
+      unlocked: var_unlocked,
+      incoming: var_incoming,
+    );
   }
 
   @protected
@@ -3139,6 +3145,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_64(self.total, serializer);
     sse_encode_u_64(self.unlocked, serializer);
+    sse_encode_u_64(self.incoming, serializer);
   }
 
   @protected

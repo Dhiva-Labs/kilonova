@@ -48,6 +48,13 @@ class SyncPanel extends StatelessWidget {
             style: monoStyle(context, size: 13, color: c.textSecondary),
           ),
         ],
+        if (balance.incoming > BigInt.zero) ...[
+          const SizedBox(height: KnSpace.xs),
+          Text(
+            l.incomingAmount(formatXmr(balance.incoming)),
+            style: monoStyle(context, size: 13, color: c.received),
+          ),
+        ],
         if (summary.viewOnly) ...[
           const SizedBox(height: KnSpace.sm),
           Text(l.viewOnlyBalanceNote, style: text.bodySmall),

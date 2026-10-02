@@ -103,6 +103,8 @@ pub struct WalletBalance {
     /// Atomic units (1 XMR = 10^12).
     pub total: u64,
     pub unlocked: u64,
+    /// Incoming payments waiting in the transaction pool; not in `total`.
+    pub incoming: u64,
 }
 
 // Flat flags rather than enums with data keep the Dart side free of code
@@ -275,6 +277,7 @@ impl OpenWallet {
         WalletBalance {
             total: b.total,
             unlocked: b.unlocked,
+            incoming: b.incoming,
         }
     }
 
@@ -299,7 +302,9 @@ impl OpenWallet {
                     incoming: h.direction == Direction::Incoming,
                     amount: h.amount,
                     miner: h.miner,
-                    locked: h.direction == Direction::Incoming && tip < h.height + lock,
+                    locked: h.direction == Direction::Incoming
+                        && !h.pending
+                        && tip < h.height + lock,
                     subaddress_index: h.subaddresses.first().map(|(_, index)| *index),
                     pending: h.pending,
                 }
