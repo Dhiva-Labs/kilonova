@@ -1,0 +1,8 @@
+# One onion service carries both: the node's restricted RPC and the light
+# wallet server. No SOCKS port: this Tor only publishes.
+SocksPort 0
+DataDirectory /var/lib/tor
+HiddenServiceDir /var/lib/tor/kilonova
+HiddenServiceVersion 3
+HiddenServicePort 18089 @MONEROD@:18089
+HiddenServicePort 8443 @LWS@:8443

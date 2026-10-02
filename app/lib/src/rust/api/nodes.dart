@@ -8,7 +8,7 @@ import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `apply_saved_network_settings`, `apply_saved_pins`, `colon_hex`, `current_node`, `explain`, `parse_fingerprint`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 /// Bundled and user-added nodes for `network`, with the selected one marked.
 ///
@@ -124,6 +124,25 @@ Future<void> trustCertificate({
 Future<void> forgetCertificate({required String url}) =>
     RustLib.instance.api.crateApiNodesForgetCertificate(url: url);
 
+/// Uses the node and light wallet server a self-hosted server's pairing
+/// code names (see `tools/selfhost`).
+///
+/// # Errors
+///
+/// [`NodeError::BadUrl`] for anything that is not a pairing code.
+Future<ServerPaired> pairWithServer({required String code}) =>
+    RustLib.instance.api.crateApiNodesPairWithServer(code: code);
+
+/// Looks for nodes serving `network` on this machine and the local network
+/// (the standard RPC ports on the local /24). Takes a few seconds.
+///
+/// # Errors
+///
+/// [`NodeError::ProxyOn`] while a proxy is set: the scan cannot go through
+/// it, and would show the local network what the owner is looking for.
+Future<List<LocalNode>> findLocalNodes({required Network network}) =>
+    RustLib.instance.api.crateApiNodesFindLocalNodes(network: network);
+
 /// The SOCKS5 proxy (for example Tor) all traffic goes through, if any.
 ///
 /// # Errors
@@ -180,6 +199,31 @@ class CertificateDetails {
           fingerprint == other.fingerprint &&
           publiclyTrusted == other.publiclyTrusted &&
           pinned == other.pinned;
+}
+
+/// A node found on the local network.
+class LocalNode {
+  final String url;
+  final BigInt height;
+  final bool synced;
+
+  const LocalNode({
+    required this.url,
+    required this.height,
+    required this.synced,
+  });
+
+  @override
+  int get hashCode => url.hashCode ^ height.hashCode ^ synced.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LocalNode &&
+          runtimeType == other.runtimeType &&
+          url == other.url &&
+          height == other.height &&
+          synced == other.synced;
 }
 
 /// What a light wallet server reported when checked.
@@ -254,6 +298,9 @@ enum NodeError {
 
   /// A light wallet server on plain http elsewhere than this device.
   insecureLws,
+
+  /// Looking on the local network would bypass the proxy the owner set.
+  proxyOn,
 }
 
 /// What a node reported when checked.
@@ -273,4 +320,39 @@ class NodeHealth {
           runtimeType == other.runtimeType &&
           height == other.height &&
           synced == other.synced;
+}
+
+/// What pairing with a self-hosted server set.
+class ServerPaired {
+  final Network network;
+
+  /// The node now selected for that network, if the code named one.
+  final String? node;
+
+  /// The light wallet server now set, if the code named one.
+  final String? lws;
+
+  /// The addresses are onion services and no Tor proxy is set yet.
+  final bool needsTor;
+
+  const ServerPaired({
+    required this.network,
+    this.node,
+    this.lws,
+    required this.needsTor,
+  });
+
+  @override
+  int get hashCode =>
+      network.hashCode ^ node.hashCode ^ lws.hashCode ^ needsTor.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ServerPaired &&
+          runtimeType == other.runtimeType &&
+          network == other.network &&
+          node == other.node &&
+          lws == other.lws &&
+          needsTor == other.needsTor;
 }

@@ -397,3 +397,102 @@ mod tests {
         }
     }
 }
+
+/// What a self-hosted server's pairing code names (see `tools/selfhost`):
+/// `kilonova-server:?network=mainnet&node=<url>&lws=<url>`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ServerPairing {
+    pub network: Network,
+    pub node: Option<NodeUrl>,
+    pub lws: Option<NodeUrl>,
+}
+
+impl ServerPairing {
+    /// # Errors
+    ///
+    /// [`SyncError::BadNodeUrl`] for anything that is not a pairing code
+    /// with at least one valid address.
+    pub fn parse(text: &str) -> Result<Self, SyncError> {
+        let query = text
+            .trim()
+            .strip_prefix("kilonova-server:")
+            .ok_or(SyncError::BadNodeUrl)?
+            .trim_start_matches('?');
+        let mut network = None;
+        let mut node = None;
+        let mut lws = None;
+        for pair in query.split('&').filter(|p| !p.is_empty()) {
+            let (key, value) = pair.split_once('=').ok_or(SyncError::BadNodeUrl)?;
+            let value = percent_decode(value).ok_or(SyncError::BadNodeUrl)?;
+            match key {
+                "network" => {
+                    network = Some(match value.as_str() {
+                        "mainnet" => Network::Mainnet,
+                        "stagenet" => Network::Stagenet,
+                        "testnet" => Network::Testnet,
+                        _ => return Err(SyncError::BadNodeUrl),
+                    });
+                }
+                "node" => node = Some(NodeUrl::parse(&value)?),
+                "lws" => lws = Some(NodeUrl::parse(&value)?),
+                // Later versions may add fields; ignore what is not known.
+                _ => {}
+            }
+        }
+        if node.is_none() && lws.is_none() {
+            return Err(SyncError::BadNodeUrl);
+        }
+        Ok(Self {
+            network: network.ok_or(SyncError::BadNodeUrl)?,
+            node,
+            lws,
+        })
+    }
+}
+
+fn percent_decode(text: &str) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            let hex = std::str::from_utf8(bytes.get(i + 1..i + 3)?).ok()?;
+            out.push(u8::from_str_radix(hex, 16).ok()?);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
+#[cfg(test)]
+mod pairing_tests {
+    use super::*;
+
+    #[test]
+    fn reads_the_code_the_selfhost_kit_prints() {
+        let onion = "ciczdlujjvdfuvwndzmqpefmndzxelyh3cbip4eqwet6it3tmuwgh2ad.onion";
+        let code = format!(
+            "kilonova-server:?network=mainnet&node=http%3A%2F%2F{onion}%3A18089&lws=http%3A%2F%2F{onion}%3A8443"
+        );
+        let pairing = ServerPairing::parse(&code).unwrap();
+        assert_eq!(pairing.network, Network::Mainnet);
+        assert_eq!(
+            pairing.node.unwrap().as_str(),
+            format!("http://{onion}:18089")
+        );
+        let lws = pairing.lws.unwrap();
+        assert!(lws.is_onion() && lws.is_private_channel());
+        for bad in [
+            "monero:4abc",
+            "kilonova-server:?network=mainnet",
+            "kilonova-server:?network=moon&node=http%3A%2F%2Fa.onion%3A1",
+            "kilonova-server:?node=http%3A%2F%2Fa.onion%3A1",
+            "kilonova-server:?network=mainnet&node=%ZZ",
+        ] {
+            assert!(ServerPairing::parse(bad).is_err(), "{bad}");
+        }
+    }
+}

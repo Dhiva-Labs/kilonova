@@ -230,6 +230,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<HistoryItem> dco_decode_list_history_item(dynamic raw);
 
   @protected
+  List<LocalNode> dco_decode_list_local_node(dynamic raw);
+
+  @protected
   List<Network> dco_decode_list_network(dynamic raw);
 
   @protected
@@ -249,6 +252,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<WalletSummary> dco_decode_list_wallet_summary(dynamic raw);
+
+  @protected
+  LocalNode dco_decode_local_node(dynamic raw);
 
   @protected
   LwsHealth dco_decode_lws_health(dynamic raw);
@@ -315,6 +321,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SendSummary dco_decode_send_summary(dynamic raw);
+
+  @protected
+  ServerPaired dco_decode_server_paired(dynamic raw);
 
   @protected
   SyncEvent dco_decode_sync_event(dynamic raw);
@@ -539,6 +548,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<HistoryItem> sse_decode_list_history_item(SseDeserializer deserializer);
 
   @protected
+  List<LocalNode> sse_decode_list_local_node(SseDeserializer deserializer);
+
+  @protected
   List<Network> sse_decode_list_network(SseDeserializer deserializer);
 
   @protected
@@ -560,6 +572,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<WalletSummary> sse_decode_list_wallet_summary(
     SseDeserializer deserializer,
   );
+
+  @protected
+  LocalNode sse_decode_local_node(SseDeserializer deserializer);
 
   @protected
   LwsHealth sse_decode_lws_health(SseDeserializer deserializer);
@@ -628,6 +643,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SendSummary sse_decode_send_summary(SseDeserializer deserializer);
+
+  @protected
+  ServerPaired sse_decode_server_paired(SseDeserializer deserializer);
 
   @protected
   SyncEvent sse_decode_sync_event(SseDeserializer deserializer);
@@ -888,6 +906,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_local_node(
+    List<LocalNode> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_network(List<Network> self, SseSerializer serializer);
 
   @protected
@@ -919,6 +943,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<WalletSummary> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_local_node(LocalNode self, SseSerializer serializer);
 
   @protected
   void sse_encode_lws_health(LwsHealth self, SseSerializer serializer);
@@ -988,6 +1015,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_send_summary(SendSummary self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_server_paired(ServerPaired self, SseSerializer serializer);
 
   @protected
   void sse_encode_sync_event(SyncEvent self, SseSerializer serializer);

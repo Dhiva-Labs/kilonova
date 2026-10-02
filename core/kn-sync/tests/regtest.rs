@@ -237,3 +237,16 @@ async fn a_node_agrees_with_itself_and_regtest_is_marked_as_a_test_chain() {
     assert!(opinion.agrees);
     assert_eq!(opinion.ours, opinion.theirs);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs the regtest devnet; see the file header"]
+async fn a_node_on_this_machine_is_found() {
+    let found = kn_sync::discover_at(
+        &[std::net::Ipv4Addr::LOCALHOST],
+        &[(18181, Network::Mainnet), (18182, Network::Mainnet)],
+    )
+    .await;
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].url.as_str(), "http://127.0.0.1:18181");
+    assert!(found[0].height > 0);
+}
