@@ -315,6 +315,8 @@ pub struct NodeStatus {
     /// Height the node believes the network is at; equals `height` when
     /// synced.
     pub target_height: u64,
+    /// A private test chain (regtest), which no public node shares.
+    pub test_chain: bool,
 }
 
 /// Connects to `node` and checks it serves `network`.
@@ -356,6 +358,7 @@ pub async fn connect(
         NodeStatus {
             height: height.max(info.height),
             target_height: info.target_height.max(height),
+            test_chain: info.nettype == "fakechain",
         },
     ))
 }

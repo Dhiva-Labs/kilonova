@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `caught_up_state`, `emit`, `fail`, `failed`, `full_round`, `go`, `hex_string`, `is_current`, `load`, `lock_current`, `lock_state`, `lws_round`, `new`, `pause`, `record`, `replace`, `reset`, `snapshot`, `starting_state`, `stop`, `stopped`
+// These functions are ignored because they are not marked as `pub`: `caught_up_state`, `emit`, `fail`, `failed`, `full_round`, `go`, `hex_string`, `is_current`, `load`, `lock_current`, `lock_state`, `lws_round`, `new`, `pause`, `record`, `replace`, `reset`, `second_opinion`, `snapshot`, `starting_state`, `stop`, `stopped`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Run`, `Setup`, `SyncHandle`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
@@ -110,6 +110,10 @@ class SyncEvent {
   /// wallet was registered.
   final bool importPending;
 
+  /// The node's chain differs from an independent node's: it may be
+  /// feeding this wallet a chain of its own.
+  final bool nodeDisagrees;
+
   const SyncEvent({
     required this.phase,
     required this.scanned,
@@ -118,6 +122,7 @@ class SyncEvent {
     this.failure,
     required this.rejectedOutputs,
     required this.importPending,
+    required this.nodeDisagrees,
   });
 
   @override
@@ -128,7 +133,8 @@ class SyncEvent {
       node.hashCode ^
       failure.hashCode ^
       rejectedOutputs.hashCode ^
-      importPending.hashCode;
+      importPending.hashCode ^
+      nodeDisagrees.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -141,7 +147,8 @@ class SyncEvent {
           node == other.node &&
           failure == other.failure &&
           rejectedOutputs == other.rejectedOutputs &&
-          importPending == other.importPending;
+          importPending == other.importPending &&
+          nodeDisagrees == other.nodeDisagrees;
 }
 
 /// Why sync stopped with an error.

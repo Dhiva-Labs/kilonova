@@ -9,6 +9,7 @@ import 'api/network.dart';
 import 'api/nodes.dart';
 import 'api/preferences.dart';
 import 'api/price.dart';
+import 'api/proof.dart';
 import 'api/send.dart';
 import 'api/sync.dart';
 import 'api/wallets.dart';
@@ -191,7 +192,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Payment dco_decode_payment(dynamic raw);
 
   @protected
+  PaymentCheck dco_decode_payment_check(dynamic raw);
+
+  @protected
   Preferences dco_decode_preferences(dynamic raw);
+
+  @protected
+  ProofFailure dco_decode_proof_failure(dynamic raw);
 
   @protected
   SeedFormat dco_decode_seed_format(dynamic raw);
@@ -406,7 +413,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Payment sse_decode_payment(SseDeserializer deserializer);
 
   @protected
+  PaymentCheck sse_decode_payment_check(SseDeserializer deserializer);
+
+  @protected
   Preferences sse_decode_preferences(SseDeserializer deserializer);
+
+  @protected
+  ProofFailure sse_decode_proof_failure(SseDeserializer deserializer);
 
   @protected
   SeedFormat sse_decode_seed_format(SseDeserializer deserializer);
@@ -655,7 +668,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_payment(Payment self, SseSerializer serializer);
 
   @protected
+  void sse_encode_payment_check(PaymentCheck self, SseSerializer serializer);
+
+  @protected
   void sse_encode_preferences(Preferences self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_proof_failure(ProofFailure self, SseSerializer serializer);
 
   @protected
   void sse_encode_seed_format(SeedFormat self, SseSerializer serializer);

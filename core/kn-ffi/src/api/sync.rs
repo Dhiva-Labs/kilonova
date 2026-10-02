@@ -80,6 +80,9 @@ pub struct SyncEvent {
     /// LWS only: the server is still importing history from before the
     /// wallet was registered.
     pub import_pending: bool,
+    /// The node's chain differs from an independent node's: it may be
+    /// feeding this wallet a chain of its own.
+    pub node_disagrees: bool,
 }
 
 impl SyncEvent {
@@ -92,6 +95,7 @@ impl SyncEvent {
             failure: None,
             rejected_outputs: 0,
             import_pending: false,
+            node_disagrees: false,
         }
     }
 
@@ -263,6 +267,8 @@ impl OpenWallet {
                 cancel: &cancel,
                 generation,
                 failed: AtomicBool::new(false),
+                opinion_done: AtomicBool::new(false),
+                disagrees: AtomicBool::new(false),
             };
             run.go().await;
             // After a failure the failure stays on screen, since it says
@@ -356,6 +362,10 @@ struct Run<'a> {
     generation: u64,
     /// Set when the run ends because of a failure it reported.
     failed: AtomicBool,
+    /// Whether this run compared its node with an independent one yet.
+    opinion_done: AtomicBool,
+    /// The node disagreed with the independent one.
+    disagrees: AtomicBool,
 }
 
 /// What a run needs from the wallet, copied out so the wallet lock is not
@@ -379,7 +389,8 @@ impl Run<'_> {
         self.cancel.load(Ordering::Relaxed) || !self.is_current()
     }
 
-    fn emit(&self, event: SyncEvent) {
+    fn emit(&self, mut event: SyncEvent) {
+        event.node_disagrees = self.disagrees.load(Ordering::Relaxed);
         self.failed
             .store(event.phase == SyncPhase::Failed, Ordering::Relaxed);
         if self.is_current() {
@@ -449,7 +460,10 @@ impl Run<'_> {
         });
         let mut state = self.inner.sync.snapshot();
         let result = async {
-            let (daemon, _) = connect(&node, setup.network).await?;
+            let (daemon, status) = connect(&node, setup.network).await?;
+            if !status.test_chain && !self.opinion_done.swap(true, Ordering::Relaxed) {
+                self.second_opinion(&daemon, &node, setup.network).await;
+            }
             sync(
                 &daemon,
                 &setup.keys,
@@ -482,6 +496,32 @@ impl Run<'_> {
                 Some(FOLLOW_INTERVAL)
             }
             Err(e) => self.fail(&e),
+        }
+    }
+
+    /// Compares the node with a bundled one it is not, once per run. An
+    /// answer that cannot be had is not a disagreement.
+    async fn second_opinion(
+        &self,
+        daemon: &kn_sync::MoneroDaemonHttp,
+        node: &NodeUrl,
+        network: kn_keys::Network,
+    ) {
+        let Some(reference) = kn_sync::bundled_nodes(network)
+            .into_iter()
+            .find(|n| n != node)
+        else {
+            return;
+        };
+        let opinion = tokio::time::timeout(
+            Duration::from_secs(30),
+            kn_sync::second_opinion(daemon, &reference, network),
+        )
+        .await;
+        if let Ok(Ok(opinion)) = opinion
+            && !opinion.agrees
+        {
+            self.disagrees.store(true, Ordering::Relaxed);
         }
     }
 

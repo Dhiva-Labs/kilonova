@@ -8,7 +8,9 @@
 
 mod lws;
 mod node;
+mod opinion;
 mod price;
+mod proof;
 mod restore_height;
 mod scan;
 mod state;
@@ -20,7 +22,11 @@ pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, l
 pub use node::{
     Http, NodeStatus, NodeUrl, ProxyUrl, bundled_nodes, check_proxy, connect, proxy, set_proxy,
 };
+/// The node client sync and sending use.
+pub type MoneroDaemonHttp = monero_daemon_rpc::MoneroDaemon<Http>;
+pub use opinion::{OPINION_DEPTH, Opinion, second_opinion};
 pub use price::{PRICE_CURRENCIES, PRICE_SOURCE, xmr_price};
+pub use proof::{ProofError, ProofResult, check_tx_key};
 pub use restore_height::approximate_height;
 pub use scan::{Progress, SUBADDRESS_LOOKAHEAD, sync};
 pub use state::{

@@ -4,6 +4,7 @@ pub mod network;
 pub mod nodes;
 pub mod preferences;
 pub mod price;
+pub mod proof;
 pub mod send;
 pub mod sync;
 pub mod wallets;

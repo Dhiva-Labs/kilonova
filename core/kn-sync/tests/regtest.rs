@@ -221,3 +221,19 @@ async fn scans_spends_and_survives_a_reorg() {
         "balance after the reorg differs from monero-wallet-rpc"
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs the regtest devnet; see the file header"]
+async fn a_node_agrees_with_itself_and_regtest_is_marked_as_a_test_chain() {
+    let node = NodeUrl::parse(NODE).unwrap();
+    let (daemon, status) = connect(&node, Network::Mainnet).await.unwrap();
+    // The app skips the comparison on test chains, which no public node
+    // shares.
+    assert!(status.test_chain);
+    mine(&other_address(), 12).await;
+    let opinion = kn_sync::second_opinion(&daemon, &node, Network::Mainnet)
+        .await
+        .unwrap();
+    assert!(opinion.agrees);
+    assert_eq!(opinion.ours, opinion.theirs);
+}

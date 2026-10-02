@@ -13,6 +13,7 @@ repository.workspace = true
 fuzzing = []
 
 [dependencies]
+curve25519-dalek = { version = "4", default-features = false, features = ["alloc", "zeroize", "precomputed-tables"] }
 hex = "0.4"
 kn-keys = { path = "../kn-keys" }
 monero-daemon-rpc = { version = "=0.2.0", features = ["std"] }
