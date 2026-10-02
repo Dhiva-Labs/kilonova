@@ -6,7 +6,7 @@ use curve25519_dalek::{Scalar as DalekScalar, constants::ED25519_BASEPOINT_TABLE
 use kn_keys::{Network, SeedFormat, WalletKeys};
 use kn_sync::{LwsServer, NodeUrl, SyncState, lws_sync};
 use monero_wallet::address::{MoneroAddress, Network as MoneroNetwork};
-use monero_wallet::ed25519::Scalar;
+use monero_wallet::ed25519::{Commitment, Scalar};
 use rand_core::OsRng;
 use serde_json::{Value, json};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -14,6 +14,12 @@ use tokio::net::TcpListener;
 
 /// Sender side: (tx public key, one-time output key) for output `index`.
 fn pay(address: &str, index: u8) -> (String, String) {
+    let (tx_pub, key, _) = pay_with_mask(address, index);
+    (tx_pub, key)
+}
+
+/// Like [`pay`], also returning the `RingCT` mask the recipient derives.
+fn pay_with_mask(address: &str, index: u8) -> (String, String, DalekScalar) {
     let address = MoneroAddress::from_str(MoneroNetwork::Mainnet, address).unwrap();
     let spend: curve25519_dalek::EdwardsPoint = address.spend().into();
     let view: curve25519_dalek::EdwardsPoint = address.view().into();
@@ -27,10 +33,31 @@ fn pay(address: &str, index: u8) -> (String, String) {
     derivation.push(index);
     let shared: DalekScalar = Scalar::hash(&derivation).into();
     let output_key = &shared * ED25519_BASEPOINT_TABLE + spend;
+    let mut mask_input = b"commitment_mask".to_vec();
+    mask_input.extend_from_slice(shared.as_bytes());
+    let mask: DalekScalar = Scalar::hash(&mask_input).into();
     (
         hex::encode(tx_pub.compress().to_bytes()),
         hex::encode(output_key.compress().to_bytes()),
+        mask,
     )
+}
+
+/// A RingCT output (not a miner one): `rct` carries a commitment to
+/// `committed` while the server claims `claimed`.
+fn rct_output(tx: u8, address: &str, committed: u64, claimed: u64) -> Value {
+    let (tx_pub, key, mask) = pay_with_mask(address, 0);
+    let commitment = Commitment::new(Scalar::from(mask), committed)
+        .commit()
+        .compress();
+    let mut out = output(tx, (tx_pub, key), (0, 0), claimed);
+    out["rct"] = json!(format!(
+        "{}{}{}",
+        hex::encode(commitment.to_bytes()),
+        hex::encode([0u8; 32]),
+        hex::encode([0u8; 8])
+    ));
+    out
 }
 
 fn output(tx: u8, (tx_pub, key): (String, String), sub: (u32, u32), amount: u64) -> Value {
@@ -119,6 +146,10 @@ async fn dishonest_outputs_and_spends_are_ignored() {
                 output(3, pay(&stranger.primary_address(Network::Mainnet), 0), (0, 0), 1_000),
                 // Ours, but the server names the wrong subaddress.
                 output(4, pay(&our_sub, 0), (0, 3), 9),
+                // Ours, with a commitment that opens to the claimed amount.
+                rct_output(5, &ours, 11, 11),
+                // Ours, but the server inflates the amount.
+                rct_output(6, &ours, 3, 3_000),
             ]}),
         ),
         (
@@ -140,18 +171,18 @@ async fn dishonest_outputs_and_spends_are_ignored() {
         .await
         .unwrap();
 
-    assert_eq!(report.rejected_outputs, 2);
-    assert_eq!(state.outputs.len(), 2);
+    assert_eq!(report.rejected_outputs, 3);
+    assert_eq!(state.outputs.len(), 3);
     let amounts: Vec<u64> = state
         .outputs
         .iter()
         .map(kn_sync::OwnedOutput::amount)
         .collect();
-    assert_eq!(amounts, vec![5, 7]);
+    assert_eq!(amounts, vec![5, 7, 11]);
     assert!(
         state.outputs.iter().all(|o| o.spent.is_none()),
         "a spend without our key image must not count"
     );
-    assert_eq!(state.balance(1_000).total, 12);
+    assert_eq!(state.balance(1_000).total, 23);
     assert_eq!((report.scanned, report.tip), (200, 200));
 }

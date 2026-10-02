@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use kn_keys::{ClaimedOutput, Network, WalletKeys};
 use monero_wallet::WalletOutput;
-use monero_wallet::ed25519::Scalar;
+use monero_wallet::ed25519::{Commitment, Scalar};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -504,9 +504,12 @@ fn owned_output(keys: &WalletKeys, out: &LwsOutput, coinbase: Option<bool>) -> O
         })
         .ok()?;
 
-    // Packed RingCT: commitment | mask | amount. Miner outputs have a zero
-    // commitment and the identity mask; for compact outputs the mask is
-    // derived locally and must match.
+    // Packed RingCT: commitment | mask | amount. Miner outputs have no
+    // commitment on chain (the network uses the identity mask). For the
+    // rest the mask is derived locally; older outputs carry it encrypted, in
+    // which case the server's value is tried. Either way the mask must open
+    // the reported commitment to the reported amount, or the output could
+    // not be spent.
     let rct = out.rct.as_deref().map(hex::decode).transpose().ok()?;
     let miner = coinbase.unwrap_or(false)
         || rct
@@ -518,14 +521,15 @@ fn owned_output(keys: &WalletKeys, out: &LwsOutput, coinbase: Option<bool>) -> O
         one
     } else {
         let derived = scalar_bytes(&verified.compact_mask);
-        match rct.as_ref().filter(|r| r.len() >= 64).map(|r| &r[32..64]) {
-            Some(server_mask) if server_mask == derived => derived,
-            // Pre-2019 outputs encrypt their mask differently; the server's
-            // value is used and checked by the network when spending.
-            Some(server_mask) if server_mask.iter().any(|b| *b != 0) => {
-                server_mask.try_into().ok()?
+        match rct.as_ref().filter(|r| r.len() >= 64) {
+            Some(r) => {
+                let commitment: [u8; 32] = r[..32].try_into().ok()?;
+                let server_mask: [u8; 32] = r[32..64].try_into().ok()?;
+                [derived, server_mask]
+                    .into_iter()
+                    .find(|mask| opens(mask, out.amount, &commitment))?
             }
-            _ => derived,
+            None => derived,
         }
     };
 
@@ -580,6 +584,13 @@ fn wallet_output(
     bytes.push(0); // no payment id
     bytes.push(0); // no arbitrary data
     WalletOutput::read(&mut bytes.as_slice()).ok()
+}
+
+/// Whether `mask` and `amount` open `commitment`.
+fn opens(mask: &[u8; 32], amount: u64, commitment: &[u8; 32]) -> bool {
+    Scalar::read(&mut mask.as_slice()).is_ok_and(|mask| {
+        Commitment::new(mask, amount).commit().compress().to_bytes() == *commitment
+    })
 }
 
 fn scalar_bytes(scalar: &Scalar) -> [u8; 32] {

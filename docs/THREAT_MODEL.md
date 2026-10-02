@@ -30,8 +30,9 @@ Mitigations, implemented in `kn-sync/src/lws.rs` and tested against a
 dishonest server (`kn-sync/tests/lws_dishonest_server.rs`):
 - the spend key never leaves the device;
 - every output the server reports must open with the wallet's own keys
-  (output key, subaddress and index all checked), or it is dropped and the
-  user is told how many were dropped;
+  (output key, subaddress and index all checked) and its amount must match
+  its on-chain commitment, or it is dropped and the user is told how many
+  were dropped;
 - an output counts as spent only when one of the server's candidate key
   images equals the key image derived locally, so a server cannot fake a
   spend;
