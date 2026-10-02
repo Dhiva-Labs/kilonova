@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kilonova/app.dart';
+import 'package:kilonova/features/settings/price_feed.dart';
 import 'package:kilonova/features/wallets/wallet_registry.dart';
 import 'package:kilonova/platform/biometric_unlock.dart';
 import 'package:kilonova/src/rust/api/network.dart';
@@ -41,8 +42,13 @@ Future<void> initRustForTests() async {
 Future<Widget> testApp(
   WidgetTester tester, {
   BiometricUnlock biometric = const BiometricUnlock(),
+  PriceFeed? price,
 }) async {
-  final registry = WalletRegistry(biometric: biometric);
+  // Prices never come from the real service in tests.
+  final registry = WalletRegistry(
+    biometric: biometric,
+    price: price ?? PriceFeed(fetch: () async => null),
+  );
   await tester.runAsync(registry.reload);
   return KilonovaApp(registry: registry);
 }

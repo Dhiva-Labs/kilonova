@@ -89,7 +89,8 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 icon: const Icon(Icons.settings_outlined),
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const SettingsScreen(),
+                    builder: (_) =>
+                        SettingsScreen(prices: widget.registry.price),
                   ),
                 ),
               ),

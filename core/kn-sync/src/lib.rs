@@ -8,6 +8,7 @@
 
 mod lws;
 mod node;
+mod price;
 mod restore_height;
 mod scan;
 mod state;
@@ -17,6 +18,7 @@ pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, l
 pub use node::{
     Http, NodeStatus, NodeUrl, ProxyUrl, bundled_nodes, check_proxy, connect, proxy, set_proxy,
 };
+pub use price::{PRICE_CURRENCIES, PRICE_SOURCE, xmr_price};
 pub use restore_height::approximate_height;
 pub use scan::{Progress, SUBADDRESS_LOOKAHEAD, sync};
 pub use state::{

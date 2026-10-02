@@ -63,9 +63,11 @@ wallet and that server only: choosing a different server asks again.
 
 ### Price data (optional, off by default)
 
-If you turn on fiat prices, the app asks a price service for exchange rates.
-That service sees your IP address and which currency you chose. It does not
-see your wallet.
+If you turn on prices (Settings, Prices), the app asks CoinGecko
+(api.coingecko.com) for the XMR price in the currency you chose, about every
+ten minutes, through your proxy if one is set. CoinGecko sees your IP address
+(or your proxy's) and the currency. The request carries nothing about any
+wallet, and test-network balances are never priced.
 
 ### Nothing else
 
@@ -115,6 +117,7 @@ Security issues: see SECURITY.md in the repository.
 
 Newest first.
 
+- 2026-10-02: name the price service and say how often it is asked.
 - 2026-10-02: QR scanning: what the camera is used for, and permissions the app never asks for.
 - 2026-10-02: describe what a light wallet server sees when you send.
 - 2026-10-02: describe the consent step before a view key is shared with a light wallet server.

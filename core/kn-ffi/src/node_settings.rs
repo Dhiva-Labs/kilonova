@@ -28,6 +28,10 @@ pub(crate) struct Settings {
     /// SOCKS5 proxy for all traffic, as `socks5h://host:port`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) proxy: Option<String>,
+    /// Currency for the optional fiat price; `None` means prices are off
+    /// and the price service is never contacted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) price_currency: Option<String>,
     /// Pinned certificate fingerprints by https address.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) pins: BTreeMap<String, String>,

@@ -479,5 +479,24 @@
     }
   },
   "receiveAmountField": "Ask for an amount (optional)",
-  "receiveCopyRequestAction": "Copy request"
+  "receiveCopyRequestAction": "Copy request",
+  "pricesTitle": "Prices",
+  "pricesSubtitle": "Optional: show balances in your currency",
+  "pricesHelp": "Off by default. When on, Kilonova asks {host} for the XMR price about every ten minutes, through your proxy if one is set. The service sees your IP address and the currency, never your wallet. Test network coins are never priced.",
+  "pricesOff": "Off",
+  "fiatApprox": "About {amount}",
+  "@pricesHelp": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "@fiatApprox": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  }
 }

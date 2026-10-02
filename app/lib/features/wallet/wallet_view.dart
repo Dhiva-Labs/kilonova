@@ -105,6 +105,9 @@ class _WalletViewState extends State<WalletView> {
             wallet: widget.wallet,
             event: event,
             onRetry: () => widget.registry.startSync(summary.id),
+            prices: summary.network.isTestNetwork()
+                ? null
+                : widget.registry.price,
           ),
           if (!summary.viewOnly) ...[
             const SizedBox(height: KnSpace.md),

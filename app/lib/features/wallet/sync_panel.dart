@@ -9,6 +9,7 @@ import '../../widgets/amount.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/sync_orbit.dart';
 import '../settings/lws_servers_screen.dart';
+import '../settings/price_feed.dart';
 import 'lws_consent_dialog.dart';
 
 /// Balance and sync status for an open wallet.
@@ -18,10 +19,14 @@ class SyncPanel extends StatelessWidget {
     required this.wallet,
     required this.event,
     required this.onRetry,
+    this.prices,
   });
 
   final OpenWallet wallet;
   final SyncEvent? event;
+
+  /// Shows the balance in the user's currency, if prices are on.
+  final PriceFeed? prices;
 
   /// Starts sync again, after an error or a settings change.
   final VoidCallback onRetry;
@@ -41,6 +46,26 @@ class SyncPanel extends StatelessWidget {
         Text(l.balanceTitle, style: text.labelMedium),
         const SizedBox(height: KnSpace.xs),
         AmountText(balance.total, size: 28),
+        if (prices != null)
+          ListenableBuilder(
+            listenable: prices!,
+            builder: (context, _) {
+              final fiat = prices!.format(balance.total);
+              return fiat == null
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: KnSpace.xs),
+                      child: Text(
+                        l.fiatApprox(fiat),
+                        style: monoStyle(
+                          context,
+                          size: 13,
+                          color: c.textSecondary,
+                        ),
+                      ),
+                    );
+            },
+          ),
         if (balance.unlocked != balance.total) ...[
           const SizedBox(height: KnSpace.xs),
           Text(

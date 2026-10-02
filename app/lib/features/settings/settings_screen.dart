@@ -4,11 +4,15 @@ import '../../l10n/generated/app_localizations.dart';
 import 'about_screen.dart';
 import 'lws_servers_screen.dart';
 import 'nodes_screen.dart';
+import 'price_feed.dart';
+import 'prices_screen.dart';
 import 'privacy_screen.dart';
 import 'proxy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, required this.prices});
+
+  final PriceFeed prices;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +48,14 @@ class SettingsScreen extends StatelessWidget {
             subtitle: Text(l.proxySubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => open(const ProxyScreen()),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.currency_exchange_outlined),
+            title: Text(l.pricesTitle),
+            subtitle: Text(l.pricesSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => open(PricesScreen(feed: prices)),
           ),
           const Divider(),
           ListTile(

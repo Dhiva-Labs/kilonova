@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../platform/biometric_unlock.dart';
+import '../settings/price_feed.dart';
 import '../../src/rust/api/network.dart';
 import '../../src/rust/api/sync.dart';
 import '../../src/rust/api/wallets.dart';
@@ -10,9 +11,13 @@ import '../../src/rust/api/wallets.dart';
 /// The wallet list and the wallets currently unlocked, shared by every
 /// screen. Unlocked wallets are locked when the app goes to the background.
 class WalletRegistry extends ChangeNotifier {
-  WalletRegistry({this.biometric = const BiometricUnlock()});
+  WalletRegistry({this.biometric = const BiometricUnlock(), PriceFeed? price})
+    : price = price ?? PriceFeed();
 
   final BiometricUnlock biometric;
+
+  /// The optional fiat price, refreshed as wallets sync.
+  final PriceFeed price;
 
   List<WalletSummary> _all = const [];
   final Map<String, OpenWallet> _open = {};
@@ -37,9 +42,10 @@ class WalletRegistry extends ChangeNotifier {
     if (wallet == null) return;
     _syncSubscriptions[id]?.cancel();
     final notifier = _sync.putIfAbsent(id, () => ValueNotifier(null));
-    _syncSubscriptions[id] = wallet.startSync().listen(
-      (event) => notifier.value = event,
-    );
+    _syncSubscriptions[id] = wallet.startSync().listen((event) {
+      notifier.value = event;
+      if (event.phase == SyncPhase.synced) price.refreshIfStale();
+    });
   }
 
   void _stopSync(String id) {
@@ -49,6 +55,7 @@ class WalletRegistry extends ChangeNotifier {
 
   Future<void> reload() async {
     _all = await listWallets();
+    if (price.currency == null) await price.reload();
     notifyListeners();
   }
 
@@ -85,6 +92,7 @@ class WalletRegistry extends ChangeNotifier {
   @override
   void dispose() {
     lockAll();
+    price.dispose();
     super.dispose();
   }
 }
