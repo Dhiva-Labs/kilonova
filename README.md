@@ -6,6 +6,8 @@
 [![Android](https://github.com/Dhiva-Labs/kilonova/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/android.yml)
 [![Bindings](https://github.com/Dhiva-Labs/kilonova/actions/workflows/bindings.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/bindings.yml)
 [![Design lint](https://github.com/Dhiva-Labs/kilonova/actions/workflows/design.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/design.yml)
+[![Regtest](https://github.com/Dhiva-Labs/kilonova/actions/workflows/regtest.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/regtest.yml)
+[![Public nodes](https://github.com/Dhiva-Labs/kilonova/actions/workflows/nodes.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/nodes.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-7A5B00)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20Android-5A6275)](#build-from-source)
 
