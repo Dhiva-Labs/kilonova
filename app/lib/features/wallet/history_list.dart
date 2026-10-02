@@ -53,7 +53,10 @@ class _HistoryTile extends StatelessWidget {
     final tags = [
       kind,
       if (item.locked) l.historyLocked,
-      l.historyBlock(item.height.toString()),
+      if (item.pending)
+        l.historyPending
+      else
+        l.historyBlock(item.height.toString()),
     ].join(' · ');
 
     return Padding(

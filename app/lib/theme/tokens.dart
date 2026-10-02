@@ -103,3 +103,10 @@ abstract final class KnSpace {
   static const lg = 24.0;
   static const xl = 40.0;
 }
+
+/// QR codes keep these colors in both themes: scanners read dark modules
+/// on a light background best.
+abstract final class KnQr {
+  static const paper = Color(0xFFFFFFFF);
+  static const ink = Color(0xFF0B0F17);
+}

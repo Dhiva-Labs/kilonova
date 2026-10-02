@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `emit`, `fail`, `failed`, `full_round`, `go`, `hex_string`, `is_current`, `load`, `lock_current`, `lock_state`, `lws_round`, `new`, `record`, `reset`, `snapshot`, `starting_state`, `stop`, `stopped`
+// These functions are ignored because they are not marked as `pub`: `caught_up_state`, `emit`, `fail`, `failed`, `full_round`, `go`, `hex_string`, `is_current`, `load`, `lock_current`, `lock_state`, `lws_round`, `new`, `pause`, `record`, `replace`, `reset`, `snapshot`, `starting_state`, `stop`, `stopped`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Run`, `Setup`, `SyncHandle`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
@@ -33,6 +33,9 @@ class HistoryItem {
   /// Index of the first receiving subaddress in its account, if incoming.
   final int? subaddressIndex;
 
+  /// Outgoing and not yet seen in a block.
+  final bool pending;
+
   const HistoryItem({
     required this.txHash,
     required this.height,
@@ -41,6 +44,7 @@ class HistoryItem {
     required this.miner,
     required this.locked,
     this.subaddressIndex,
+    required this.pending,
   });
 
   @override
@@ -51,7 +55,8 @@ class HistoryItem {
       amount.hashCode ^
       miner.hashCode ^
       locked.hashCode ^
-      subaddressIndex.hashCode;
+      subaddressIndex.hashCode ^
+      pending.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -64,7 +69,8 @@ class HistoryItem {
           amount == other.amount &&
           miner == other.miner &&
           locked == other.locked &&
-          subaddressIndex == other.subaddressIndex;
+          subaddressIndex == other.subaddressIndex &&
+          pending == other.pending;
 }
 
 /// A progress report from a running sync. Flat rather than an enum with

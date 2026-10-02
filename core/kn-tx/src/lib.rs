@@ -356,6 +356,31 @@ fn timelock_passed(timelock: Timelock, tip: u64, now: u64) -> bool {
     }
 }
 
+/// What kind of address a valid address string is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AddressKind {
+    Standard,
+    Subaddress,
+    /// A standard address with an embedded payment id.
+    Integrated,
+}
+
+/// Checks that `address` is a valid address on `network`.
+///
+/// # Errors
+///
+/// [`TxError::BadAddress`] otherwise.
+pub fn check_address(address: &str, network: Network) -> Result<AddressKind, TxError> {
+    let address = parse_address(address, network)?;
+    Ok(if address.is_subaddress() {
+        AddressKind::Subaddress
+    } else if address.payment_id().is_some() {
+        AddressKind::Integrated
+    } else {
+        AddressKind::Standard
+    })
+}
+
 fn parse_address(address: &str, network: Network) -> Result<MoneroAddress, TxError> {
     MoneroAddress::from_str(MoneroNetwork::from(network), address.trim())
         .map_err(|_| TxError::BadAddress(address.trim().to_owned()))
