@@ -26,13 +26,12 @@ Future<OpenWallet> _lwsWallet(WidgetTester tester, String name) async {
 }
 
 Future<void> _open(WidgetTester tester, String name) async {
-  await tester.tap(find.text('Testnet'));
-  await tester.pumpAndSettle();
+  // The app opens on Testnet already: it is the only network with a wallet.
   await tester.tap(find.text(name));
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextField), _password);
   await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
-  await pumpUntilFound(tester, find.text('Balance'));
+  await pumpUntilFound(tester, find.text('BALANCE'));
 }
 
 void main() {

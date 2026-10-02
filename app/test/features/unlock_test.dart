@@ -24,7 +24,8 @@ void main() {
     });
     await tester.pumpWidget(await testApp(tester));
 
-    expect(find.text('Light wallet server'), findsOneWidget);
+    // Mode is no longer shown in the sidebar row, only locked state.
+    expect(find.text('Locked'), findsOneWidget);
     await tester.tap(find.text('Daily'));
     await tester.pumpAndSettle();
 
@@ -37,7 +38,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'daily password');
     await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
-    await pumpUntilFound(tester, find.text('Balance'));
+    await pumpUntilFound(tester, find.text('BALANCE'));
 
     await tester.tap(find.byTooltip('Wallet options'));
     await tester.pumpAndSettle();

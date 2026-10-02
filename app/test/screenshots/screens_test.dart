@@ -10,6 +10,7 @@ import 'package:kilonova/src/rust/api/nodes.dart';
 import 'package:kilonova/src/rust/api/preferences.dart';
 import 'package:kilonova/src/rust/api/price.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
+import 'package:kilonova/widgets/kn_button.dart';
 
 import '../helpers/rust.dart';
 
@@ -151,9 +152,10 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
       await pumpUntilFound(
         tester,
-        find.textContaining('Up to date at block'),
+        find.textContaining('Synced, block'),
         timeout: const Duration(seconds: 90),
       );
+      await _shot(tester, '04-wallet-fresh');
 
       // A sent transaction, so history has both directions.
       await tester.tap(find.widgetWithText(FilledButton, 'Send'));
@@ -183,7 +185,7 @@ void main() {
       await tester.runAsync(() => _mine(payee, 1));
       await pumpUntil(
         tester,
-        () => find.textContaining('Waiting for a block').evaluate().isEmpty,
+        () => find.textContaining('Pending').evaluate().isEmpty,
         what: 'confirmation',
         timeout: const Duration(seconds: 90),
       );
@@ -196,25 +198,13 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(
-        find.text('Receive'),
-        300,
-        scrollable: find.byType(Scrollable).last,
-      );
-      await tester.pumpAndSettle();
-      await _shot(tester, '04-wallet-addresses');
-      await tester.tap(find.byTooltip('Show QR code').first);
+      await tester.tap(find.widgetWithText(KnButton, 'Receive'));
       await tester.pumpAndSettle();
       await _shot(tester, '09-receive');
-      await tester.tap(find.text('Close'));
+      // Dismiss the dialog by tapping the barrier outside it.
+      await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(
-        find.byTooltip('Wallet options'),
-        -300,
-        scrollable: find.byType(Scrollable).last,
-      );
-      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Wallet options'));
       await tester.pumpAndSettle();
       await _shot(tester, '10-wallet-menu');
@@ -225,7 +215,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Settings and its screens.
-      await tester.tap(find.byTooltip('Settings'));
+      await tester.tap(find.text('Settings'));
       await tester.pumpAndSettle();
       await _shot(tester, '12-settings');
       for (final (title, name) in [
@@ -247,14 +237,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Create and restore.
-      await tester.tap(find.byTooltip('Add a wallet'));
+      await tester.tap(find.text('Add wallet'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Create wallet'));
       await tester.pumpAndSettle();
       await _shot(tester, '20-create');
       await tester.pageBack();
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Add a wallet'));
+      await tester.tap(find.text('Add wallet'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Restore wallet'));
       await tester.pumpAndSettle();
@@ -263,9 +253,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // Stagenet strip.
+      await tester.tap(find.text('Mainnet'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Stagenet'));
       await tester.pumpAndSettle();
       await _shot(tester, '22-stagenet');
+      await tester.tap(find.text('Stagenet'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Mainnet'));
       await tester.pumpAndSettle();
 

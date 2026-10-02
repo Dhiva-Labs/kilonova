@@ -28,8 +28,7 @@ Future<String> makeWallet(WidgetTester tester, String name) async {
 }
 
 Future<void> openWallet(WidgetTester tester, String name) async {
-  await tester.tap(find.text('Testnet'));
-  await tester.pumpAndSettle();
+  // The app opens on Testnet already: it is the only network with a wallet.
   await tester.tap(find.text(name));
   await tester.pumpAndSettle();
 }
@@ -37,7 +36,7 @@ Future<void> openWallet(WidgetTester tester, String name) async {
 Future<void> unlockWithPassword(WidgetTester tester) async {
   await tester.enterText(find.byType(TextField), password);
   await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
-  await pumpUntilFound(tester, find.text('Balance'));
+  await pumpUntilFound(tester, find.text('BALANCE'));
 }
 
 Future<void> openMenu(WidgetTester tester) async {
@@ -78,7 +77,7 @@ void main() {
     await tester.tap(find.text('Lock'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Unlock with fingerprint or face'));
-    await pumpUntilFound(tester, find.text('Balance'));
+    await pumpUntilFound(tester, find.text('BALANCE'));
 
     await openMenu(tester);
     await tester.tap(find.text('Turn off biometric unlock'));

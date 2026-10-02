@@ -45,7 +45,7 @@
   "modeFull": "Full sync",
   "modeLws": "Light wallet server",
   "viewOnlyTag": "View-only",
-  "selectWalletHint": "Select a wallet to open it.",
+  "selectWalletHint": "Choose a wallet",
   "unlockTitle": "Unlock",
   "passwordLabel": "Password",
   "unlockAction": "Unlock",
@@ -161,7 +161,7 @@
   "biometricFailed": "Biometric unlock did not work. Use the password.",
   "biometricOffAfterPasswordChange": "Password changed. Biometric unlock was turned off; turn it on again from the wallet menu.",
   "balanceTitle": "Balance",
-  "spendableAmount": "{amount} XMR can be spent now",
+  "spendableAmount": "{amount} XMR spendable",
   "@spendableAmount": {
     "placeholders": {
       "amount": {
@@ -188,7 +188,7 @@
       }
     }
   },
-  "syncSynced": "Up to date at block {tip}",
+  "syncSynced": "Synced, block {tip}",
   "@syncSynced": {
     "placeholders": {
       "tip": {
@@ -386,7 +386,7 @@
   "sendLwsConsentNeeded": "Agree to share the view key with the light wallet server first, from the wallet screen.",
   "sendAlreadyUsed": "This transaction was already handled. Review it again.",
   "sentNotice": "Sent. It confirms when the next block is mined.",
-  "historyPending": "Waiting for a block",
+  "historyPending": "Pending",
   "receiveQrAction": "Show QR code",
   "closeAction": "Close",
   "scanAction": "Scan a QR code",
@@ -544,5 +544,16 @@
   "nodeErrorInsecureLws": "A light wallet server receives your view key, so it must use https. Plain http is allowed only for this device or an onion address.",
   "syncInsecureLws": "This light wallet server uses plain http, so the view key was not sent. Use its https address.",
   "sendFeeTooHigh": "The node or server suggested a fee far above normal, so nothing was built. Try again later or choose another node.",
-  "sendHighFeeWarning": "The fee is more than 5% of what you are sending."
+  "sendHighFeeWarning": "The fee is more than 5% of what you are sending.",
+  "addWalletAction": "Add wallet",
+  "walletLockedLabel": "Locked",
+  "addressesTitle": "Addresses",
+  "historyDetailLocked": "{detail}, locked",
+  "@historyDetailLocked": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  }
 }

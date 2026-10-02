@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/kn_button.dart';
 
 /// Asks before a wallet's private view key goes to a light wallet server.
 /// Returns true only if the user agrees.
@@ -29,13 +30,13 @@ Future<bool> showLwsConsentDialog(BuildContext context, String server) async {
           ),
         ),
         actions: [
-          TextButton(
+          KnButton.text(
+            l.cancelAction,
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l.cancelAction),
           ),
-          FilledButton(
+          KnButton.primary(
+            l.lwsConsentAccept,
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l.lwsConsentAccept),
           ),
         ],
       );
