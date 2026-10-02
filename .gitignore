@@ -1,0 +1,13 @@
+# Editors
+.idea/
+*.iml
+.vscode/
+*.swp
+.DS_Store
+
+# Local devnet chain data
+tools/devnet/data/
+
+# Dart and Flutter tool output
+.dart_tool/
+build/

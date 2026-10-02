@@ -1,0 +1,3 @@
+# Exceptions to the design lint, one per line:
+#   <check> <path relative to repo root>   # reason
+# Add entries in their own PR, with a reason.

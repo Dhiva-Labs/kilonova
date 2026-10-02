@@ -1,0 +1,56 @@
+name: Bug report
+description: Something does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Never paste your seed, keys, wallet files or full addresses here.
+        Security problems go through the private report link instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options: [Linux, Windows, Android]
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options: [Mainnet, Stagenet, Testnet, Not relevant]
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Sync mode
+      options: [Full, LWS, Not relevant]
+  - type: input
+    id: version
+    attributes:
+      label: Kilonova version or commit
+      description: Settings, About Kilonova shows the version.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Remove anything that identifies your wallet before pasting.
+      render: text

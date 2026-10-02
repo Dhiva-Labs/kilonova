@@ -1,0 +1,85 @@
+import 'package:flutter/material.dart';
+
+import '../../l10n/generated/app_localizations.dart';
+import '../../src/rust/api/core.dart';
+import '../../theme/theme.dart';
+import '../../theme/tokens.dart';
+
+class AboutScreen extends StatelessWidget {
+  const AboutScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    final c = context.kn;
+
+    Widget row(String label, String value, {bool mono = false}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: KnSpace.sm),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              label,
+              style: text.bodyMedium!.copyWith(color: c.textSecondary),
+            ),
+          ),
+          Expanded(
+            child: SelectableText(
+              value,
+              style: mono ? monoStyle(context) : text.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l.aboutTitle)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(KnSpace.lg),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.aboutDescription, style: text.bodyLarge),
+                const SizedBox(height: KnSpace.lg),
+                row(l.aboutCoreVersion, coreInfo().version, mono: true),
+                row(l.aboutLicense, l.aboutLicenseValue),
+                row(l.aboutSource, l.aboutSourceValue, mono: true),
+                const SizedBox(height: KnSpace.lg),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_outlined,
+                      color: c.textSecondary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: KnSpace.sm),
+                    Expanded(
+                      child: Text(l.aboutUnaudited, style: text.bodyMedium),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: KnSpace.lg),
+                TextButton(
+                  onPressed: () => showLicensePage(
+                    context: context,
+                    applicationName: l.appTitle,
+                    applicationVersion: coreInfo().version,
+                  ),
+                  child: Text(l.aboutOpenSourceLicenses),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

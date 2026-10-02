@@ -1,0 +1,24 @@
+name: Translation
+description: Offer or request a translation of the app.
+labels: [translation]
+body:
+  - type: input
+    id: language
+    attributes:
+      label: Language and locale code
+      placeholder: Tamil (ta)
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Request
+      options:
+        - I want to translate this language
+        - I am reporting a mistake in an existing translation
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details

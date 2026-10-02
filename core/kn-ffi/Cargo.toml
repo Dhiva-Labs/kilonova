@@ -1,0 +1,18 @@
+[package]
+name = "kn_ffi"
+description = "The Rust API surface the Kilonova app calls through flutter_rust_bridge"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.13.0"
+
+[lints]
+workspace = true

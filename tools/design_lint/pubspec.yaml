@@ -1,0 +1,9 @@
+name: design_lint
+description: Enforces the mechanical rules in docs/DESIGN.md.
+publish_to: none
+
+environment:
+  sdk: ^3.10.0
+
+dev_dependencies:
+  test: ^1.25.0

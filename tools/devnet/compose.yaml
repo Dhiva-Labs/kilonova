@@ -1,0 +1,97 @@
+# Local Monero test networks for Kilonova development.
+#
+#   docker compose --profile stagenet up -d
+#   docker compose --profile testnet up -d
+#
+# Ports are bound to 127.0.0.1 only. See README.md in this folder.
+
+x-monerod: &monerod
+  image: ghcr.io/sethforprivacy/simple-monerod:v0.18.5.1@sha256:0329465ffc599048efd57712d91d3b4b7d66380bd7205d5d0992cd9faf668e38
+  restart: unless-stopped
+  user: "${KN_UID:-1000}:${KN_GID:-1000}"
+
+x-lws: &lws
+  image: ghcr.io/vtnerd/monero-lws:0.3@sha256:573c3ba3c3034e0b046bd5b42001b4097e2a96af0c4284ed80e052d300955903
+  restart: unless-stopped
+  user: "${KN_UID:-1000}:${KN_GID:-1000}"
+
+services:
+  monerod-stagenet:
+    <<: *monerod
+    profiles: [stagenet]
+    command:
+      - --stagenet
+      - --data-dir=/data
+      - --prune-blockchain
+      - --no-igd
+      - --rpc-bind-ip=0.0.0.0
+      - --rpc-bind-port=38081
+      - --confirm-external-bind
+      - --zmq-rpc-bind-ip=0.0.0.0
+      - --confirm-zmq-rpc-external-bind
+      - --zmq-rpc-bind-port=38082
+      - --zmq-pub=tcp://0.0.0.0:38083
+    ports:
+      - "127.0.0.1:38081:38081"
+    volumes:
+      - ./data/stagenet/monerod:/data
+
+  lws-stagenet:
+    <<: *lws
+    profiles: [stagenet]
+    depends_on: [monerod-stagenet]
+    command:
+      - --network=stage
+      - --db-path=/data
+      - --daemon=tcp://monerod-stagenet:38082
+      - --sub=tcp://monerod-stagenet:38083
+      - --rest-server=http://0.0.0.0:38443
+      - --admin-rest-server=http://0.0.0.0:38444
+      - --confirm-external-bind
+      - --auto-accept-creation
+      - --disable-admin-auth
+    ports:
+      - "127.0.0.1:38443:38443"
+      - "127.0.0.1:38444:38444"
+    volumes:
+      - ./data/stagenet/lws:/data
+
+  monerod-testnet:
+    <<: *monerod
+    profiles: [testnet]
+    command:
+      - --testnet
+      - --data-dir=/data
+      - --prune-blockchain
+      - --no-igd
+      - --rpc-bind-ip=0.0.0.0
+      - --rpc-bind-port=28081
+      - --confirm-external-bind
+      - --zmq-rpc-bind-ip=0.0.0.0
+      - --confirm-zmq-rpc-external-bind
+      - --zmq-rpc-bind-port=28082
+      - --zmq-pub=tcp://0.0.0.0:28083
+    ports:
+      - "127.0.0.1:28081:28081"
+    volumes:
+      - ./data/testnet/monerod:/data
+
+  lws-testnet:
+    <<: *lws
+    profiles: [testnet]
+    depends_on: [monerod-testnet]
+    command:
+      - --network=test
+      - --db-path=/data
+      - --daemon=tcp://monerod-testnet:28082
+      - --sub=tcp://monerod-testnet:28083
+      - --rest-server=http://0.0.0.0:28443
+      - --admin-rest-server=http://0.0.0.0:28444
+      - --confirm-external-bind
+      - --auto-accept-creation
+      - --disable-admin-auth
+    ports:
+      - "127.0.0.1:28443:28443"
+      - "127.0.0.1:28444:28444"
+    volumes:
+      - ./data/testnet/lws:/data

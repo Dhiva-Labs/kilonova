@@ -1,0 +1,42 @@
+{
+  "@@locale": "en",
+  "appTitle": "Kilonova",
+  "walletsTitle": "Wallets",
+  "settingsTooltip": "Settings",
+  "networkMainnet": "Mainnet",
+  "networkStagenet": "Stagenet",
+  "networkTestnet": "Testnet",
+  "networkSwitcherLabel": "Network",
+  "testNetworkStrip": "{network}. These coins have no value.",
+  "@testNetworkStrip": {
+    "placeholders": {
+      "network": {
+        "type": "String",
+        "example": "Stagenet"
+      }
+    }
+  },
+  "noWalletsTitle": "No {network} wallets yet",
+  "@noWalletsTitle": {
+    "placeholders": {
+      "network": {
+        "type": "String",
+        "example": "Mainnet"
+      }
+    }
+  },
+  "noWalletsBody": "Creating and restoring wallets is not available in this build yet. Follow the project on GitHub for the first release.",
+  "settingsTitle": "Settings",
+  "privacyTitle": "Privacy policy",
+  "privacySubtitle": "What Kilonova shares, and with whom",
+  "aboutTitle": "About Kilonova",
+  "aboutSubtitle": "Version, license and source code",
+  "aboutDescription": "Kilonova is an open-source Monero wallet by Dhiva Labs. It can scan the blockchain itself against a Monero node, or use a light wallet server you choose.",
+  "aboutCoreVersion": "Version",
+  "aboutLicense": "License",
+  "aboutLicenseValue": "MIT",
+  "aboutSource": "Source code",
+  "aboutSourceValue": "github.com/Dhiva-Labs/kilonova",
+  "aboutUnaudited": "This software has not been audited. Do not store more than you can afford to lose.",
+  "aboutOpenSourceLicenses": "Open-source licenses"
+}

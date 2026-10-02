@@ -1,0 +1,25 @@
+# One word or phrase per line, matched case-insensitively on word boundaries.
+# Say what the thing does instead. See docs/DESIGN.md.
+seamless
+seamlessly
+next-gen
+next-generation
+unleash
+revolutionary
+revolutionize
+empower
+empowering
+cutting-edge
+game-changer
+game-changing
+supercharge
+effortless
+effortlessly
+blazing fast
+blazingly fast
+world-class
+best-in-class
+leverage
+synergy
+elevate
+unlock the power

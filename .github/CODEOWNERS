@@ -1,0 +1,9 @@
+# Reviews required before merge. Security-sensitive paths are listed
+# explicitly so they stay owned even if the default changes.
+*                       @dhivadhiva
+
+/core/                  @dhivadhiva
+/core/kn-ffi/src/api/   @dhivadhiva
+/.github/workflows/     @dhivadhiva
+/PRIVACY.md             @dhivadhiva
+/SECURITY.md            @dhivadhiva
