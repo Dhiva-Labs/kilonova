@@ -127,6 +127,15 @@ pub struct WalletData {
     /// Subaddresses handed out so far, per account (index 0 = account 0).
     pub next_subaddress: Vec<u32>,
     pub labels: Vec<AddressLabel>,
+    /// True for wallets created in Kilonova (not restored), which have no
+    /// history before their restore height. Light wallet servers start such
+    /// wallets at the current block instead of charging for an import.
+    #[serde(default)]
+    pub created_here: bool,
+    /// The light wallet server this wallet's owner agreed to share the
+    /// private view key with. Changing servers asks again.
+    #[serde(default)]
+    pub lws_consent: Option<String>,
 }
 
 impl WalletData {
@@ -141,6 +150,8 @@ impl WalletData {
             birthday: None,
             next_subaddress: vec![1],
             labels: Vec::new(),
+            created_here: false,
+            lws_consent: None,
         }
     }
 }
@@ -362,6 +373,23 @@ impl Store {
             Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
             _ => Ok(()),
         }
+    }
+
+    /// Switches how a wallet syncs. The old sync cache is deleted, since
+    /// the two modes build it differently; the next sync starts over.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an unknown id or I/O failure.
+    pub fn set_mode(&self, id: &str, mode: SyncMode) -> Result<(), StoreError> {
+        let mut entries = self.list()?;
+        let entry = entries
+            .iter_mut()
+            .find(|e| e.id == id)
+            .ok_or(StoreError::NotFound)?;
+        entry.mode = mode;
+        self.write_registry(&entries)?;
+        self.remove_cache(id)
     }
 
     /// Renames a wallet in the registry.

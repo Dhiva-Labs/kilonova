@@ -105,6 +105,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
         password: _password.text,
         // A new wallet has no history before today.
         restoreHeight: restoreHeightForNewWallet(network: widget.network),
+        createdHere: true,
       );
       _words = const [];
       await widget.registry.opened(wallet);

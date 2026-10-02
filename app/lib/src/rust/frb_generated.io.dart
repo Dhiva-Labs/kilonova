@@ -99,6 +99,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<WalletSummary> dco_decode_list_wallet_summary(dynamic raw);
 
   @protected
+  LwsHealth dco_decode_lws_health(dynamic raw);
+
+  @protected
   Network dco_decode_network(dynamic raw);
 
   @protected
@@ -242,6 +245,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<WalletSummary> sse_decode_list_wallet_summary(
     SseDeserializer deserializer,
   );
+
+  @protected
+  LwsHealth sse_decode_lws_health(SseDeserializer deserializer);
 
   @protected
   Network sse_decode_network(SseDeserializer deserializer);
@@ -412,6 +418,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<WalletSummary> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_lws_health(LwsHealth self, SseSerializer serializer);
 
   @protected
   void sse_encode_network(Network self, SseSerializer serializer);

@@ -18,6 +18,7 @@ void main() {
         mode: SyncMode.lws,
         words: seed.words.join(' '),
         password: 'daily password',
+        createdHere: true,
       );
       wallet.lock();
     });

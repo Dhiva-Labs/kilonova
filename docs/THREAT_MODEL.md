@@ -26,10 +26,22 @@ support.
 **Light wallet server (LWS mode).** Holds the view key, so it sees all
 incoming payments and can infer spends. Can lie about outputs, spent status
 and decoys.
-Mitigations: the spend key never leaves the device; spent status is
-recomputed from locally derived key images; the user picks the server and is
-warned before the view key is shared; Kilonova runs no server and sets no
-default.
+Mitigations, implemented in `kn-sync/src/lws.rs` and tested against a
+dishonest server (`kn-sync/tests/lws_dishonest_server.rs`):
+- the spend key never leaves the device;
+- every output the server reports must open with the wallet's own keys
+  (output key, subaddress and index all checked), or it is dropped and the
+  user is told how many were dropped;
+- an output counts as spent only when one of the server's candidate key
+  images equals the key image derived locally, so a server cannot fake a
+  spend;
+- the view key is sent only after the user agrees for that exact server,
+  and changing servers asks again; Kilonova runs no server and sets no
+  default.
+
+What remains possible for a dishonest server: hiding payments, inventing
+incoming payments (which fail when spent), and hiding spends. These are
+inherent to giving a server the view key; full sync avoids them.
 
 **Network observer.** Sees connections to nodes and servers.
 Mitigations: TLS to nodes and LWS servers, optional certificate pinning,

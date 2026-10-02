@@ -201,7 +201,6 @@
   "syncNodeUnreachable": "The node is not answering. Retrying in 30 seconds.",
   "syncWrongNetwork": "The selected node serves a different network. Choose another in Settings, Nodes.",
   "syncBadNode": "The selected node address is not valid. Choose another in Settings, Nodes.",
-  "syncLwsNotYet": "Light wallet server sync arrives in the next update. Balance and history will appear then.",
   "syncRetry": "Try again",
   "viewOnlyBalanceNote": "View-only wallets cannot see their own spends, so this shows everything received.",
   "historyTitle": "History",
@@ -248,5 +247,70 @@
   "nodeErrorBadUrl": "Use host:port or http(s)://host:port.",
   "nodeErrorWrongNetwork": "This node serves a different Monero network.",
   "nodeErrorUnreachable": "This node is not answering.",
-  "nodeErrorStorage": "Node settings could not be saved."
+  "nodeErrorStorage": "Node settings could not be saved.",
+  "lwsTitle": "Light wallet servers",
+  "lwsSubtitle": "For wallets that sync through a server",
+  "lwsHelp": "A light wallet server scans the blockchain for your wallet, so syncing is fast. To do that it needs your private view key, which lets it see every payment you receive. It cannot spend your funds. Use a server you run yourself, or one you trust. Kilonova does not run one and never picks one for you.",
+  "lwsServerLabel": "Server address, as host:port or https://host:port",
+  "lwsSaveAction": "Save",
+  "lwsClearAction": "Remove",
+  "lwsNotSet": "No server set for this network.",
+  "lwsHealthy": "Answering, at block {height}",
+  "@lwsHealthy": {
+    "placeholders": {
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "lwsHealthyType": "{type} answering, at block {height}",
+  "@lwsHealthyType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "syncLwsServerNotSet": "Set a light wallet server for this network to sync this wallet.",
+  "syncLwsSetServer": "Set a server",
+  "syncLwsConsentNeeded": "This wallet will share its private view key with {server} before it can sync.",
+  "@syncLwsConsentNeeded": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "syncLwsReview": "Review and connect",
+  "syncLwsDenied": "The light wallet server refused this wallet.",
+  "syncLwsCreationRefused": "The light wallet server does not accept new wallets. Ask its operator, or use another server.",
+  "syncLwsRejected": "The server reported {count} payments that do not belong to this wallet. They were ignored.",
+  "@syncLwsRejected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncLwsImportPending": "The server is still scanning this wallet's older history.",
+  "lwsConsentTitle": "Share your view key?",
+  "lwsConsentBody": "{server} will receive this wallet's private view key. With it, the server can see every payment this wallet receives, now and in the future, and can usually tell when you spend. It cannot spend your funds or see your seed.",
+  "@lwsConsentBody": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "lwsConsentAdvice": "Only continue if you run this server or trust whoever does. You can switch this wallet to full sync at any time from the wallet menu.",
+  "lwsConsentAccept": "Share and connect",
+  "switchToLwsAction": "Switch to light wallet server",
+  "switchToFullAction": "Switch to full sync",
+  "switchModeTitle": "Switch sync mode?",
+  "switchToLwsBody": "The wallet will sync through the light wallet server set for this network, which receives the private view key. What has been scanned so far is cleared.",
+  "switchToFullBody": "The wallet will scan the blockchain itself from a Monero node. What has been scanned so far is cleared and scanning starts again from the restore height. The light wallet server keeps any data it already has.",
+  "switchAction": "Switch"
 }

@@ -44,14 +44,18 @@ jobs:
             curl -sf -X POST http://127.0.0.1:18181/json_rpc \
               -d '{"jsonrpc":"2.0","id":"0","method":"get_info"}' >/dev/null &&
             curl -sf -X POST http://127.0.0.1:18183/json_rpc \
-              -d '{"jsonrpc":"2.0","id":"0","method":"get_version"}' >/dev/null && exit 0
+              -d '{"jsonrpc":"2.0","id":"0","method":"get_version"}' >/dev/null &&
+            curl -sf -X POST http://127.0.0.1:18443/get_version -d '{}' >/dev/null && exit 0
             sleep 2
           done
           docker compose --profile regtest logs
           exit 1
-      - name: Scan, spend detection and reorg against monero-wallet-rpc
+      - name: Full mode against monero-wallet-rpc (scan, spends, reorg)
         working-directory: core
         run: cargo test -p kn-sync --test regtest -- --ignored --test-threads 1
+      - name: LWS mode against monero-lws, full mode and monero-wallet-rpc
+        working-directory: core
+        run: cargo test -p kn-sync --test regtest_lws -- --ignored --test-threads 1
       - name: Logs
         if: failure()
         working-directory: tools/devnet

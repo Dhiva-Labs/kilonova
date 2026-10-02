@@ -15,6 +15,7 @@ import '../helpers/rust.dart';
 ///     cd tools/devnet && docker compose --profile regtest up -d
 ///     cd app && KN_REGTEST=1 flutter test test/features/sync_regtest_test.dart
 const _node = 'http://127.0.0.1:18181';
+const _lws = 'http://127.0.0.1:18443';
 
 /// The plain dart:io client, unlike the one flutter_test installs.
 class _RealHttp extends HttpOverrides {}
@@ -64,6 +65,7 @@ void main() {
           password: 'regtest password',
           // Regtest heights are small; start at the beginning.
           restoreHeight: BigInt.zero,
+          createdHere: true,
         );
         await _mine(wallet.addresses().first.address, 12);
         wallet.lock();
@@ -84,6 +86,49 @@ void main() {
       // Mined outputs stay locked for 60 blocks, so nothing is spendable.
       expect(find.textContaining('can be spent now'), findsOneWidget);
       expect(find.text('0.0 XMR'), findsNothing);
+    },
+    skip: Platform.environment['KN_REGTEST'] != '1',
+  );
+
+  testWidgets(
+    'an LWS-mode wallet syncs through monero-lws after consent',
+    (tester) async {
+      useDesktopWindow(tester);
+      late String address;
+      await tester.runAsync(() async {
+        await setLwsServer(network: Network.mainnet, url: _lws);
+        final seed = await generateSeed(format: SeedFormat.polyseed);
+        final wallet = await createWalletFromSeed(
+          name: 'Light',
+          network: Network.mainnet,
+          mode: SyncMode.lws,
+          words: seed.words.join(' '),
+          password: 'regtest password',
+          createdHere: true,
+        );
+        address = wallet.addresses().first.address;
+        wallet.lock();
+      });
+
+      await tester.pumpWidget(await testApp(tester));
+      await tester.tap(find.text('Light'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'regtest password');
+      await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
+      await pumpUntilFound(tester, find.text('Review and connect'));
+      await tester.tap(find.text('Review and connect'));
+      await pumpUntilFound(tester, find.text('Share and connect'));
+      await tester.tap(find.text('Share and connect'));
+      // Registered with the server; now pay it.
+      await pumpUntilFound(tester, find.textContaining('Up to date at block'));
+      await tester.runAsync(() => _mine(address, 12));
+
+      await pumpUntil(
+        tester,
+        () => find.textContaining('Mined').evaluate().length == 12,
+        what: '12 mined payments from monero-lws',
+        timeout: const Duration(seconds: 90),
+      );
     },
     skip: Platform.environment['KN_REGTEST'] != '1',
   );

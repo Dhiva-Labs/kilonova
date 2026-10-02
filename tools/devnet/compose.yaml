@@ -50,6 +50,8 @@ services:
       - --admin-rest-server=http://0.0.0.0:38444
       - --confirm-external-bind
       - --auto-accept-creation
+      - --auto-accept-import
+      - --max-subaddresses=1000
       - --disable-admin-auth
     ports:
       - "127.0.0.1:38443:38443"
@@ -90,6 +92,8 @@ services:
       - --admin-rest-server=http://0.0.0.0:28444
       - --confirm-external-bind
       - --auto-accept-creation
+      - --auto-accept-import
+      - --max-subaddresses=1000
       - --disable-admin-auth
     ports:
       - "127.0.0.1:28443:28443"
@@ -112,6 +116,10 @@ services:
       - --rpc-bind-ip=0.0.0.0
       - --rpc-bind-port=18081
       - --confirm-external-bind
+      - --zmq-rpc-bind-ip=0.0.0.0
+      - --confirm-zmq-rpc-external-bind
+      - --zmq-rpc-bind-port=18082
+      - --zmq-pub=tcp://0.0.0.0:18083
     ports:
       - "127.0.0.1:18181:18081"
     tmpfs:
@@ -133,3 +141,32 @@ services:
       - --rpc-bind-port=18083
     ports:
       - "127.0.0.1:18183:18083"
+
+  # monero-lws on the regtest chain, for LWS-mode tests. Regtest support
+  # (--regtest) is not in a tagged release yet, so this uses a master build
+  # pinned by digest.
+  lws-regtest:
+    <<: *lws
+    image: ghcr.io/vtnerd/monero-lws:master@sha256:159e224076b6464c3cf14ca024827ea1a584957cd18ea13a0c5d4df0d1b98c74
+    profiles: [regtest]
+    restart: "no"
+    depends_on: [monerod-regtest]
+    command:
+      - --network=main
+      - --regtest
+      - --db-path=/data
+      - --daemon=tcp://monerod-regtest:18082
+      - --sub=tcp://monerod-regtest:18083
+      - --rest-server=http://0.0.0.0:8443
+      - --admin-rest-server=http://0.0.0.0:8444
+      - --confirm-external-bind
+      - --auto-accept-creation
+      - --auto-accept-import
+      - --max-subaddresses=1000
+      - --disable-admin-auth
+      - --log-level=2
+    ports:
+      - "127.0.0.1:18443:8443"
+      - "127.0.0.1:18444:8444"
+    tmpfs:
+      - /data:uid=${KN_UID:-1000},gid=${KN_GID:-1000}

@@ -15,6 +15,10 @@ const SETTINGS: &str = "nodes";
 pub(crate) struct PerNetwork {
     pub(crate) selected: Option<String>,
     pub(crate) custom: Vec<String>,
+    /// The light wallet server for LWS-mode wallets. There is no default:
+    /// it receives view keys, so only the user chooses it.
+    #[serde(default)]
+    pub(crate) lws: Option<String>,
 }
 
 pub(crate) type Settings = BTreeMap<String, PerNetwork>;

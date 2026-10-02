@@ -43,6 +43,8 @@ Future<SeedFormat> checkSeed({required String words}) =>
     RustLib.instance.api.crateApiWalletsCheckSeed(words: words);
 
 /// Creates or restores a wallet from a 25-word or 16-word seed.
+/// `created_here` is true for a seed generated just now, which has no
+/// earlier history.
 ///
 /// # Errors
 ///
@@ -54,6 +56,7 @@ Future<OpenWallet> createWalletFromSeed({
   required String words,
   required String password,
   BigInt? restoreHeight,
+  required bool createdHere,
 }) => RustLib.instance.api.crateApiWalletsCreateWalletFromSeed(
   name: name,
   network: network,
@@ -61,6 +64,7 @@ Future<OpenWallet> createWalletFromSeed({
   words: words,
   password: password,
   restoreHeight: restoreHeight,
+  createdHere: createdHere,
 );
 
 /// Restores a wallet from its private spend key.
@@ -163,11 +167,29 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required String newPassword,
   });
 
+  /// Records that the owner agreed to share this wallet's private view
+  /// key with `server`, and saves the wallet.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked or cannot be saved.
+  Future<void> grantLwsConsent({required String server});
+
   /// Transactions found so far, newest first.
   List<HistoryItem> history();
 
   /// Wipes the keys now instead of waiting for Dart to release the object.
   void lock();
+
+  /// The light wallet server this LWS-mode wallet would sync from, if the
+  /// owner has not yet agreed to share the view key with it. `None` when
+  /// consent is already given, no server is set, or the wallet uses full
+  /// sync.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked.
+  Future<String?> lwsConsentNeeded();
 
   /// Hands out the next subaddress in account 0 and saves the wallet.
   ///
@@ -195,12 +217,20 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required String label,
   });
 
+  /// Switches between full sync and a light wallet server. Stops sync and
+  /// clears what was scanned; start sync again afterwards.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked or cannot be saved.
+  Future<void> setSyncMode({required SyncMode mode});
+
   /// Starts syncing in the background and reports through `sink`. Keeps
   /// following new blocks until [`OpenWallet::stop_sync`] or
-  /// [`OpenWallet::lock`]. Calling it while sync runs does nothing.
+  /// [`OpenWallet::lock`]. Calling it again restarts sync.
   Stream<SyncEvent> startSync();
 
-  /// Stops background sync after the current batch.
+  /// Stops background sync after the current step.
   void stopSync();
 
   /// The wallet's registry entry.

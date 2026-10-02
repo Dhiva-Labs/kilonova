@@ -292,3 +292,20 @@ fn a_cache_from_another_wallet_is_refused() {
     .unwrap();
     assert!(matches!(store.load_cache(&a), Err(StoreError::Corrupt(_))));
 }
+
+#[test]
+fn switching_mode_updates_the_list_and_drops_the_cache() {
+    let (dir, store) = store();
+    let wallet = store
+        .create("W", SyncMode::Full, seed_data(Network::Mainnet).0, b"pw", 0)
+        .unwrap();
+    store.save_cache(&wallet, b"full-mode scan").unwrap();
+
+    store.set_mode(&wallet.entry.id, SyncMode::Lws).unwrap();
+    assert_eq!(store.list().unwrap()[0].mode, SyncMode::Lws);
+    assert!(!dir.path().join(format!("{}.knc", wallet.entry.id)).exists());
+    assert!(matches!(
+        store.set_mode("missing", SyncMode::Full),
+        Err(StoreError::NotFound)
+    ));
+}

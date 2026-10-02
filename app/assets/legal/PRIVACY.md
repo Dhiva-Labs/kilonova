@@ -51,8 +51,12 @@ needs your **private view key**. With it, the server can see:
 
 It can also see outgoing payments when it notices your coins being spent. It
 **cannot** spend your funds, because your spend key stays on your device. Only
-use a server you run yourself or one you trust, such as MyMonero. Kilonova does not run a light wallet server and never picks one for you. The app warns you before sharing your
-view key.
+use a server you run yourself or one you trust, such as MyMonero. Kilonova
+does not run a light wallet server and never picks one for you.
+
+Before a wallet's view key is sent anywhere, the app shows you which server
+will receive it and asks you to agree. Your answer is remembered for that
+wallet and that server only: choosing a different server asks again.
 
 ### Price data (optional, off by default)
 
@@ -100,3 +104,4 @@ Security issues: see SECURITY.md in the repository.
 ## Changelog
 
 - (date): first version.
+- 2026-10-02: describe the consent step before a view key is shared with a light wallet server.

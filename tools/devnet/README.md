@@ -9,6 +9,9 @@ Full mode and LWS mode can be developed without touching mainnet.
 | `lws-stagenet` | monero-lws 0.3 | `127.0.0.1:38443` (REST), `38444` (admin) |
 | `monerod-testnet` | simple-monerod v0.18.5.1 | `127.0.0.1:28081` (RPC) |
 | `lws-testnet` | monero-lws 0.3 | `127.0.0.1:28443` (REST), `28444` (admin) |
+| `monerod-regtest` | simple-monerod v0.18.5.1 | `127.0.0.1:18181` (RPC, unrestricted) |
+| `wallet-rpc-regtest` | simple-monero-wallet-rpc v0.18.5.1 | `127.0.0.1:18183` |
+| `lws-regtest` | monero-lws master (pinned digest; `--regtest` is not in a release yet) | `127.0.0.1:18443` (REST) |
 
 Images are pinned by tag and digest. Nothing is exposed beyond localhost.
 
@@ -19,7 +22,9 @@ cd tools/devnet
 KN_UID=$(id -u) KN_GID=$(id -g) docker compose --profile stagenet up -d
 ```
 
-Use `--profile testnet` for testnet, or pass both profiles. Chain data goes to
+Use `--profile testnet` for testnet, or pass both profiles. The `regtest`
+profile is a private chain that starts empty and needs no sync; the Rust
+and app tests that use it mine blocks on demand. Chain data goes to
 `tools/devnet/data/`, which git ignores.
 
 ## First sync takes a while
@@ -39,7 +44,7 @@ curl -s http://127.0.0.1:38081/json_rpc \
 
 ## Dev-only settings
 
-The LWS servers run with `--auto-accept-creation` and `--disable-admin-auth`
+The LWS servers run with `--auto-accept-creation`, `--auto-accept-import` and `--disable-admin-auth`
 so tests can create accounts without an approval step. Never use these flags
 on a server other people can reach.
 

@@ -10,7 +10,7 @@
 
 use std::sync::LazyLock;
 
-use kn_sync::{NodeUrl, SyncError, bundled_nodes, connect};
+use kn_sync::{NodeUrl, SyncError, bundled_nodes, check_lws, connect};
 use rand_core::{OsRng, RngCore};
 
 use super::network::Network;
@@ -41,7 +41,10 @@ impl From<SyncError> for NodeError {
         match e {
             SyncError::BadNodeUrl => Self::BadUrl,
             SyncError::WrongNetwork => Self::WrongNetwork,
-            SyncError::Node(_) | SyncError::Cancelled => Self::Unreachable,
+            SyncError::Node(_)
+            | SyncError::Cancelled
+            | SyncError::LwsDenied
+            | SyncError::LwsCreationRefused => Self::Unreachable,
         }
     }
 }
@@ -181,6 +184,63 @@ pub fn check_node(network: Network, url: String) -> Result<NodeHealth, NodeError
     })
 }
 
+/// The light wallet server LWS-mode wallets on `network` use, if one is
+/// set. Kilonova never picks one.
+///
+/// # Errors
+///
+/// Fails if the settings cannot be read.
+pub fn lws_server(network: Network) -> Result<Option<String>, NodeError> {
+    Ok(load()?.get(key(network)).and_then(|n| n.lws.clone()))
+}
+
+/// Sets the light wallet server for `network`. Returns the normalized URL.
+///
+/// # Errors
+///
+/// [`NodeError::BadUrl`] for anything that is not `host:port` or an
+/// http(s) URL.
+pub fn set_lws_server(network: Network, url: String) -> Result<String, NodeError> {
+    let url = NodeUrl::parse(&url)?.as_str().to_owned();
+    let mut settings = load()?;
+    settings.entry(key(network).to_owned()).or_default().lws = Some(url.clone());
+    save(&settings)?;
+    Ok(url)
+}
+
+/// Forgets the light wallet server for `network`.
+///
+/// # Errors
+///
+/// Fails if the settings cannot be written.
+pub fn clear_lws_server(network: Network) -> Result<(), NodeError> {
+    let mut settings = load()?;
+    settings.entry(key(network).to_owned()).or_default().lws = None;
+    save(&settings)
+}
+
+/// What a light wallet server reported when checked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LwsHealth {
+    pub height: u64,
+    pub server_type: Option<String>,
+}
+
+/// Contacts a light wallet server and checks its network where it says.
+/// Sends no keys.
+///
+/// # Errors
+///
+/// [`NodeError::WrongNetwork`] or [`NodeError::Unreachable`].
+pub fn check_lws_server(network: Network, url: String) -> Result<LwsHealth, NodeError> {
+    let url = NodeUrl::parse(&url)?;
+    let info = RUNTIME.block_on(check_lws(&url, network.into()))?;
+    Ok(LwsHealth {
+        height: info.height,
+        server_type: info.server_type,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,5 +283,19 @@ mod tests {
         let after = nodes(Network::Testnet).unwrap();
         assert!(after.iter().filter(|n| n.selected).all(|n| n.bundled));
         assert_eq!(after.iter().filter(|n| n.selected).count(), 1);
+
+        // Light wallet servers have no default and are kept per network.
+        assert_eq!(lws_server(Network::Stagenet).unwrap(), None);
+        assert_eq!(
+            set_lws_server(Network::Stagenet, "lws.example:8443".into()).unwrap(),
+            "http://lws.example:8443"
+        );
+        assert_eq!(
+            lws_server(Network::Stagenet).unwrap().as_deref(),
+            Some("http://lws.example:8443")
+        );
+        assert_eq!(lws_server(Network::Testnet).unwrap(), None);
+        clear_lws_server(Network::Stagenet).unwrap();
+        assert_eq!(lws_server(Network::Stagenet).unwrap(), None);
     }
 }

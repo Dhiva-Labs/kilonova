@@ -75,6 +75,7 @@ void main() {
       mode: SyncMode.full,
       words: seed.words.join(' '),
       password: 'emulator password',
+      createdHere: true,
     )).lock();
     await registry.reload();
 

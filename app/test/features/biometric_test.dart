@@ -19,6 +19,7 @@ Future<String> makeWallet(WidgetTester tester, String name) async {
       mode: SyncMode.full,
       words: seed.words.join(' '),
       password: password,
+      createdHere: true,
     );
     id = wallet.summary().id;
     wallet.lock();

@@ -320,6 +320,7 @@ dependencies = [
  "cpufeatures",
  "curve25519-dalek-derive",
  "fiat-crypto",
+ "rand_core",
  "rustc_version",
  "subtle",
  "zeroize",
@@ -993,11 +994,13 @@ dependencies = [
 name = "kn-sync"
 version = "0.1.0"
 dependencies = [
+ "curve25519-dalek",
  "hex",
  "kn-keys",
  "monero-daemon-rpc",
  "monero-interface",
  "monero-wallet",
+ "rand_core",
  "reqwest",
  "rustls",
  "serde",
@@ -1005,6 +1008,7 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "webpki-roots",
+ "zeroize",
 ]
 
 [[package]]
