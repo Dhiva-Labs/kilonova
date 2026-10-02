@@ -81,6 +81,8 @@ enum _WalletAction {
   switchMode,
   biometricOn,
   biometricOff,
+  makeCold,
+  makeHot,
   lock,
   delete,
 }
@@ -210,6 +212,31 @@ class _WalletMenuState extends State<WalletMenu> {
         await registry.biometric.disable(summary.id);
         await _refreshBiometric();
         _notice(l.biometricDisabledNotice);
+      case _WalletAction.makeCold:
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(l.coldUseAsOfflineTitle),
+            content: SizedBox(width: 420, child: Text(l.coldUseAsOfflineBody)),
+            actions: [
+              KnButton.text(
+                l.cancelAction,
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+              KnButton.primary(
+                l.coldUseAsOfflineAction,
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ],
+          ),
+        );
+        if (!(confirmed ?? false)) return;
+        await wallet.setCold(cold: true);
+        await registry.reload();
+      case _WalletAction.makeHot:
+        await wallet.setCold(cold: false);
+        await registry.reload();
+        registry.startSync(summary.id);
       case _WalletAction.lock:
         registry.lock(summary.id);
       case _WalletAction.delete:
@@ -242,14 +269,15 @@ class _WalletMenuState extends State<WalletMenu> {
           value: _WalletAction.changePassword,
           child: Text(l.changePasswordAction),
         ),
-        PopupMenuItem(
-          value: _WalletAction.switchMode,
-          child: Text(
-            wallet.summary().mode == SyncMode.full
-                ? l.switchToLwsAction
-                : l.switchToFullAction,
+        if (!wallet.summary().cold)
+          PopupMenuItem(
+            value: _WalletAction.switchMode,
+            child: Text(
+              wallet.summary().mode == SyncMode.full
+                  ? l.switchToLwsAction
+                  : l.switchToFullAction,
+            ),
           ),
-        ),
         if (_biometricAvailable)
           _biometricOn
               ? PopupMenuItem(
@@ -259,6 +287,16 @@ class _WalletMenuState extends State<WalletMenu> {
               : PopupMenuItem(
                   value: _WalletAction.biometricOn,
                   child: Text(l.biometricEnableAction),
+                ),
+        if (!wallet.summary().viewOnly)
+          wallet.summary().cold
+              ? PopupMenuItem(
+                  value: _WalletAction.makeHot,
+                  child: Text(l.coldStopOfflineAction),
+                )
+              : PopupMenuItem(
+                  value: _WalletAction.makeCold,
+                  child: Text(l.coldUseAsOfflineAction),
                 ),
         PopupMenuItem(value: _WalletAction.lock, child: Text(l.lockAction)),
         PopupMenuItem(value: _WalletAction.delete, child: Text(l.deleteAction)),

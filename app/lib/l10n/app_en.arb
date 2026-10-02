@@ -562,5 +562,75 @@
     }
   },
   "nodeActionsMenu": "Node actions",
-  "nodesUseAction": "Use this node"
+  "nodesUseAction": "Use this node",
+  "coldOfflineTitle": "Offline wallet",
+  "coldOfflineBody": "Kilonova never connects for this wallet. Keep this phone offline, for example in airplane mode.",
+  "coldOfflineLabel": "Offline",
+  "coldScanRequestAction": "Scan a request",
+  "coldPairAction": "Pair a watching wallet",
+  "coldScanPairingTitle": "Scan the pairing code",
+  "coldShowToWatchingTitle": "Show this to your watching wallet",
+  "coldSaveFileAction": "Save as a file",
+  "coldFramePartLabel": "Part {received} of {total}",
+  "@coldFramePartLabel": {
+    "placeholders": {
+      "received": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "coldCheckBeforeSigningTitle": "Check before signing",
+  "coldSigningEyebrow": "Signing",
+  "coldCoinsSpentLabel": "Coins spent: {count}",
+  "@coldCoinsSpentLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coldReadFromTxNote": "Read from the transaction itself, not from the other device.",
+  "coldSignAction": "Sign",
+  "coldPairingWarning": "This code holds the private view key. Show it only to your own watching wallet.",
+  "coldSyncNeededCard": "{count, plural, =1{1 coin needs key images from your offline wallet before you can spend it.} other{{count} coins need key images from your offline wallet before you can spend them.}}",
+  "@coldSyncNeededCard": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coldSyncWithOfflineAction": "Sync with offline wallet",
+  "coldShowToOfflineTitle": "Show this to your offline wallet",
+  "coldScanAnswerAction": "Scan the answer",
+  "coldLearnedKeyImagesNotice": "{count, plural, =1{Learned the key image for 1 coin} other{Learned key images for {count} coins}}",
+  "@coldLearnedKeyImagesNotice": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coldSignOnOfflineTitle": "Sign this on your offline wallet",
+  "coldScanSignedAction": "Scan the signed transaction",
+  "coldPairWatchingMenuAction": "Pair with an offline wallet",
+  "coldCreateWatchingAction": "Create watching wallet",
+  "coldUseAsOfflineAction": "Use as offline wallet",
+  "coldStopOfflineAction": "Stop using as offline wallet",
+  "coldUseAsOfflineTitle": "Use as offline wallet",
+  "coldUseAsOfflineBody": "This stops syncing. The wallet will only sign requests from a watching wallet, until you turn this off again.",
+  "coldFailureNotColdData": "That is not a Kilonova cold wallet code or file.",
+  "coldFailureWrongWallet": "That code is for another wallet.",
+  "coldFailureWrongNetwork": "That code is for another network.",
+  "coldFailureWrongKind": "That is not the kind of code expected here.",
+  "coldFailureDamaged": "The code is damaged or incomplete. Scan it again.",
+  "coldFailureNotOurs": "That transaction spends coins that are not this wallet's.",
+  "coldFailureChangeElsewhere": "That transaction's change does not come back to this wallet.",
+  "coldFailureInconsistent": "The amounts in that transaction do not add up.",
+  "coldFailureNotWatching": "Only a watching wallet does this.",
+  "coldFailureIsCold": "This offline wallet never connects.",
+  "coldFailureAlreadyUsed": "That request was already answered."
 }

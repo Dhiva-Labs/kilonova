@@ -12,6 +12,7 @@ import '../settings/price_feed.dart';
 import '../../src/rust/api/network.dart';
 import '../../src/rust/api/sync.dart';
 import '../../src/rust/api/wallets.dart';
+import '../cold/cold_transport.dart';
 
 /// The wallet list and the wallets currently unlocked, shared by every
 /// screen. Unlocked wallets are locked when the app goes to the background.
@@ -19,11 +20,15 @@ class WalletRegistry extends ChangeNotifier {
   WalletRegistry({
     this.biometric = const BiometricUnlock(),
     this.notifier = const Notifier(),
+    this.cold = const ColdTransport(),
     PriceFeed? price,
   }) : price = price ?? PriceFeed();
 
   final BiometricUnlock biometric;
   final Notifier notifier;
+
+  /// How scans and file saves move cold wallet messages; a fake in tests.
+  final ColdTransport cold;
 
   /// Notifications and background sync, both off until turned on.
   prefs.Preferences preferences = const prefs.Preferences(
@@ -58,10 +63,11 @@ class WalletRegistry extends ChangeNotifier {
       _sync.putIfAbsent(id, () => ValueNotifier(null));
 
   /// Starts (or restarts after an error) background sync. Sync then keeps
-  /// following the chain until the wallet is locked.
+  /// following the chain until the wallet is locked. A cold wallet never
+  /// goes online, so this does nothing for one.
   void startSync(String id) {
     final wallet = _open[id];
-    if (wallet == null) return;
+    if (wallet == null || wallet.summary().cold) return;
     _syncSubscriptions[id]?.cancel();
     final notifier = _sync.putIfAbsent(id, () => ValueNotifier(null));
     _syncSubscriptions[id] = wallet.startSync().listen((event) {
