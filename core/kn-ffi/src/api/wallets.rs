@@ -50,9 +50,11 @@ impl From<KeyError> for WalletError {
             KeyError::BadChecksum => Self::BadChecksum,
             KeyError::UnsupportedPolyseed => Self::UnsupportedPolyseed,
             KeyError::MalformedKey => Self::MalformedKey,
-            KeyError::NonCanonicalKey | KeyError::BadSubaddressIndex | KeyError::NotOurs => {
-                Self::InvalidKey
-            }
+            KeyError::NonCanonicalKey
+            | KeyError::BadSubaddressIndex
+            | KeyError::NotOurs
+            | KeyError::ViewOnly
+            | KeyError::Signing(_) => Self::InvalidKey,
             KeyError::BadAddress(_) => Self::BadAddress,
             KeyError::ViewKeyMismatch => Self::ViewKeyMismatch,
             KeyError::NotStandardAddress => Self::NotStandardAddress,

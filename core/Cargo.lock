@@ -1085,6 +1085,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "kn-tx"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "kn-keys",
+ "kn-sync",
+ "monero-daemon-rpc",
+ "monero-interface",
+ "monero-wallet",
+ "rand_core",
+ "reqwest",
+ "rustls",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "zeroize",
+]
+
+[[package]]
 name = "kn_ffi"
 version = "0.1.0"
 dependencies = [
