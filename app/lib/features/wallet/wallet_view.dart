@@ -8,6 +8,7 @@ import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../src/rust/api/sync.dart';
 import '../../widgets/mode_label.dart';
+import '../../widgets/amount.dart';
 import '../send/monero_uri.dart';
 import '../send/send_screen.dart';
 import '../wallets/wallet_registry.dart';
@@ -209,52 +210,113 @@ class _AddressTile extends StatelessWidget {
   }
 }
 
-/// The address as a `monero:` QR code. Always dark on white, whatever the
-/// theme, because that is what scanners read best.
+/// The address as a `monero:` QR code, optionally asking for an amount.
+/// Always dark on white, whatever the theme, because that is what scanners
+/// read best.
 void _showQr(BuildContext context, String title, String address) {
-  final l = AppLocalizations.of(context);
   showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
+    builder: (_) => _ReceiveDialog(title: title, address: address),
+  );
+}
+
+class _ReceiveDialog extends StatefulWidget {
+  const _ReceiveDialog({required this.title, required this.address});
+
+  final String title;
+  final String address;
+
+  @override
+  State<_ReceiveDialog> createState() => _ReceiveDialogState();
+}
+
+class _ReceiveDialogState extends State<_ReceiveDialog> {
+  final _amount = TextEditingController();
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final typed = _amount.text.trim();
+    final amount = parseXmr(typed);
+    final valid = typed.isEmpty || (amount != null && amount > BigInt.zero);
+    final request = paymentRequestUri(
+      widget.address,
+      amount: typed.isEmpty || !valid ? null : amount,
+    );
+    return AlertDialog(
+      title: Text(widget.title),
       content: SizedBox(
-        width: 280,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ColoredBox(
-              color: KnQr.paper,
-              child: Padding(
-                // A quiet zone of about four modules, as scanners expect.
-                padding: const EdgeInsets.all(KnSpace.lg),
-                child: QrImageView(
-                  data: paymentRequestUri(address),
-                  size: 248,
-                  padding: EdgeInsets.zero,
-                  backgroundColor: KnQr.paper,
-                  eyeStyle: const QrEyeStyle(
-                    eyeShape: QrEyeShape.square,
-                    color: KnQr.ink,
+        width: 296,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ColoredBox(
+                color: KnQr.paper,
+                child: Padding(
+                  // A quiet zone of about four modules, as scanners expect.
+                  padding: const EdgeInsets.all(KnSpace.lg),
+                  child: QrImageView(
+                    data: request,
+                    size: 248,
+                    padding: EdgeInsets.zero,
+                    backgroundColor: KnQr.paper,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: KnQr.ink,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: KnQr.ink,
+                    ),
+                    semanticsLabel: request,
                   ),
-                  dataModuleStyle: const QrDataModuleStyle(
-                    dataModuleShape: QrDataModuleShape.square,
-                    color: KnQr.ink,
-                  ),
-                  semanticsLabel: address,
                 ),
               ),
-            ),
-            const SizedBox(height: KnSpace.md),
-            SelectableText(address, style: monoStyle(context, size: 12)),
-          ],
+              const SizedBox(height: KnSpace.md),
+              SelectableText(
+                widget.address,
+                style: monoStyle(context, size: 12),
+              ),
+              const SizedBox(height: KnSpace.md),
+              TextField(
+                controller: _amount,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                style: monoStyle(context, size: 14),
+                decoration: InputDecoration(
+                  labelText: l.receiveAmountField,
+                  suffixText: 'XMR',
+                  errorText: valid ? null : l.sendAmountInvalid,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
+        TextButton(
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: request));
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(l.copiedNotice)));
+          },
+          child: Text(l.receiveCopyRequestAction),
+        ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l.closeAction),
         ),
       ],
-    ),
-  );
+    );
+  }
 }

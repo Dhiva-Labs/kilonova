@@ -477,5 +477,7 @@
         "type": "String"
       }
     }
-  }
+  },
+  "receiveAmountField": "Ask for an amount (optional)",
+  "receiveCopyRequestAction": "Copy request"
 }

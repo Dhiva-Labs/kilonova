@@ -125,12 +125,24 @@ void main() {
     expect(find.text('Payment request: Shop'), findsOneWidget);
   });
 
-  testWidgets('receive addresses show as a QR code', (tester) async {
+  testWidgets('receive addresses show as a QR code, with an optional amount', (
+    tester,
+  ) async {
     useDesktopWindow(tester);
     final own = await _openWallet(tester, 'QR');
     await tester.tap(find.byTooltip('Show QR code').first);
     await tester.pumpAndSettle();
-    expect(find.bySemanticsLabel(own), findsOneWidget);
+    expect(find.bySemanticsLabel('monero:$own'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, '0.5');
+    await tester.pump();
+    expect(find.bySemanticsLabel('monero:$own?tx_amount=0.5'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, '0.5.1');
+    await tester.pump();
+    expect(
+      find.text('Enter an amount above zero, with at most 12 decimals'),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel('monero:$own'), findsOneWidget);
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
   });
