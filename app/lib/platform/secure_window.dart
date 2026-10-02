@@ -5,9 +5,11 @@ import 'package:flutter/widgets.dart';
 
 const _channel = MethodChannel('kilonova/secure_window');
 
-/// Blocks screenshots and screen recording while [child] is shown, on
-/// platforms that support it (Android today). Used on screens that show a
-/// seed.
+/// Keeps the window out of screenshots, screen recording and screen sharing
+/// while [child] is shown. Used on screens that show a seed.
+///
+/// Android sets `FLAG_SECURE`; Windows 10 2004 and later exclude the window
+/// from capture. Linux has no equivalent a window can request.
 class SecureWindow extends StatefulWidget {
   const SecureWindow({super.key, required this.child});
 
@@ -33,7 +35,7 @@ class _SecureWindowState extends State<SecureWindow> {
   }
 
   static void _set(bool secure) {
-    if (!Platform.isAndroid) return;
+    if (!Platform.isAndroid && !Platform.isWindows) return;
     _channel.invokeMethod<void>('setSecure', secure).ignore();
   }
 

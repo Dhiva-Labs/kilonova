@@ -43,8 +43,9 @@ app data.
 **Someone with the device, unlocked and the wallet open.** Can spend.
 Mitigations: on Android every unlocked wallet is locked when the app leaves
 the foreground; showing the seed, changing the password and deleting a
-wallet all ask for the password again; seed screens block screenshots and
-the recent-apps thumbnail (`FLAG_SECURE`). Re-authentication before sending
+wallet all ask for the password again; seed screens are kept out of screenshots
+and screen recording (`FLAG_SECURE` on Android, display affinity on Windows
+10 2004 and later; Linux has no equivalent). Re-authentication before sending
 is planned with M4.
 
 **Malicious dependency or build pipeline.** Could ship code that leaks keys.

@@ -1,8 +1,16 @@
 #include "flutter_window.h"
 
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
+
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+
+// Windows 10 2004 and later; older SDK headers do not define it.
+#ifndef WDA_EXCLUDEFROMCAPTURE
+#define WDA_EXCLUDEFROMCAPTURE 0x00000011
+#endif
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -27,6 +35,30 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  // Screens that show a seed ask to be left out of screenshots, screen
+  // recording and screen sharing.
+  secure_window_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "kilonova/secure_window",
+          &flutter::StandardMethodCodec::GetInstance());
+  secure_window_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() != "setSecure") {
+          result->NotImplemented();
+          return;
+        }
+        const auto* secure = std::get_if<bool>(call.arguments());
+        const DWORD affinity =
+            (secure && *secure) ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE;
+        if (SetWindowDisplayAffinity(GetHandle(), affinity)) {
+          result->Success();
+        } else {
+          result->Error("unsupported", "SetWindowDisplayAffinity failed");
+        }
+      });
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -40,6 +72,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  secure_window_channel_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
