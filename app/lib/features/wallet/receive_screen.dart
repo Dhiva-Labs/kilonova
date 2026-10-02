@@ -27,6 +27,7 @@ Future<void> openReceiveScreen(
   return showKnDialog<void>(
     context,
     ReceiveScreen(wallet: wallet, embedded: true),
+    title: AppLocalizations.of(context).receiveTitle,
     width: 520,
   );
 }
@@ -120,49 +121,69 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       amount: typed.isEmpty || !valid ? null : amount,
     );
 
+    final qrBlock = ColoredBox(
+      color: KnQr.paper,
+      child: Padding(
+        // A quiet zone of about four modules, as scanners expect.
+        padding: const EdgeInsets.all(KnSpace.lg),
+        child: Center(
+          child: QrImageView(
+            data: request,
+            size: 248,
+            padding: EdgeInsets.zero,
+            backgroundColor: KnQr.paper,
+            eyeStyle: const QrEyeStyle(
+              eyeShape: QrEyeShape.square,
+              color: KnQr.ink,
+            ),
+            dataModuleStyle: const QrDataModuleStyle(
+              dataModuleShape: QrDataModuleShape.square,
+              color: KnQr.ink,
+            ),
+            semanticsLabel: request,
+          ),
+        ),
+      ),
+    );
+
+    final addressLine = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(row.address, style: monoStyle(context, size: 13)),
+        ),
+        const SizedBox(width: KnSpace.sm),
+        KnIconButton(
+          icon: const Icon(Icons.copy_outlined),
+          tooltip: l.copyAction,
+          onPressed: () => _copy(row.address),
+        ),
+      ],
+    );
+
+    // Desktop shows the QR and address on the `surface` card background;
+    // the phone screen keeps its existing plain layout.
+    final qrSection = widget.embedded
+        ? KnCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(child: qrBlock),
+                const SizedBox(height: KnSpace.md),
+                addressLine,
+              ],
+            ),
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [qrBlock, const SizedBox(height: KnSpace.md), addressLine],
+          );
+
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        ColoredBox(
-          color: KnQr.paper,
-          child: Padding(
-            // A quiet zone of about four modules, as scanners expect.
-            padding: const EdgeInsets.all(KnSpace.lg),
-            child: Center(
-              child: QrImageView(
-                data: request,
-                size: 248,
-                padding: EdgeInsets.zero,
-                backgroundColor: KnQr.paper,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: KnQr.ink,
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: KnQr.ink,
-                ),
-                semanticsLabel: request,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: KnSpace.md),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(row.address, style: monoStyle(context, size: 13)),
-            ),
-            const SizedBox(width: KnSpace.sm),
-            KnIconButton(
-              icon: const Icon(Icons.copy_outlined),
-              tooltip: l.copyAction,
-              onPressed: () => _copy(row.address),
-            ),
-          ],
-        ),
+        qrSection,
         const SizedBox(height: KnSpace.md),
         KnField(
           controller: _amount,

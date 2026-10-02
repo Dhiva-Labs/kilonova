@@ -54,6 +54,31 @@ static void my_application_activate(GApplication* application) {
 
   gtk_window_set_default_size(window, 1280, 720);
 
+  // The window and taskbar icon, loaded from the bundle's own assets so a
+  // build run from anywhere shows it; installed builds also get it from the
+  // icon theme through the desktop file.
+  g_autofree gchar* exe_path = g_file_read_link("/proc/self/exe", nullptr);
+  if (exe_path != nullptr) {
+    g_autofree gchar* exe_dir = g_path_get_dirname(exe_path);
+    g_autofree gchar* icon_path = g_build_filename(
+        exe_dir, "data", "flutter_assets", "assets", "icon", "kilonova-256.png", nullptr);
+    g_autoptr(GError) error = nullptr;
+    g_autoptr(GdkPixbuf) master = gdk_pixbuf_new_from_file(icon_path, &error);
+    if (master == nullptr) {
+      g_warning("Window icon not loaded from %s: %s", icon_path, error->message);
+    } else {
+      // Pre-scaled sizes, so window managers pick a crisp one.
+      GList* icons = nullptr;
+      static const int sizes[] = {16, 24, 32, 48, 64, 128};
+      for (int size : sizes) {
+        icons = g_list_append(
+            icons, gdk_pixbuf_scale_simple(master, size, size, GDK_INTERP_BILINEAR));
+      }
+      gtk_window_set_icon_list(window, icons);
+      g_list_free_full(icons, g_object_unref);
+    }
+  }
+
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);

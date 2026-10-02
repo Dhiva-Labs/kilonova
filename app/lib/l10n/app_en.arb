@@ -560,5 +560,7 @@
         "type": "String"
       }
     }
-  }
+  },
+  "nodeActionsMenu": "Node actions",
+  "nodesUseAction": "Use this node"
 }

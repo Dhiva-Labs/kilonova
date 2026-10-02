@@ -35,6 +35,7 @@ flutter:
   assets:
     - assets/legal/PRIVACY.md
     - assets/fonts/OFL.txt
+    - assets/icon/kilonova-256.png
   fonts:
     - family: IBM Plex Sans
       fonts:

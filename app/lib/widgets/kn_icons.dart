@@ -83,10 +83,13 @@ class KnIconPainter extends CustomPainter {
         ]);
         canvas.drawRect(const Rect.fromLTRB(7, 2.5, 13, 5.5), line);
       case KnIcons.contacts:
-        canvas
-          ..drawCircle(const Offset(7.5, 8), 3.5, line)
-          ..drawCircle(const Offset(12.5, 8), 3.5, line);
-        poly(const [Offset(3, 16), Offset(17, 16)]);
+        canvas.drawCircle(const Offset(10, 7), 3.25, line);
+        canvas.drawPath(
+          Path()
+            ..moveTo(4, 17)
+            ..quadraticBezierTo(10, 7, 16, 17),
+          line,
+        );
       case KnIcons.lock:
         canvas.drawPath(
           Path()

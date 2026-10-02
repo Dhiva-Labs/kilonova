@@ -48,6 +48,18 @@ class AboutScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(KnRadius.md),
+                  child: Image.asset(
+                    'assets/icon/kilonova-256.png',
+                    width: 64,
+                    height: 64,
+                    filterQuality: FilterQuality.medium,
+                  ),
+                ),
+                const SizedBox(height: KnSpace.md),
+                Text('Kilonova', style: text.headlineSmall),
+                const SizedBox(height: KnSpace.sm),
                 Text(l.aboutDescription, style: text.bodyLarge),
                 const SizedBox(height: KnSpace.lg),
                 row(l.aboutCoreVersion, coreInfo().version, mono: true),

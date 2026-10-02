@@ -2,4 +2,6 @@
 <resources>
     <!-- Kilonova bg token, light. Shown while Flutter starts. -->
     <color name="kn_bg">#F6F7F9</color>
+    <!-- The launcher icon keeps the deep-space background in both themes. -->
+    <color name="kn_icon_bg">#0B0F17</color>
 </resources>

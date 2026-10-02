@@ -27,6 +27,8 @@ String nodeErrorMessage(BuildContext context, NodeError error) {
   };
 }
 
+enum _NodeAction { use, check, remove }
+
 /// Choose which node each network syncs from, and add your own.
 class NodesScreen extends StatefulWidget {
   const NodesScreen({super.key});
@@ -202,23 +204,41 @@ class _NodesScreenState extends State<NodesScreen> {
                               ErrorLine(_healthErrors[node.url]!),
                           ],
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            KnButton.text(
-                              l.nodesCheckAction,
-                              onPressed: () => _check(node.url),
+                        trailing: PopupMenuButton<_NodeAction>(
+                          tooltip: l.nodeActionsMenu,
+                          icon: const Icon(Icons.more_horiz),
+                          onSelected: (action) async {
+                            switch (action) {
+                              case _NodeAction.use:
+                                await selectNode(
+                                  network: _network,
+                                  url: node.url,
+                                );
+                                await _load();
+                              case _NodeAction.check:
+                                await _check(node.url);
+                              case _NodeAction.remove:
+                                await removeNode(
+                                  network: _network,
+                                  url: node.url,
+                                );
+                                await _load();
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            if (node.url != selected)
+                              PopupMenuItem(
+                                value: _NodeAction.use,
+                                child: Text(l.nodesUseAction),
+                              ),
+                            PopupMenuItem(
+                              value: _NodeAction.check,
+                              child: Text(l.nodesCheckAction),
                             ),
                             if (!node.bundled)
-                              KnButton.text(
-                                l.nodesRemoveAction,
-                                onPressed: () async {
-                                  await removeNode(
-                                    network: _network,
-                                    url: node.url,
-                                  );
-                                  await _load();
-                                },
+                              PopupMenuItem(
+                                value: _NodeAction.remove,
+                                child: Text(l.nodesRemoveAction),
                               ),
                           ],
                         ),

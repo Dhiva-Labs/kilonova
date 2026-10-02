@@ -41,6 +41,34 @@ def draw(size: int) -> Image.Image:
     return img.resize((size, size), Image.LANCZOS)
 
 
+def draw_foreground(size: int) -> Image.Image:
+    """The mark alone, scaled into the adaptive icon's safe zone (the
+    central 66%), on a transparent canvas; Android adds the background."""
+    s = size * SUPERSAMPLE
+    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    c = s / 2
+    r = s * 0.27 * 0.66
+    w = round(s * 0.045 * 0.66)
+    box = (c - r, c - r, c + r, c + r)
+    d.ellipse(box, outline=TRACK, width=w)
+    d.arc(box, start=-90, end=180, fill=GOLD, width=w)
+    dot = s * 0.05 * 0.66
+    d.ellipse((c - r - dot, c - dot, c - r + dot, c + dot), fill=GOLD)
+    core = s * 0.075 * 0.66
+    d.ellipse((c - core, c - core, c + core, c + core), fill=GOLD)
+    return img.resize((size, size), Image.LANCZOS)
+
+
+def draw_monochrome(size: int) -> Image.Image:
+    """Themed-icon layer: the mark in white alpha, same geometry."""
+    fg = draw_foreground(size)
+    alpha = fg.getchannel("A")
+    out = Image.new("RGBA", (size, size), (255, 255, 255, 0))
+    out.putalpha(alpha)
+    return out
+
+
 def main() -> None:
     app = Path("app")
     master = draw(MASTER)
@@ -50,6 +78,17 @@ def main() -> None:
     for density, px in android.items():
         out = app / f"android/app/src/main/res/mipmap-{density}/ic_launcher.png"
         draw(px).convert("RGB").save(out)
+
+    # Adaptive icon layers (Android 8+), legacy PNGs stay for older devices.
+    for density, px in {"mdpi": 108, "hdpi": 162, "xhdpi": 216, "xxhdpi": 324, "xxxhdpi": 432}.items():
+        out = app / f"android/app/src/main/res/mipmap-{density}"
+        draw_foreground(px).save(out / "ic_launcher_foreground.png")
+        draw_monochrome(px).save(out / "ic_launcher_monochrome.png")
+
+    # The window icon the Linux runner loads at startup, and the About screen.
+    icon_asset = app / "assets/icon"
+    icon_asset.mkdir(parents=True, exist_ok=True)
+    draw(256).save(icon_asset / "kilonova-256.png")
 
     linux = Path("packaging/linux/icons")
     for px in (64, 128, 256, 512):
