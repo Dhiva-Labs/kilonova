@@ -6,6 +6,7 @@
 import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'send.dart';
 import 'sync.dart';
 
 // These functions are ignored because they are not marked as `pub`: `address_row`, `create`, `new`, `set_label`, `store`, `with`, `with`
@@ -167,6 +168,19 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required String newPassword,
   });
 
+  /// Checks `password` and publishes `send`. Its inputs count as spent at
+  /// once; sync confirms the spend when it is mined. Sync is paused while
+  /// publishing; start it again afterwards.
+  ///
+  /// # Errors
+  ///
+  /// [`SendError::WrongPassword`] leaves `send` usable; after any other
+  /// error it is discarded.
+  Future<void> confirmSend({
+    required PreparedSend send,
+    required String password,
+  });
+
   /// Records that the owner agreed to share this wallet's private view
   /// key with `server`, and saves the wallet.
   ///
@@ -197,6 +211,20 @@ abstract class OpenWallet implements RustOpaqueInterface {
   ///
   /// Fails if the wallet has been locked or cannot be saved.
   Future<AddressRow> newAddress({required String label});
+
+  /// Builds and signs a transaction paying `payments`, or, with
+  /// `sweep_to`, sending everything spendable to that address. Nothing is
+  /// published; show [`PreparedSend::summary`] and call
+  /// [`OpenWallet::confirm_send`].
+  ///
+  /// # Errors
+  ///
+  /// See [`SendError`]; sync must have reached the chain tip first.
+  Future<PreparedSend> prepareSend({
+    required List<Payment> payments,
+    String? sweepTo,
+    required FeePriority priority,
+  });
 
   /// Returns the seed words after re-checking the password. `None` for
   /// wallets restored from keys or view-only wallets, which have no seed.

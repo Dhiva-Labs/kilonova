@@ -105,6 +105,9 @@ pub struct WalletBalance {
     pub unlocked: u64,
 }
 
+// Flat flags rather than enums with data keep the Dart side free of code
+// generation.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HistoryItem {
     pub tx_hash: String,
@@ -117,6 +120,8 @@ pub struct HistoryItem {
     pub locked: bool,
     /// Index of the first receiving subaddress in its account, if incoming.
     pub subaddress_index: Option<u32>,
+    /// Outgoing and not yet seen in a block.
+    pub pending: bool,
 }
 
 /// Sync state shared between the wallet and its background task.
@@ -129,6 +134,9 @@ pub(crate) struct SyncHandle {
     /// Incremented per run; a run only writes state while it is current, so
     /// a cancelled run that is still finishing cannot overwrite a newer one.
     generation: AtomicU64,
+    /// Set once a run reaches the chain tip; sending waits for it so it
+    /// never builds on a stale view of the wallet.
+    pub(crate) caught_up: AtomicBool,
 }
 
 impl SyncHandle {
@@ -143,12 +151,14 @@ impl SyncHandle {
             state: Mutex::new(state),
             current: Mutex::new(Arc::new(AtomicBool::new(true))),
             generation: AtomicU64::new(0),
+            caught_up: AtomicBool::new(false),
         }
     }
 
     /// Forgets everything scanned, for example after switching mode.
     pub(crate) fn reset(&self, inner: &Inner) {
         self.generation.fetch_add(1, Ordering::AcqRel);
+        self.caught_up.store(false, Ordering::Relaxed);
         if let Ok(state) = inner.with(|w| Ok(starting_state(w))) {
             self.tip.store(state.next_height, Ordering::Relaxed);
             *self.lock_state() = state;
@@ -157,6 +167,27 @@ impl SyncHandle {
 
     pub(crate) fn stop(&self) {
         self.lock_current().store(true, Ordering::Relaxed);
+    }
+
+    /// Stops the current run and keeps it from writing state again, so the
+    /// caller can change the state; start sync afterwards.
+    pub(crate) fn pause(&self) {
+        self.stop();
+        self.generation.fetch_add(1, Ordering::AcqRel);
+    }
+
+    /// The scanned state and the chain tip, if sync has reached the tip.
+    pub(crate) fn caught_up_state(&self) -> Option<(SyncState, u64)> {
+        let tip = self.tip.load(Ordering::Relaxed);
+        let state = self.snapshot();
+        (self.caught_up.load(Ordering::Relaxed) && state.next_height >= tip).then_some((state, tip))
+    }
+
+    /// Replaces the state and saves the encrypted cache.
+    pub(crate) fn replace(&self, inner: &Inner, state: SyncState) {
+        let bytes = state.to_bytes();
+        *self.lock_state() = state;
+        let _ = inner.with(|w| store()?.save_cache(w, &bytes).map_err(WalletError::from));
     }
 
     fn lock_state(&self) -> std::sync::MutexGuard<'_, SyncState> {
@@ -270,6 +301,7 @@ impl OpenWallet {
                     miner: h.miner,
                     locked: h.direction == Direction::Incoming && tip < h.height + lock,
                     subaddress_index: h.subaddresses.first().map(|(_, index)| *index),
+                    pending: h.pending,
                 }
             })
             .collect()
@@ -311,6 +343,9 @@ impl Run<'_> {
         self.failed
             .store(event.phase == SyncPhase::Failed, Ordering::Relaxed);
         if self.is_current() {
+            if event.phase == SyncPhase::Synced {
+                self.inner.sync.caught_up.store(true, Ordering::Relaxed);
+            }
             let _ = self.sink.add(event);
         }
     }
@@ -485,7 +520,7 @@ impl Run<'_> {
     }
 }
 
-fn hex_string(bytes: &[u8; 32]) -> String {
+pub(crate) fn hex_string(bytes: &[u8; 32]) -> String {
     use std::fmt::Write as _;
     bytes.iter().fold(String::with_capacity(64), |mut s, b| {
         let _ = write!(s, "{b:02x}");

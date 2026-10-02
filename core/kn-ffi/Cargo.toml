@@ -16,6 +16,7 @@ flutter_rust_bridge = "=2.13.0"
 kn-keys = { path = "../kn-keys" }
 kn-store = { path = "../kn-store" }
 kn-sync = { path = "../kn-sync" }
+kn-tx = { path = "../kn-tx" }
 rand_core = { version = "0.6", features = ["getrandom"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

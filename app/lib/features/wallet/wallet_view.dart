@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/wallets.dart';
@@ -7,6 +8,8 @@ import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../src/rust/api/sync.dart';
 import '../../widgets/mode_label.dart';
+import '../send/monero_uri.dart';
+import '../send/send_screen.dart';
 import '../wallets/wallet_registry.dart';
 import 'history_list.dart';
 import 'sync_panel.dart';
@@ -55,6 +58,21 @@ class _WalletViewState extends State<WalletView> {
     setState(() => _addresses = widget.wallet.addresses());
   }
 
+  Future<void> _send() async {
+    final l = AppLocalizations.of(context);
+    final sent = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            SendScreen(wallet: widget.wallet, registry: widget.registry),
+      ),
+    );
+    if (sent != true || !mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l.sentNotice)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -86,6 +104,13 @@ class _WalletViewState extends State<WalletView> {
             event: event,
             onRetry: () => widget.registry.startSync(summary.id),
           ),
+          if (!summary.viewOnly) ...[
+            const SizedBox(height: KnSpace.md),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton(onPressed: _send, child: Text(l.sendAction)),
+            ),
+          ],
           const SizedBox(height: KnSpace.xl),
           Text(l.historyTitle, style: text.titleMedium),
           const SizedBox(height: KnSpace.sm),
@@ -145,6 +170,11 @@ class _AddressTile extends StatelessWidget {
                 onPressed: onEditLabel,
               ),
               IconButton(
+                tooltip: l.receiveQrAction,
+                icon: const Icon(Icons.qr_code_2_outlined, size: 20),
+                onPressed: () => _showQr(context, title, row.address),
+              ),
+              IconButton(
                 tooltip: l.copyAction,
                 icon: const Icon(Icons.copy_outlined, size: 20),
                 onPressed: () {
@@ -162,4 +192,53 @@ class _AddressTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The address as a `monero:` QR code. Always dark on white, whatever the
+/// theme, because that is what scanners read best.
+void _showQr(BuildContext context, String title, String address) {
+  final l = AppLocalizations.of(context);
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: SizedBox(
+        width: 280,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ColoredBox(
+              color: KnQr.paper,
+              child: Padding(
+                padding: const EdgeInsets.all(KnSpace.md),
+                child: QrImageView(
+                  data: paymentRequestUri(address),
+                  size: 248,
+                  padding: EdgeInsets.zero,
+                  backgroundColor: KnQr.paper,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: KnQr.ink,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: KnQr.ink,
+                  ),
+                  semanticsLabel: address,
+                ),
+              ),
+            ),
+            const SizedBox(height: KnSpace.md),
+            SelectableText(address, style: monoStyle(context, size: 12)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.closeAction),
+        ),
+      ],
+    ),
+  );
 }

@@ -132,4 +132,93 @@ void main() {
     },
     skip: Platform.environment['KN_REGTEST'] != '1',
   );
+
+  testWidgets(
+    'sends from the app and sees the spend confirmed',
+    (tester) async {
+      useDesktopWindow(tester);
+      late String payee;
+      late String burn;
+      await tester.runAsync(() async {
+        await selectNode(network: Network.mainnet, url: _node);
+        Future<OpenWallet> make(String name) async {
+          final seed = await generateSeed(format: SeedFormat.classic);
+          return createWalletFromSeed(
+            name: name,
+            network: Network.mainnet,
+            mode: SyncMode.full,
+            words: seed.words.join(' '),
+            password: 'regtest password',
+            restoreHeight: BigInt.zero,
+            createdHere: true,
+          );
+        }
+
+        final sender = await make('Sender');
+        final payeeWallet = await make('Payee');
+        payee = payeeWallet.addresses().first.address;
+        burn = (await make('Burn')).addresses().first.address;
+        // Mined outputs unlock after 60 blocks.
+        await _mine(sender.addresses().first.address, 70);
+        sender.lock();
+        payeeWallet.lock();
+      });
+
+      await tester.pumpWidget(await testApp(tester));
+      await tester.tap(find.text('Sender'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'regtest password');
+      await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
+      await pumpUntilFound(
+        tester,
+        find.textContaining('Up to date at block'),
+        timeout: const Duration(seconds: 90),
+      );
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Send'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Recipient address'),
+        payee,
+      );
+      await tester.enterText(find.widgetWithText(TextField, 'Amount'), '1.5');
+      await tester.tap(find.text('Review'));
+      await pumpUntilFound(
+        tester,
+        find.text('Check before sending'),
+        timeout: const Duration(seconds: 60),
+      );
+      expect(find.text('1.5 XMR'), findsOneWidget);
+      expect(
+        find.textContaining('Published through 127.0.0.1'),
+        findsOneWidget,
+      );
+
+      // A wrong password publishes nothing and keeps the transaction.
+      await tester.enterText(find.byType(TextField), 'not it');
+      await tester.tap(find.text('Send now'));
+      await pumpUntilFound(
+        tester,
+        find.text('That password does not open this wallet.'),
+      );
+      await tester.enterText(find.byType(TextField), 'regtest password');
+      await tester.tap(find.text('Send now'));
+      await pumpUntilFound(
+        tester,
+        find.text('Sent. It confirms when the next block is mined.'),
+        timeout: const Duration(seconds: 30),
+      );
+      await pumpUntilFound(tester, find.textContaining('Waiting for a block'));
+
+      await tester.runAsync(() => _mine(burn, 1));
+      await pumpUntil(
+        tester,
+        () => find.textContaining('Waiting for a block').evaluate().isEmpty,
+        what: 'the spend to be confirmed',
+        timeout: const Duration(seconds: 90),
+      );
+      expect(find.textContaining('Sent'), findsWidgets);
+    },
+    skip: Platform.environment['KN_REGTEST'] != '1',
+  );
 }

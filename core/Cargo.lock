@@ -1038,6 +1038,7 @@ dependencies = [
  "kn-keys",
  "kn-store",
  "kn-sync",
+ "kn-tx",
  "rand_core",
  "serde",
  "serde_json",

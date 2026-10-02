@@ -52,3 +52,17 @@ class _AmountTextState extends State<AmountText> {
     );
   }
 }
+
+final _xmrAmount = RegExp(r'^(\d*)(?:\.(\d{0,12}))?$');
+
+/// Parses an XMR amount such as `1.5` or `.25` into atomic units. Returns
+/// null for anything else, including more than 12 decimals.
+BigInt? parseXmr(String text) {
+  final match = _xmrAmount.firstMatch(text.trim());
+  if (match == null) return null;
+  final whole = match.group(1)!;
+  final fraction = match.group(2) ?? '';
+  if (whole.isEmpty && fraction.isEmpty) return null;
+  return BigInt.parse(whole.isEmpty ? '0' : whole) * _piconero +
+      BigInt.parse(fraction.padRight(12, '0'));
+}

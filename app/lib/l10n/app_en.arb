@@ -312,5 +312,81 @@
   "switchModeTitle": "Switch sync mode?",
   "switchToLwsBody": "The wallet will sync through the light wallet server set for this network, which receives the private view key. What has been scanned so far is cleared.",
   "switchToFullBody": "The wallet will scan the blockchain itself from a Monero node. What has been scanned so far is cleared and scanning starts again from the restore height. The light wallet server keeps any data it already has.",
-  "switchAction": "Switch"
+  "switchAction": "Switch",
+  "sendAction": "Send",
+  "sendTitle": "Send",
+  "pasteAction": "Paste",
+  "sendAddressField": "Recipient address",
+  "sendAmountField": "Amount",
+  "sendAddressMissing": "Enter an address",
+  "sendAddressInvalid": "Not a valid address for this wallet's network",
+  "sendAmountInvalid": "Enter an amount above zero, with at most 12 decimals",
+  "sendRequestFrom": "Payment request: {note}",
+  "@sendRequestFrom": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRecipientNumber": "Recipient {number}",
+  "@sendRecipientNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "sendAddRecipient": "Add a recipient",
+  "sendRemoveRecipient": "Remove",
+  "sendEverything": "Send everything",
+  "sendEnterAmount": "Enter an amount",
+  "sendEverythingNote": "Everything that can be spent now goes to this address, minus the fee.",
+  "sendFeeTitle": "Fee",
+  "feeLow": "Low",
+  "feeNormal": "Normal",
+  "feeHigh": "High",
+  "feeUrgent": "Urgent",
+  "sendFeeHelp": "A higher fee only helps when blocks are full. Normal is right almost always.",
+  "sendReviewAction": "Review",
+  "sendPreparing": "Choosing decoys and signing. Nothing is sent yet.",
+  "sendConfirmTitle": "Check before sending",
+  "sendTestNetworkNote": "This is a test network. These coins have no value.",
+  "sendFeeLine": "Network fee",
+  "sendTotalLine": "Leaves this wallet",
+  "sendChangeLine": "Change back to this wallet",
+  "sendViaLine": "Published through {host}",
+  "@sendViaLine": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "sendConfirmAction": "Send now",
+  "sendEditAction": "Change",
+  "sendPublishing": "Publishing",
+  "biometricSendAction": "Confirm with fingerprint or face",
+  "biometricSendTitle": "Send from {name}",
+  "@biometricSendTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendTooManyPayments": "One transaction can pay at most 15 recipients.",
+  "sendInsufficientFunds": "Not enough can be spent now to cover the amount and the fee. Received funds can be spent after 10 blocks.",
+  "sendTooManyInputs": "This needs more than 100 of the wallet's coins at once. Send a smaller amount first.",
+  "sendViewOnly": "A view-only wallet cannot send.",
+  "sendNotSynced": "Wait until the wallet is up to date, then try again.",
+  "sendUnreachable": "The node or server could not be reached. Nothing was sent.",
+  "sendRejected": "The network refused the transaction. Nothing was sent; your balance is unchanged.",
+  "sendBuildFailed": "The transaction could not be built. Nothing was sent.",
+  "sendLwsConsentNeeded": "Agree to share the view key with the light wallet server first, from the wallet screen.",
+  "sendAlreadyUsed": "This transaction was already handled. Review it again.",
+  "sentNotice": "Sent. It confirms when the next block is mined.",
+  "historyPending": "Waiting for a block",
+  "receiveQrAction": "Show QR code",
+  "closeAction": "Close"
 }

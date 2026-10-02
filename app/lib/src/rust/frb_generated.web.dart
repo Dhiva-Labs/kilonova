@@ -9,6 +9,7 @@
 import 'api/core.dart';
 import 'api/network.dart';
 import 'api/nodes.dart';
+import 'api/send.dart';
 import 'api/sync.dart';
 import 'api/wallets.dart';
 import 'dart:async';
@@ -28,6 +29,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   get rust_arc_decrement_strong_count_OpenWalletPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet;
 
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_PreparedSendPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
@@ -38,8 +43,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  PreparedSend
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    dynamic raw,
+  );
+
+  @protected
   OpenWallet
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
+    dynamic raw,
+  );
+
+  @protected
+  PreparedSend
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
     dynamic raw,
   );
 
@@ -50,10 +67,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  PreparedSend
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    dynamic raw,
+  );
+
+  @protected
   RustStreamSink<SyncEvent> dco_decode_StreamSink_sync_event_Sse(dynamic raw);
 
   @protected
   String dco_decode_String(dynamic raw);
+
+  @protected
+  AddressKind dco_decode_address_kind(dynamic raw);
 
   @protected
   AddressRow dco_decode_address_row(dynamic raw);
@@ -72,6 +98,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreInfo dco_decode_core_info(dynamic raw);
+
+  @protected
+  FeePriority dco_decode_fee_priority(dynamic raw);
 
   @protected
   HistoryItem dco_decode_history_item(dynamic raw);
@@ -93,6 +122,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<NodeChoice> dco_decode_list_node_choice(dynamic raw);
+
+  @protected
+  List<Payment> dco_decode_list_payment(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -134,7 +166,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String>? dco_decode_opt_list_String(dynamic raw);
 
   @protected
+  Payment dco_decode_payment(dynamic raw);
+
+  @protected
   SeedFormat dco_decode_seed_format(dynamic raw);
+
+  @protected
+  SendError dco_decode_send_error(dynamic raw);
+
+  @protected
+  SendSummary dco_decode_send_summary(dynamic raw);
 
   @protected
   SyncEvent dco_decode_sync_event(dynamic raw);
@@ -182,8 +223,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  PreparedSend
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   OpenWallet
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PreparedSend
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
     SseDeserializer deserializer,
   );
 
@@ -194,12 +247,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  PreparedSend
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<SyncEvent> sse_decode_StreamSink_sync_event_Sse(
     SseDeserializer deserializer,
   );
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  AddressKind sse_decode_address_kind(SseDeserializer deserializer);
 
   @protected
   AddressRow sse_decode_address_row(SseDeserializer deserializer);
@@ -218,6 +280,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreInfo sse_decode_core_info(SseDeserializer deserializer);
+
+  @protected
+  FeePriority sse_decode_fee_priority(SseDeserializer deserializer);
 
   @protected
   HistoryItem sse_decode_history_item(SseDeserializer deserializer);
@@ -239,6 +304,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<NodeChoice> sse_decode_list_node_choice(SseDeserializer deserializer);
+
+  @protected
+  List<Payment> sse_decode_list_payment(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -284,7 +352,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
 
   @protected
+  Payment sse_decode_payment(SseDeserializer deserializer);
+
+  @protected
   SeedFormat sse_decode_seed_format(SseDeserializer deserializer);
+
+  @protected
+  SendError sse_decode_send_error(SseDeserializer deserializer);
+
+  @protected
+  SendSummary sse_decode_send_summary(SseDeserializer deserializer);
 
   @protected
   SyncEvent sse_decode_sync_event(SseDeserializer deserializer);
@@ -337,8 +414,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    PreparedSend self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
     OpenWallet self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    PreparedSend self,
     SseSerializer serializer,
   );
 
@@ -350,6 +441,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    PreparedSend self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_sync_event_Sse(
     RustStreamSink<SyncEvent> self,
     SseSerializer serializer,
@@ -357,6 +455,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_address_kind(AddressKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_address_row(AddressRow self, SseSerializer serializer);
@@ -378,6 +479,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_core_info(CoreInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_fee_priority(FeePriority self, SseSerializer serializer);
 
   @protected
   void sse_encode_history_item(HistoryItem self, SseSerializer serializer);
@@ -408,6 +512,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<NodeChoice> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_list_payment(List<Payment> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -458,7 +565,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_payment(Payment self, SseSerializer serializer);
+
+  @protected
   void sse_encode_seed_format(SeedFormat self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_send_error(SendError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_send_summary(SendSummary self, SseSerializer serializer);
 
   @protected
   void sse_encode_sync_event(SyncEvent self, SseSerializer serializer);
@@ -517,6 +633,22 @@ class RustLibWire implements BaseWire {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
         ptr,
       );
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+        ptr,
+      );
 }
 
 @JS('wasm_bindgen')
@@ -532,6 +664,16 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void
   rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
+    int ptr,
+  );
+
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
     int ptr,
   );
 }
