@@ -70,13 +70,57 @@ class _TextDialogState extends State<_TextDialog> {
   }
 }
 
-enum _WalletAction { showSeed, rename, changePassword, lock, delete }
+enum _WalletAction {
+  showSeed,
+  rename,
+  changePassword,
+  biometricOn,
+  biometricOff,
+  lock,
+  delete,
+}
 
-class WalletMenu extends StatelessWidget {
+class WalletMenu extends StatefulWidget {
   const WalletMenu({super.key, required this.wallet, required this.registry});
 
   final OpenWallet wallet;
   final WalletRegistry registry;
+
+  @override
+  State<WalletMenu> createState() => _WalletMenuState();
+}
+
+class _WalletMenuState extends State<WalletMenu> {
+  OpenWallet get wallet => widget.wallet;
+  WalletRegistry get registry => widget.registry;
+
+  bool _biometricAvailable = false;
+  bool _biometricOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshBiometric();
+  }
+
+  Future<void> _refreshBiometric() async {
+    final id = wallet.summary().id;
+    final available = await registry.biometric.isAvailable();
+    final on = await registry.biometric.isEnabled(id);
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricOn = on;
+      });
+    }
+  }
+
+  void _notice(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
   Future<void> _run(BuildContext context, _WalletAction action) async {
     final l = AppLocalizations.of(context);
@@ -102,11 +146,33 @@ class WalletMenu extends StatelessWidget {
           context: context,
           builder: (_) => _ChangePasswordDialog(wallet: wallet),
         );
-        if ((changed ?? false) && context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l.passwordChangedNotice)));
+        if (!(changed ?? false)) return;
+        if (_biometricOn) {
+          // The stored password is now stale.
+          await registry.biometric.disable(summary.id);
+          await _refreshBiometric();
+          _notice(l.biometricOffAfterPasswordChange);
+        } else {
+          _notice(l.passwordChangedNotice);
         }
+      case _WalletAction.biometricOn:
+        final password = await showDialog<String>(
+          context: context,
+          builder: (_) => _ConfirmPasswordDialog(walletId: summary.id),
+        );
+        if (password == null || !context.mounted) return;
+        final enabled = await registry.biometric.enable(
+          summary.id,
+          password,
+          title: l.biometricEnableTitle,
+          cancel: l.cancelAction,
+        );
+        await _refreshBiometric();
+        if (enabled) _notice(l.biometricEnabledNotice);
+      case _WalletAction.biometricOff:
+        await registry.biometric.disable(summary.id);
+        await _refreshBiometric();
+        _notice(l.biometricDisabledNotice);
       case _WalletAction.lock:
         registry.lock(summary.id);
       case _WalletAction.delete:
@@ -135,6 +201,16 @@ class WalletMenu extends StatelessWidget {
           value: _WalletAction.changePassword,
           child: Text(l.changePasswordAction),
         ),
+        if (_biometricAvailable)
+          _biometricOn
+              ? PopupMenuItem(
+                  value: _WalletAction.biometricOff,
+                  child: Text(l.biometricDisableAction),
+                )
+              : PopupMenuItem(
+                  value: _WalletAction.biometricOn,
+                  child: Text(l.biometricEnableAction),
+                ),
         PopupMenuItem(value: _WalletAction.lock, child: Text(l.lockAction)),
         PopupMenuItem(value: _WalletAction.delete, child: Text(l.deleteAction)),
       ],
@@ -367,6 +443,70 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           child: Text(l.cancelAction),
         ),
         FilledButton(onPressed: _delete, child: Text(l.deleteAction)),
+      ],
+    );
+  }
+}
+
+/// Asks for the wallet password and checks it, returning it if correct.
+class _ConfirmPasswordDialog extends StatefulWidget {
+  const _ConfirmPasswordDialog({required this.walletId});
+
+  final String walletId;
+
+  @override
+  State<_ConfirmPasswordDialog> createState() => _ConfirmPasswordDialogState();
+}
+
+class _ConfirmPasswordDialogState extends State<_ConfirmPasswordDialog> {
+  final _password = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    final password = _password.text;
+    try {
+      // Opening a second handle is the check; it is wiped right away.
+      (await unlockWallet(id: widget.walletId, password: password)).lock();
+      if (mounted) Navigator.of(context).pop(password);
+    } on WalletError catch (e) {
+      if (mounted) setState(() => _error = walletErrorMessage(context, e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l.biometricEnableAction),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l.biometricEnablePrompt),
+            const SizedBox(height: KnSpace.md),
+            PasswordField(
+              controller: _password,
+              autofocus: true,
+              errorText: _error,
+              onSubmitted: (_) => _confirm(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.cancelAction),
+        ),
+        FilledButton(onPressed: _confirm, child: Text(l.continueAction)),
       ],
     );
   }
