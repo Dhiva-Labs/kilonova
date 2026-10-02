@@ -28,6 +28,9 @@ pub(crate) struct Settings {
     /// SOCKS5 proxy for all traffic, as `socks5h://host:port`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) proxy: Option<String>,
+    /// Pinned certificate fingerprints by https address.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) pins: BTreeMap<String, String>,
 }
 
 pub(crate) fn key(network: Network) -> &'static str {

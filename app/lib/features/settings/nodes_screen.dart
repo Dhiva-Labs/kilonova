@@ -6,6 +6,7 @@ import '../../src/rust/api/nodes.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_line.dart';
+import 'certificate_dialog.dart';
 import '../../widgets/network_label.dart';
 
 String nodeErrorMessage(BuildContext context, NodeError error) {
@@ -17,6 +18,7 @@ String nodeErrorMessage(BuildContext context, NodeError error) {
     NodeError.storage || NodeError.notInitialized => l.nodeErrorStorage,
     NodeError.badProxy => l.nodeErrorBadProxy,
     NodeError.needsTor => l.nodeErrorNeedsTor,
+    NodeError.untrustedCertificate => l.nodeErrorUntrustedCertificate,
   };
 }
 
@@ -79,6 +81,12 @@ class _NodesScreenState extends State<NodesScreen> {
             : l.nodesBehind(h.height.toString()),
       );
     } on NodeError catch (e) {
+      if (e == NodeError.untrustedCertificate &&
+          mounted &&
+          await offerToTrustCertificate(context, url)) {
+        await _load();
+        return _check(url);
+      }
       if (mounted) {
         setState(() => _healthErrors[url] = nodeErrorMessage(context, e));
       }
@@ -168,9 +176,12 @@ class _NodesScreenState extends State<NodesScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                node.bundled
-                                    ? l.nodesBundledTag
-                                    : l.nodesCustomTag,
+                                [
+                                  node.bundled
+                                      ? l.nodesBundledTag
+                                      : l.nodesCustomTag,
+                                  if (node.pinned) l.nodesPinnedTag,
+                                ].join(' · '),
                                 style: text.bodySmall,
                               ),
                               if (_health[node.url] != null)

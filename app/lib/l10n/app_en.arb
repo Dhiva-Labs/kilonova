@@ -424,5 +424,28 @@
         "type": "String"
       }
     }
+  },
+  "certTitle": "Trust this certificate?",
+  "certBody": "{url} uses a certificate that no public authority vouches for. That is normal for a node you run yourself with a self-signed certificate.",
+  "certChangedBody": "{url} now presents a different certificate from the one you trusted. If you did not change it on your node, someone may be intercepting the connection.",
+  "certFingerprintLabel": "SHA-256 fingerprint presented",
+  "certPinnedLabel": "Fingerprint you trusted before",
+  "certAdvice": "Compare it with the fingerprint your node shows (monerod prints it at startup when it creates its certificate). Kilonova will then trust this address for this certificate only.",
+  "certTrustAction": "Trust this certificate",
+  "nodeErrorUntrustedCertificate": "This server's certificate is not trusted.",
+  "nodesPinnedTag": "Pinned certificate",
+  "@certBody": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "@certChangedBody": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
   }
 }

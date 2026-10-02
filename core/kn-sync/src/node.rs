@@ -186,12 +186,7 @@ pub(crate) fn http_client(target: &NodeUrl) -> Result<reqwest::Client, SyncError
     if proxy.is_none() && target.is_onion() {
         return Err(SyncError::NeedsProxy);
     }
-    let _ = rustls::crypto::ring::default_provider().install_default();
-    let mut roots = rustls::RootCertStore::empty();
-    roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-    let tls = rustls::ClientConfig::builder()
-        .with_root_certificates(roots)
-        .with_no_client_auth();
+    let tls = crate::tls::config_for(target);
     let builder = match proxy {
         Some(p) => reqwest::Client::builder()
             .proxy(reqwest::Proxy::all(p.as_str()).map_err(|_| SyncError::BadProxyUrl)?),

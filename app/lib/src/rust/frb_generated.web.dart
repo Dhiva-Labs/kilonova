@@ -97,6 +97,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt dco_decode_box_autoadd_u_64(dynamic raw);
 
   @protected
+  CertificateDetails dco_decode_certificate_details(dynamic raw);
+
+  @protected
   CoreInfo dco_decode_core_info(dynamic raw);
 
   @protected
@@ -277,6 +280,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  CertificateDetails sse_decode_certificate_details(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreInfo sse_decode_core_info(SseDeserializer deserializer);
@@ -476,6 +484,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_certificate_details(
+    CertificateDetails self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_info(CoreInfo self, SseSerializer serializer);

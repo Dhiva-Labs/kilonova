@@ -11,7 +11,8 @@
 use std::sync::LazyLock;
 
 use kn_sync::{
-    NodeUrl, ProxyUrl, SyncError, bundled_nodes, check_lws, check_proxy, connect, set_proxy,
+    NodeUrl, ProxyUrl, SyncError, bundled_nodes, check_lws, check_proxy, connect,
+    server_certificate, set_pins, set_proxy,
 };
 use rand_core::{OsRng, RngCore};
 
@@ -40,6 +41,9 @@ pub enum NodeError {
     BadProxy,
     /// An onion address without a Tor proxy set.
     NeedsTor,
+    /// The server's certificate is not from a public authority (or not the
+    /// one pinned). See [`server_certificate_info`].
+    UntrustedCertificate,
 }
 
 impl From<SyncError> for NodeError {
@@ -65,6 +69,8 @@ pub struct NodeChoice {
     /// the user.
     pub bundled: bool,
     pub selected: bool,
+    /// Trusted through a pinned certificate.
+    pub pinned: bool,
 }
 
 /// What a node reported when checked.
@@ -112,6 +118,7 @@ pub fn nodes(network: Network) -> Result<Vec<NodeChoice>, NodeError> {
         .into_iter()
         .map(|url| NodeChoice {
             selected: url == selected.as_str(),
+            pinned: settings.pins.contains_key(&url),
             url,
             bundled: false,
         })
@@ -121,6 +128,7 @@ pub fn nodes(network: Network) -> Result<Vec<NodeChoice>, NodeError> {
             .into_iter()
             .map(|url| NodeChoice {
                 selected: url == selected,
+                pinned: settings.pins.contains_key(url.as_str()),
                 url: url.as_str().to_owned(),
                 bundled: true,
             }),
@@ -198,7 +206,9 @@ pub fn select_node(network: Network, url: String) -> Result<(), NodeError> {
 /// [`NodeError::WrongNetwork`] or [`NodeError::Unreachable`].
 pub fn check_node(network: Network, url: String) -> Result<NodeHealth, NodeError> {
     let url = NodeUrl::parse(&url)?;
-    let (_, status) = RUNTIME.block_on(connect(&url, network.into()))?;
+    let (_, status) = RUNTIME
+        .block_on(connect(&url, network.into()))
+        .map_err(|e| explain(&url, e))?;
     Ok(NodeHealth {
         height: status.height,
         synced: status.height + 10 >= status.target_height,
@@ -266,11 +276,112 @@ pub struct LwsHealth {
 /// [`NodeError::WrongNetwork`] or [`NodeError::Unreachable`].
 pub fn check_lws_server(network: Network, url: String) -> Result<LwsHealth, NodeError> {
     let url = NodeUrl::parse(&url)?;
-    let info = RUNTIME.block_on(check_lws(&url, network.into()))?;
+    let info = RUNTIME
+        .block_on(check_lws(&url, network.into()))
+        .map_err(|e| explain(&url, e))?;
     Ok(LwsHealth {
         height: info.height,
         server_type: info.server_type,
     })
+}
+
+/// Turns a failed check into [`NodeError::UntrustedCertificate`] when the
+/// reason is an https server whose certificate nobody vouches for.
+fn explain(url: &NodeUrl, e: SyncError) -> NodeError {
+    let error = NodeError::from(e);
+    if error != NodeError::Unreachable || !url.as_str().starts_with("https://") {
+        return error;
+    }
+    match RUNTIME.block_on(server_certificate(url)) {
+        Ok(info) if !info.publicly_trusted => NodeError::UntrustedCertificate,
+        _ => error,
+    }
+}
+
+/// A server's certificate, for the user to compare before trusting it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CertificateDetails {
+    /// SHA-256 of the certificate, as colon-separated hex pairs.
+    pub fingerprint: String,
+    /// Issued by a public authority, so no pin is needed.
+    pub publicly_trusted: bool,
+    /// The pinned fingerprint for this address, if any.
+    pub pinned: Option<String>,
+}
+
+/// Reads the certificate an https node or server presents, without sending
+/// it anything.
+///
+/// # Errors
+///
+/// [`NodeError::BadUrl`] for an http address, [`NodeError::Unreachable`]
+/// if no certificate could be read.
+pub fn server_certificate_info(url: String) -> Result<CertificateDetails, NodeError> {
+    let url = NodeUrl::parse(&url)?;
+    let info = RUNTIME.block_on(server_certificate(&url))?;
+    Ok(CertificateDetails {
+        fingerprint: colon_hex(&info.fingerprint),
+        publicly_trusted: info.publicly_trusted,
+        pinned: load()?.pins.get(url.as_str()).cloned(),
+    })
+}
+
+/// Trusts `url` for the certificate with `fingerprint` (as returned by
+/// [`server_certificate_info`]) and nothing else.
+///
+/// # Errors
+///
+/// [`NodeError::BadUrl`] for a bad address or fingerprint.
+pub fn trust_certificate(url: String, fingerprint: String) -> Result<(), NodeError> {
+    let url = NodeUrl::parse(&url)?;
+    let pin = parse_fingerprint(&fingerprint).ok_or(NodeError::BadUrl)?;
+    let mut settings = load()?;
+    settings
+        .pins
+        .insert(url.as_str().to_owned(), colon_hex(&pin));
+    save(&settings)?;
+    apply_saved_pins(&settings);
+    Ok(())
+}
+
+/// Removes the pinned certificate for `url`.
+///
+/// # Errors
+///
+/// Fails if the settings cannot be saved.
+pub fn forget_certificate(url: String) -> Result<(), NodeError> {
+    let url = NodeUrl::parse(&url)?;
+    let mut settings = load()?;
+    settings.pins.remove(url.as_str());
+    save(&settings)?;
+    apply_saved_pins(&settings);
+    Ok(())
+}
+
+fn colon_hex(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .map(|b| format!("{b:02X}"))
+        .collect::<Vec<_>>()
+        .join(":")
+}
+
+fn parse_fingerprint(text: &str) -> Option<[u8; 32]> {
+    let hex: String = text.chars().filter(char::is_ascii_hexdigit).collect();
+    let bytes: Vec<u8> = (0..hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(hex.get(i..i + 2)?, 16).ok())
+        .collect::<Option<_>>()?;
+    bytes.try_into().ok()
+}
+
+fn apply_saved_pins(settings: &crate::node_settings::Settings) {
+    set_pins(
+        settings
+            .pins
+            .iter()
+            .filter_map(|(url, pin)| Some((NodeUrl::parse(url).ok()?, parse_fingerprint(pin)?))),
+    );
 }
 
 /// The SOCKS5 proxy (for example Tor) all traffic goes through, if any.
@@ -310,10 +421,17 @@ pub fn check_network_proxy(url: String) -> Result<String, NodeError> {
     Ok(parsed.as_str().to_owned())
 }
 
-/// Applies the saved proxy. Called once the store is open.
-pub(crate) fn apply_saved_proxy() {
-    let saved = load().ok().and_then(|s| s.proxy);
-    set_proxy(saved.as_deref().and_then(|p| ProxyUrl::parse(p).ok()));
+/// Applies the saved proxy and pinned certificates. Called once the store
+/// is open.
+pub(crate) fn apply_saved_network_settings() {
+    let settings = load().unwrap_or_default();
+    set_proxy(
+        settings
+            .proxy
+            .as_deref()
+            .and_then(|p| ProxyUrl::parse(p).ok()),
+    );
+    apply_saved_pins(&settings);
 }
 
 #[cfg(test)]

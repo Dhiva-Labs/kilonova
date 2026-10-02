@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/network_label.dart';
+import 'certificate_dialog.dart';
 import 'nodes_screen.dart' show nodeErrorMessage;
 
 /// Choose the light wallet server for each network. There is no default.
@@ -69,6 +70,11 @@ class _LwsServersScreenState extends State<LwsServersScreen> {
             : l.lwsHealthyType(health.serverType!, health.height.toString()),
       );
     } on NodeError catch (e) {
+      if (e == NodeError.untrustedCertificate &&
+          mounted &&
+          await offerToTrustCertificate(context, _url.text)) {
+        return _save();
+      }
       if (mounted) setState(() => _error = nodeErrorMessage(context, e));
     }
   }

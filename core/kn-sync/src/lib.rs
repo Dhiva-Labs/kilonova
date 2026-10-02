@@ -11,6 +11,7 @@ mod node;
 mod restore_height;
 mod scan;
 mod state;
+mod tls;
 
 pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, lws_sync};
 pub use node::{
@@ -22,6 +23,7 @@ pub use state::{
     Balance, DEFAULT_LOCK_BLOCKS, Direction, HistoryEntry, MINER_LOCK_BLOCKS, OwnedOutput,
     PENDING_EXPIRY_BLOCKS, PoolPayment, Spend, SyncState,
 };
+pub use tls::{CertificateInfo, Fingerprint, fingerprint, server_certificate, set_pins};
 
 #[derive(Debug, thiserror::Error)]
 pub enum SyncError {

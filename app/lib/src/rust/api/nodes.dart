@@ -7,8 +7,8 @@ import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply_saved_proxy`, `current_node`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
+// These functions are ignored because they are not marked as `pub`: `apply_saved_network_settings`, `apply_saved_pins`, `colon_hex`, `current_node`, `explain`, `parse_fingerprint`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 /// Bundled and user-added nodes for `network`, with the selected one marked.
 ///
@@ -92,6 +92,38 @@ Future<LwsHealth> checkLwsServer({
   url: url,
 );
 
+/// Reads the certificate an https node or server presents, without sending
+/// it anything.
+///
+/// # Errors
+///
+/// [`NodeError::BadUrl`] for an http address, [`NodeError::Unreachable`]
+/// if no certificate could be read.
+Future<CertificateDetails> serverCertificateInfo({required String url}) =>
+    RustLib.instance.api.crateApiNodesServerCertificateInfo(url: url);
+
+/// Trusts `url` for the certificate with `fingerprint` (as returned by
+/// [`server_certificate_info`]) and nothing else.
+///
+/// # Errors
+///
+/// [`NodeError::BadUrl`] for a bad address or fingerprint.
+Future<void> trustCertificate({
+  required String url,
+  required String fingerprint,
+}) => RustLib.instance.api.crateApiNodesTrustCertificate(
+  url: url,
+  fingerprint: fingerprint,
+);
+
+/// Removes the pinned certificate for `url`.
+///
+/// # Errors
+///
+/// Fails if the settings cannot be saved.
+Future<void> forgetCertificate({required String url}) =>
+    RustLib.instance.api.crateApiNodesForgetCertificate(url: url);
+
 /// The SOCKS5 proxy (for example Tor) all traffic goes through, if any.
 ///
 /// # Errors
@@ -118,6 +150,37 @@ Future<String?> setNetworkProxy({String? url}) =>
 /// [`NodeError::BadProxy`] or [`NodeError::Unreachable`].
 Future<String> checkNetworkProxy({required String url}) =>
     RustLib.instance.api.crateApiNodesCheckNetworkProxy(url: url);
+
+/// A server's certificate, for the user to compare before trusting it.
+class CertificateDetails {
+  /// SHA-256 of the certificate, as colon-separated hex pairs.
+  final String fingerprint;
+
+  /// Issued by a public authority, so no pin is needed.
+  final bool publiclyTrusted;
+
+  /// The pinned fingerprint for this address, if any.
+  final String? pinned;
+
+  const CertificateDetails({
+    required this.fingerprint,
+    required this.publiclyTrusted,
+    this.pinned,
+  });
+
+  @override
+  int get hashCode =>
+      fingerprint.hashCode ^ publiclyTrusted.hashCode ^ pinned.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CertificateDetails &&
+          runtimeType == other.runtimeType &&
+          fingerprint == other.fingerprint &&
+          publiclyTrusted == other.publiclyTrusted &&
+          pinned == other.pinned;
+}
 
 /// What a light wallet server reported when checked.
 class LwsHealth {
@@ -147,14 +210,19 @@ class NodeChoice {
   final bool bundled;
   final bool selected;
 
+  /// Trusted through a pinned certificate.
+  final bool pinned;
+
   const NodeChoice({
     required this.url,
     required this.bundled,
     required this.selected,
+    required this.pinned,
   });
 
   @override
-  int get hashCode => url.hashCode ^ bundled.hashCode ^ selected.hashCode;
+  int get hashCode =>
+      url.hashCode ^ bundled.hashCode ^ selected.hashCode ^ pinned.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -163,7 +231,8 @@ class NodeChoice {
           runtimeType == other.runtimeType &&
           url == other.url &&
           bundled == other.bundled &&
-          selected == other.selected;
+          selected == other.selected &&
+          pinned == other.pinned;
 }
 
 enum NodeError {
@@ -178,6 +247,10 @@ enum NodeError {
 
   /// An onion address without a Tor proxy set.
   needsTor,
+
+  /// The server's certificate is not from a public authority (or not the
+  /// one pinned). See [`server_certificate_info`].
+  untrustedCertificate,
 }
 
 /// What a node reported when checked.

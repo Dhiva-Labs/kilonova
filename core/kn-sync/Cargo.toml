@@ -18,6 +18,7 @@ monero-wallet = { version = "=0.2.0", default-features = false, features = ["std
 # Android); ring is installed as the provider, and roots come from
 # webpki-roots so no platform verifier (which needs JNI on Android) is used.
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "socks"] }
+ring = "0.17"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -27,6 +28,8 @@ webpki-roots = "1"
 zeroize = "1.8"
 
 [dev-dependencies]
+rcgen = "0.14"
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring"] }
 curve25519-dalek = { version = "4", features = ["rand_core"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net", "io-util"] }

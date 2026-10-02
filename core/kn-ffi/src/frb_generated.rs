@@ -41,7 +41,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 130684611;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 404481387;
 
 // Section: executor
 
@@ -1386,6 +1386,39 @@ fn wire__crate__api__wallets__delete_wallet_impl(
         },
     )
 }
+fn wire__crate__api__nodes__forget_certificate_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "forget_certificate",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_url = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::nodes::NodeError>((move || {
+                    let output_ok = crate::api::nodes::forget_certificate(api_url)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__wallets__generate_seed_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1780,6 +1813,39 @@ fn wire__crate__api__nodes__select_node_impl(
         },
     )
 }
+fn wire__crate__api__nodes__server_certificate_info_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "server_certificate_info",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_url = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::nodes::NodeError>((move || {
+                    let output_ok = crate::api::nodes::server_certificate_info(api_url)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__nodes__set_lws_server_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1841,6 +1907,40 @@ fn wire__crate__api__nodes__set_network_proxy_impl(
             move |context| {
                 transform_result_sse::<_, crate::api::nodes::NodeError>((move || {
                     let output_ok = crate::api::nodes::set_network_proxy(api_url)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__nodes__trust_certificate_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "trust_certificate",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_url = <String>::sse_decode(&mut deserializer);
+            let api_fingerprint = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::nodes::NodeError>((move || {
+                    let output_ok = crate::api::nodes::trust_certificate(api_url, api_fingerprint)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -1992,6 +2092,20 @@ impl SseDecode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_u8().unwrap() != 0
+    }
+}
+
+impl SseDecode for crate::api::nodes::CertificateDetails {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_fingerprint = <String>::sse_decode(deserializer);
+        let mut var_publiclyTrusted = <bool>::sse_decode(deserializer);
+        let mut var_pinned = <Option<String>>::sse_decode(deserializer);
+        return crate::api::nodes::CertificateDetails {
+            fingerprint: var_fingerprint,
+            publicly_trusted: var_publiclyTrusted,
+            pinned: var_pinned,
+        };
     }
 }
 
@@ -2191,10 +2305,12 @@ impl SseDecode for crate::api::nodes::NodeChoice {
         let mut var_url = <String>::sse_decode(deserializer);
         let mut var_bundled = <bool>::sse_decode(deserializer);
         let mut var_selected = <bool>::sse_decode(deserializer);
+        let mut var_pinned = <bool>::sse_decode(deserializer);
         return crate::api::nodes::NodeChoice {
             url: var_url,
             bundled: var_bundled,
             selected: var_selected,
+            pinned: var_pinned,
         };
     }
 }
@@ -2211,6 +2327,7 @@ impl SseDecode for crate::api::nodes::NodeError {
             4 => crate::api::nodes::NodeError::NotInitialized,
             5 => crate::api::nodes::NodeError::BadProxy,
             6 => crate::api::nodes::NodeError::NeedsTor,
+            7 => crate::api::nodes::NodeError::UntrustedCertificate,
             _ => unreachable!("Invalid variant for NodeError: {}", inner),
         };
     }
@@ -2602,19 +2719,24 @@ fn pde_ffi_dispatcher_primary_impl(
             data_len,
         ),
         30 => wire__crate__api__wallets__delete_wallet_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__wallets__generate_seed_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__core__init_app_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__wallets__init_wallet_store_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__wallets__list_wallets_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__nodes__lws_server_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__nodes__network_proxy_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__nodes__nodes_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__nodes__remove_node_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__wallets__rename_wallet_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__nodes__select_node_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__nodes__set_lws_server_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__nodes__set_network_proxy_impl(port, ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__wallets__unlock_wallet_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__nodes__forget_certificate_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__wallets__generate_seed_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__core__init_app_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__wallets__init_wallet_store_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__wallets__list_wallets_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__nodes__lws_server_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__nodes__network_proxy_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__nodes__nodes_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__nodes__remove_node_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__wallets__rename_wallet_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__nodes__select_node_impl(port, ptr, rust_vec_len, data_len),
+        44 => {
+            wire__crate__api__nodes__server_certificate_info_impl(port, ptr, rust_vec_len, data_len)
+        }
+        45 => wire__crate__api__nodes__set_lws_server_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__nodes__set_network_proxy_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__nodes__trust_certificate_impl(port, ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__wallets__unlock_wallet_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2637,8 +2759,8 @@ fn pde_ffi_dispatcher_sync_impl(
         19 => wire__crate__api__network__all_networks_impl(ptr, rust_vec_len, data_len),
         20 => wire__crate__api__send__check_address_impl(ptr, rust_vec_len, data_len),
         26 => wire__crate__api__core__core_info_impl(ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__network__network_is_test_network_impl(ptr, rust_vec_len, data_len),
-        41 => {
+        37 => wire__crate__api__network__network_is_test_network_impl(ptr, rust_vec_len, data_len),
+        42 => {
             wire__crate__api__sync__restore_height_for_new_wallet_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -2716,6 +2838,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::wallets::AddressRow>
     for crate::api::wallets::AddressRow
 {
     fn into_into_dart(self) -> crate::api::wallets::AddressRow {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::nodes::CertificateDetails {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.fingerprint.into_into_dart().into_dart(),
+            self.publicly_trusted.into_into_dart().into_dart(),
+            self.pinned.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::nodes::CertificateDetails
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::nodes::CertificateDetails>
+    for crate::api::nodes::CertificateDetails
+{
+    fn into_into_dart(self) -> crate::api::nodes::CertificateDetails {
         self
     }
 }
@@ -2837,6 +2981,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::nodes::NodeChoice {
             self.url.into_into_dart().into_dart(),
             self.bundled.into_into_dart().into_dart(),
             self.selected.into_into_dart().into_dart(),
+            self.pinned.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2860,6 +3005,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::nodes::NodeError {
             Self::NotInitialized => 4.into_dart(),
             Self::BadProxy => 5.into_dart(),
             Self::NeedsTor => 6.into_dart(),
+            Self::UntrustedCertificate => 7.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -3242,6 +3388,15 @@ impl SseEncode for bool {
     }
 }
 
+impl SseEncode for crate::api::nodes::CertificateDetails {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.fingerprint, serializer);
+        <bool>::sse_encode(self.publicly_trusted, serializer);
+        <Option<String>>::sse_encode(self.pinned, serializer);
+    }
+}
+
 impl SseEncode for crate::api::core::CoreInfo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3407,6 +3562,7 @@ impl SseEncode for crate::api::nodes::NodeChoice {
         <String>::sse_encode(self.url, serializer);
         <bool>::sse_encode(self.bundled, serializer);
         <bool>::sse_encode(self.selected, serializer);
+        <bool>::sse_encode(self.pinned, serializer);
     }
 }
 
@@ -3422,6 +3578,7 @@ impl SseEncode for crate::api::nodes::NodeError {
                 crate::api::nodes::NodeError::NotInitialized => 4,
                 crate::api::nodes::NodeError::BadProxy => 5,
                 crate::api::nodes::NodeError::NeedsTor => 6,
+                crate::api::nodes::NodeError::UntrustedCertificate => 7,
                 _ => {
                     unimplemented!("");
                 }
