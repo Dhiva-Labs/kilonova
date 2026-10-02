@@ -8,10 +8,21 @@ updates:
     directory: /core
     schedule:
       interval: weekly
-    # flutter_rust_bridge must move in lockstep with its Dart package and
-    # the codegen; upgrade it by hand.
     ignore:
+      # Must move in lockstep with its Dart package and the codegen.
       - dependency-name: flutter_rust_bridge
+      # Cryptography and Monero crates: major versions change behaviour or
+      # types (curve25519-dalek must match monero-oxide), so they are
+      # upgraded by hand with the wallet-file compatibility tests. Patch and
+      # minor updates still come through.
+      - dependency-name: argon2
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: chacha20poly1305
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: curve25519-dalek
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "monero-*"
+      - dependency-name: polyseed
   - package-ecosystem: pub
     directory: /app
     schedule:

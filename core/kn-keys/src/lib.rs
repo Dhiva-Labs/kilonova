@@ -73,10 +73,6 @@ pub enum KeyError {
     BadSubaddressIndex,
     #[error("the output does not belong to this wallet")]
     NotOurs,
-    #[error("view-only wallets cannot sign")]
-    ViewOnly,
-    #[error("the transaction could not be signed: {0}")]
-    Signing(String),
 }
 
 /// An output a light wallet server says this wallet received, as the server
@@ -369,24 +365,6 @@ impl WalletKeys {
             key_offset,
             compact_mask,
         })
-    }
-
-    /// Signs a transaction spending this wallet's outputs. The spend key is
-    /// used here and nowhere else.
-    ///
-    /// # Errors
-    ///
-    /// [`KeyError::ViewOnly`] for view-only wallets, [`KeyError::Signing`]
-    /// if an input is not this wallet's or signing fails.
-    pub fn sign(
-        &self,
-        transaction: monero_wallet::send::SignableTransaction,
-    ) -> Result<monero_wallet::transaction::Transaction, KeyError> {
-        let spend = self.spend.as_ref().ok_or(KeyError::ViewOnly)?;
-        let spend = Zeroizing::new(Scalar::from(**spend));
-        transaction
-            .sign(&mut OsRng, &spend)
-            .map_err(|e| KeyError::Signing(e.to_string()))
     }
 
     /// The private spend key as hex, for export. `None` if view-only.

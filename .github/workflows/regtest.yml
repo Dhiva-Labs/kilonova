@@ -56,9 +56,6 @@ jobs:
       - name: LWS mode against monero-lws, full mode and monero-wallet-rpc
         working-directory: core
         run: cargo test -p kn-sync --test regtest_lws -- --ignored --test-threads 1
-      - name: Sending, received by monero-wallet-rpc
-        working-directory: core
-        run: cargo test -p kn-tx --test regtest_send -- --ignored --test-threads 1
       - name: Logs
         if: failure()
         working-directory: tools/devnet
