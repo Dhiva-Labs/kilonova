@@ -9,7 +9,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-curve25519-dalek = { version = "4", default-features = false, features = ["alloc", "zeroize", "precomputed-tables"] }
+curve25519-dalek = { version = "5", default-features = false, features = ["alloc", "zeroize", "precomputed-tables"] }
 monero-wallet = { version = "=0.2.0", default-features = false, features = ["std", "compile-time-generators"] }
 # Not used from crates.io: the published releases predate the 2025 Polyseed
 # birthday-encoding and key-derivation fixes. Pinned to an exact commit.
