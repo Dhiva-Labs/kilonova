@@ -12,7 +12,7 @@ mod restore_height;
 mod scan;
 mod state;
 
-pub use lws::{LwsInfo, LwsReport, LwsServer, check_lws, lws_sync};
+pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, lws_sync};
 pub use node::{Http, NodeStatus, NodeUrl, bundled_nodes, connect};
 pub use restore_height::approximate_height;
 pub use scan::{Progress, SUBADDRESS_LOOKAHEAD, sync};

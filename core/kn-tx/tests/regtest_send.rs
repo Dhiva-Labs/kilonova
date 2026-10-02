@@ -11,7 +11,7 @@ use std::sync::atomic::AtomicBool;
 
 use kn_keys::{Network, SeedFormat, WalletKeys};
 use kn_sync::{Direction, NodeUrl, SyncState, connect, sync};
-use kn_tx::{Priority, Request, TxError, prepare, publish, spendable};
+use kn_tx::{Backend, Priority, Request, TxError, prepare, publish, spendable};
 use monero_wallet::address::{MoneroAddress, Network as MoneroNetwork};
 use serde_json::{Value, json};
 
@@ -140,7 +140,7 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
 
     // Errors first: nothing is published.
     let err = prepare(
-        &d,
+        Backend::Node(&d),
         &keys,
         Network::Mainnet,
         &state,
@@ -155,7 +155,7 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
         .0
         .primary_address(Network::Stagenet);
     let err = prepare(
-        &d,
+        Backend::Node(&d),
         &keys,
         Network::Mainnet,
         &state,
@@ -169,7 +169,7 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
 
     // Pay two addresses of the reference wallet in one transaction.
     let prepared = prepare(
-        &d,
+        Backend::Node(&d),
         &keys,
         Network::Mainnet,
         &state,
@@ -191,7 +191,9 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
         spent_inputs,
         prepared.amount + prepared.fee + prepared.change
     );
-    publish(&d, &prepared, &mut state, height).await.unwrap();
+    publish(Backend::Node(&d), &prepared, &mut state, height)
+        .await
+        .unwrap();
 
     // Pending at once: the inputs are no longer counted.
     let pending = state.balance(height);
@@ -226,7 +228,7 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
     let height = tip().await;
     let sweepable: u64 = spendable(&state, height).iter().map(|o| o.amount()).sum();
     let swept = prepare(
-        &d,
+        Backend::Node(&d),
         &keys,
         Network::Mainnet,
         &state,
@@ -238,7 +240,9 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
     .unwrap();
     assert_eq!(swept.amount + swept.fee, sweepable);
     assert_eq!(swept.change, 0);
-    publish(&d, &swept, &mut state, height).await.unwrap();
+    publish(Backend::Node(&d), &swept, &mut state, height)
+        .await
+        .unwrap();
     assert!(
         spendable(&state, height).is_empty(),
         "everything spendable went"

@@ -39,8 +39,17 @@ dishonest server (`kn-sync/tests/lws_dishonest_server.rs`):
   and changing servers asks again; Kilonova runs no server and sets no
   default.
 
+When sending in LWS mode the server also picks the decoys, suggests the fee
+and broadcasts the transaction (`kn-tx`, `Backend::Lws`). Kilonova checks
+that the ring has 16 distinct, valid outputs with the real one included, and
+shows the fee before anything is broadcast. A server already knows which output
+is real from the view key, so decoys it picks protect only against third
+parties; a dishonest server could pick decoys that are easy for others to
+rule out.
+
 What remains possible for a dishonest server: hiding payments, inventing
-incoming payments (which fail when spent), and hiding spends. These are
+incoming payments (which fail when spent), hiding spends, weak decoys and
+not broadcasting a transaction (its inputs are released after 30 blocks). These are
 inherent to giving a server the view key; full sync avoids them.
 
 **Network observer.** Sees connections to nodes and servers.
