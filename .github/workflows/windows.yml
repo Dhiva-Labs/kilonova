@@ -1,0 +1,51 @@
+name: Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'core/**'
+      - 'PRIVACY.md'
+      - '.github/workflows/windows.yml'
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'core/**'
+      - 'PRIVACY.md'
+      - '.github/workflows/windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.44.6
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows:
+    name: Flutter (Windows)
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Install pinned toolchain
+        working-directory: core
+        run: rustup show active-toolchain; if ($LASTEXITCODE -ne 0) { rustup toolchain install }
+      - name: Build Rust core for widget tests
+        working-directory: core
+        run: cargo build
+      - working-directory: app
+        run: flutter pub get
+      - working-directory: app
+        run: flutter test
+      - working-directory: app
+        run: flutter build windows --release

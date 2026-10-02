@@ -1,0 +1,63 @@
+name: Linux
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'core/**'
+      - 'PRIVACY.md'
+      - '.github/workflows/linux.yml'
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'core/**'
+      - 'PRIVACY.md'
+      - '.github/workflows/linux.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.44.6
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    name: Flutter (Linux)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev xvfb
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Install pinned toolchain
+        working-directory: core
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: core
+      - name: Build Rust core for widget tests
+        working-directory: core
+        run: cargo build
+      - working-directory: app
+        run: flutter pub get
+      - working-directory: app
+        run: flutter analyze
+      - working-directory: app
+        run: flutter test
+      - name: Integration test (real app, Rust built by cargokit)
+        working-directory: app
+        run: xvfb-run -a flutter test integration_test -d linux
+      - working-directory: app
+        run: flutter build linux --release

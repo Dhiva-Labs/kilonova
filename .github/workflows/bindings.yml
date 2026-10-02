@@ -1,0 +1,55 @@
+name: Bindings
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'core/kn-ffi/**'
+      - 'app/lib/src/rust/**'
+      - 'app/flutter_rust_bridge.yaml'
+      - '.github/workflows/bindings.yml'
+  pull_request:
+    paths:
+      - 'core/kn-ffi/**'
+      - 'app/lib/src/rust/**'
+      - 'app/flutter_rust_bridge.yaml'
+      - '.github/workflows/bindings.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bindings-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.44.6
+  CARGO_TERM_COLOR: always
+  FRB_VERSION: 2.13.0
+
+jobs:
+  bindings:
+    name: Generated bindings up to date
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Install pinned toolchain
+        working-directory: core
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: core
+          cache-bin: true
+      - run: cargo install flutter_rust_bridge_codegen --version "$FRB_VERSION" --locked
+      - name: Regenerate
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter_rust_bridge_codegen generate
+      - name: Fail if generated code changed
+        run: git diff --exit-code -- app/lib/src/rust core/kn-ffi/src/frb_generated.rs
