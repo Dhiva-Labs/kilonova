@@ -34,8 +34,6 @@ Future<String> _openWallet(WidgetTester tester, String name) async {
   return address;
 }
 
-Finder _field(String label) => find.widgetWithText(TextField, label);
-
 void main() {
   setUpAll(initRustForTests);
 
@@ -70,8 +68,8 @@ void main() {
       stagenet = w.addresses().first.address;
       w.lock();
     });
-    await tester.enterText(_field('Recipient address'), stagenet);
-    await tester.enterText(_field('Amount'), '1.0000000000001');
+    await tester.enterText(fieldWithLabel('To'), stagenet);
+    await tester.enterText(fieldWithLabel('Amount'), '1.0000000000001');
     await tester.tap(find.text('Review'));
     await tester.pumpAndSettle();
     expect(
@@ -84,8 +82,8 @@ void main() {
     );
 
     // Valid input, but the wallet never caught up with its node.
-    await tester.enterText(_field('Recipient address'), own);
-    await tester.enterText(_field('Amount'), '0.5');
+    await tester.enterText(fieldWithLabel('To'), own);
+    await tester.enterText(fieldWithLabel('Amount'), '0.5');
     await tester.tap(find.text('Review'));
     await pumpUntilFound(
       tester,
@@ -118,8 +116,9 @@ void main() {
     await tester.tap(find.byTooltip('Paste'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Recipient 1'), findsOneWidget);
-    expect(find.text('Recipient 2'), findsOneWidget);
+    // Eyebrow labels render upper case.
+    expect(find.text('RECIPIENT 1'), findsOneWidget);
+    expect(find.text('RECIPIENT 2'), findsOneWidget);
     expect(find.text('0.25'), findsOneWidget);
     expect(find.text('1.0'), findsOneWidget);
     expect(find.text('Payment request: Shop'), findsOneWidget);

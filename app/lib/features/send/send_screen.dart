@@ -10,6 +10,11 @@ import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/amount.dart';
 import '../../widgets/error_line.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_card.dart';
+import '../../widgets/kn_field.dart';
+import '../../widgets/kn_icons.dart';
+import '../../widgets/kn_segments.dart';
 import '../../widgets/password_fields.dart';
 import '../book/address_book_screen.dart';
 import '../wallets/wallet_registry.dart';
@@ -215,26 +220,29 @@ class _SendScreenState extends State<SendScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final prepared = _prepared;
+    final isPhone = context.isPhoneWidth;
     return PopScope(
       canPop: !_busy,
       // Recipients and amounts stay out of screenshots and the app switcher.
       child: SecureWindow(
         child: Scaffold(
-          appBar: AppBar(title: Text(l.sendTitle)),
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: prepared == null
-                  ? _form(context)
-                  : _ConfirmView(
-                      wallet: widget.wallet,
-                      biometric: widget.registry.biometric,
-                      prepared: prepared,
-                      onEdit: _edit,
-                      onSent: _sent,
-                      onFailed: _failed,
-                    ),
+          appBar: isPhone ? AppBar(title: Text(l.sendTitle)) : null,
+          body: SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: prepared == null
+                    ? _form(context)
+                    : _ConfirmView(
+                        wallet: widget.wallet,
+                        biometric: widget.registry.biometric,
+                        prepared: prepared,
+                        onEdit: _edit,
+                        onSent: _sent,
+                        onFailed: _failed,
+                      ),
+              ),
             ),
           ),
         ),
@@ -245,14 +253,31 @@ class _SendScreenState extends State<SendScreen> {
   Widget _form(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final c = context.kn;
+    final isPhone = context.isPhoneWidth;
     final balance = widget.wallet.balance();
     final note = _requestNote;
-    return ListView(
-      padding: const EdgeInsets.all(KnSpace.lg),
+    final pad = isPhone ? KnSpace.md : KnSpace.xl;
+
+    final content = ListView(
+      padding: EdgeInsets.fromLTRB(pad, pad, pad, pad),
       children: [
+        if (!isPhone) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: Text(l.sendTitle, style: text.headlineSmall)),
+              KnButton.text(
+                l.cancelAction,
+                onPressed: _busy ? null : () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: KnSpace.lg),
+        ],
         Text(
-          l.spendableAmount(formatXmr(balance.unlocked)),
-          style: monoStyle(context, size: 13, color: context.kn.textSecondary),
+          l.spendableAmount(formatXmrGrouped(balance.unlocked)),
+          style: monoStyle(context, size: 13, color: c.textSecondary),
         ),
         if (note != null && note.isNotEmpty) ...[
           const SizedBox(height: KnSpace.sm),
@@ -260,106 +285,101 @@ class _SendScreenState extends State<SendScreen> {
         ],
         const SizedBox(height: KnSpace.lg),
         for (final (i, r) in _recipients.indexed) ...[
-          if (_recipients.length > 1)
+          if (_recipients.length > 1) ...[
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Text(
-                    l.sendRecipientNumber(i + 1),
-                    style: text.labelLarge,
-                  ),
-                ),
-                TextButton(
+                Expanded(child: Eyebrow(l.sendRecipientNumber(i + 1))),
+                KnButton.text(
+                  l.sendRemoveRecipient,
                   onPressed: _busy ? null : () => _removeRecipient(r),
-                  child: Text(l.sendRemoveRecipient),
                 ),
               ],
             ),
-          TextField(
+            const SizedBox(height: KnSpace.sm),
+          ],
+          KnField(
             controller: r.address,
+            label: l.sendAddressField,
+            hint: l.sendAddressHint,
+            mono: true,
+            multiline: true,
             enabled: !_busy,
-            style: monoStyle(context, size: 13),
-            minLines: 1,
-            maxLines: 3,
-            decoration: InputDecoration(
-              labelText: l.sendAddressField,
-              errorText: r.addressError,
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: l.bookChooseAction,
-                    icon: const Icon(Icons.contacts_outlined, size: 20),
-                    onPressed: _busy ? null : () => _pickContact(r),
-                  ),
-                  IconButton(
-                    tooltip: scansWithCamera ? l.scanAction : l.scanImageAction,
-                    icon: const Icon(Icons.qr_code_scanner, size: 20),
-                    onPressed: _busy ? null : () => _scan(r),
-                  ),
-                  IconButton(
-                    tooltip: l.pasteAction,
-                    icon: const Icon(Icons.content_paste_outlined, size: 20),
-                    onPressed: _busy ? null : () => _paste(r),
-                  ),
-                ],
-              ),
-            ),
+            error: r.addressError,
             onChanged: (v) => _applyRequest(r, v),
+            trailing: [
+              KnIconButton(
+                icon: const KnIcon(KnIcons.contacts),
+                tooltip: l.bookChooseAction,
+                onPressed: _busy ? null : () => _pickContact(r),
+              ),
+              KnIconButton(
+                icon: const KnIcon(KnIcons.scan),
+                tooltip: scansWithCamera ? l.scanAction : l.scanImageAction,
+                onPressed: _busy ? null : () => _scan(r),
+              ),
+              KnIconButton(
+                icon: const KnIcon(KnIcons.paste),
+                tooltip: l.pasteAction,
+                onPressed: _busy ? null : () => _paste(r),
+              ),
+            ],
           ),
           const SizedBox(height: KnSpace.sm),
           if (!_sweep)
-            TextField(
+            KnField(
               controller: r.amount,
+              label: l.sendAmountField,
+              suffix: 'XMR',
+              mono: true,
               enabled: !_busy,
-              style: monoStyle(context, size: 15),
+              error: r.amountError,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: InputDecoration(
-                labelText: l.sendAmountField,
-                suffixText: 'XMR',
-                errorText: r.amountError,
+            ),
+          if (_recipients.length == 1)
+            Padding(
+              padding: const EdgeInsets.only(top: KnSpace.xs),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: KnButton.text(
+                  _sweep ? l.sendEnterAmount : l.sendEverything,
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() => _sweep = !_sweep),
+                ),
               ),
             ),
+          if (_sweep) ...[
+            const SizedBox(height: KnSpace.xs),
+            Text(l.sendEverythingNote, style: text.bodySmall),
+          ],
           const SizedBox(height: KnSpace.md),
         ],
-        Wrap(
-          spacing: KnSpace.sm,
-          children: [
-            if (!_sweep && _recipients.length < _maxRecipients)
-              TextButton(
-                onPressed: _busy ? null : _addRecipient,
-                child: Text(l.sendAddRecipient),
-              ),
-            if (_recipients.length == 1)
-              TextButton(
-                onPressed: _busy
-                    ? null
-                    : () => setState(() => _sweep = !_sweep),
-                child: Text(_sweep ? l.sendEnterAmount : l.sendEverything),
-              ),
-          ],
-        ),
-        if (_sweep) ...[
-          const SizedBox(height: KnSpace.sm),
-          Text(l.sendEverythingNote, style: text.bodySmall),
-        ],
+        if (!_sweep && _recipients.length < _maxRecipients)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: KnButton.text(
+              l.sendAddRecipient,
+              onPressed: _busy ? null : _addRecipient,
+            ),
+          ),
         const SizedBox(height: KnSpace.lg),
-        Text(l.sendFeeTitle, style: text.labelLarge),
+        Eyebrow(l.sendFeeTitle),
         const SizedBox(height: KnSpace.sm),
-        SegmentedButton<FeePriority>(
+        KnSegments<FeePriority>(
           segments: [
-            ButtonSegment(value: FeePriority.low, label: Text(l.feeLow)),
-            ButtonSegment(value: FeePriority.normal, label: Text(l.feeNormal)),
-            ButtonSegment(value: FeePriority.high, label: Text(l.feeHigh)),
-            ButtonSegment(value: FeePriority.urgent, label: Text(l.feeUrgent)),
+            KnSegment(FeePriority.low, l.feeLow),
+            KnSegment(FeePriority.normal, l.feeNormal),
+            KnSegment(FeePriority.high, l.feeHigh),
+            KnSegment(FeePriority.urgent, l.feeUrgent),
           ],
-          selected: {_priority},
-          showSelectedIcon: false,
-          onSelectionChanged: _busy
+          selected: _priority,
+          expand: true,
+          onChanged: _busy
               ? null
-              : (s) => setState(() => _priority = s.single),
+              : (v) => setState(() => _priority = v),
         ),
         const SizedBox(height: KnSpace.xs),
         Text(l.sendFeeHelp, style: text.bodySmall),
@@ -367,18 +387,46 @@ class _SendScreenState extends State<SendScreen> {
           const SizedBox(height: KnSpace.md),
           ErrorLine(_error!),
         ],
-        const SizedBox(height: KnSpace.lg),
-        Row(
-          children: [
-            FilledButton(
-              onPressed: _busy ? null : _review,
-              child: Text(l.sendReviewAction),
-            ),
-            if (_busy) ...[
-              const SizedBox(width: KnSpace.md),
-              Expanded(child: Text(l.sendPreparing, style: text.bodySmall)),
+        if (!isPhone) ...[
+          const SizedBox(height: KnSpace.lg),
+          Row(
+            children: [
+              KnButton.primary(l.sendReviewAction, onPressed: _busy ? null : _review),
+              if (_busy) ...[
+                const SizedBox(width: KnSpace.md),
+                Expanded(child: Text(l.sendPreparing, style: text.bodySmall)),
+              ],
             ],
-          ],
+          ),
+        ],
+      ],
+    );
+
+    if (!isPhone) return content;
+
+    return Column(
+      children: [
+        Expanded(child: content),
+        Container(
+          padding: const EdgeInsets.all(KnSpace.md),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: c.border)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_busy) ...[
+                Text(l.sendPreparing, style: text.bodySmall),
+                const SizedBox(height: KnSpace.sm),
+              ],
+              KnButton.primary(
+                l.sendReviewAction,
+                onPressed: _busy ? null : _review,
+                expand: true,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -482,46 +530,69 @@ class _ConfirmViewState extends State<_ConfirmView> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final c = context.kn;
+    final isPhone = context.isPhoneWidth;
     final s = widget.prepared.summary();
     final paid = s.payments.fold(BigInt.zero, (sum, p) => sum + p.amount);
     final network = widget.wallet.summary().network;
+    final highFee = s.fee * BigInt.from(20) > paid;
+    final contacts = {
+      for (final contact in widget.wallet.contacts())
+        contact.address: contact.name,
+    };
+    final pad = isPhone ? KnSpace.md : KnSpace.xl;
 
-    return ListView(
-      padding: const EdgeInsets.all(KnSpace.lg),
+    final content = ListView(
+      padding: EdgeInsets.fromLTRB(pad, pad, pad, pad),
       children: [
-        Text(l.sendConfirmTitle, style: text.titleMedium),
+        Text(
+          l.sendConfirmTitle,
+          style: isPhone ? text.titleLarge : text.headlineSmall,
+        ),
         const SizedBox(height: KnSpace.xs),
         Text(
           network.isTestNetwork() ? l.sendTestNetworkNote : l.aboutUnaudited,
           style: text.bodySmall,
         ),
-        const SizedBox(height: KnSpace.md),
-        const Divider(),
-        for (final p in s.payments) ...[
-          const SizedBox(height: KnSpace.sm),
-          AmountText(p.amount, size: 18),
-          const SizedBox(height: KnSpace.xs),
-          SelectableText(
-            p.address,
-            style: monoStyle(
-              context,
-              size: 12,
-              color: context.kn.textSecondary,
-            ),
+        const SizedBox(height: KnSpace.lg),
+        KnCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Eyebrow(l.sendSendingLabel),
+              const SizedBox(height: KnSpace.md),
+              for (final p in s.payments) ...[
+                if (contacts[p.address] != null) ...[
+                  Text(contacts[p.address]!, style: text.bodyMedium),
+                  const SizedBox(height: 2),
+                ],
+                AmountText(p.amount, size: text.titleLarge!.fontSize),
+                const SizedBox(height: 2),
+                Text(
+                  p.address,
+                  style: monoStyle(context, size: 13, color: c.textSecondary),
+                ),
+                const SizedBox(height: KnSpace.md),
+              ],
+              if (highFee) ...[
+                ErrorLine(l.sendHighFeeWarning),
+                const SizedBox(height: KnSpace.sm),
+              ],
+              ...withDividers([
+                KeyValue(label: l.sendFeeLine, value: AmountText(s.fee)),
+                KeyValue(
+                  label: l.sendTotalLine,
+                  value: AmountText(paid + s.fee),
+                  strong: true,
+                ),
+                if (s.change > BigInt.zero)
+                  KeyValue(label: l.sendChangeLine, value: AmountText(s.change)),
+              ]),
+              const SizedBox(height: KnSpace.sm),
+              Text(l.sendViaLine(_host(s.via)), style: text.bodySmall),
+            ],
           ),
-          const SizedBox(height: KnSpace.sm),
-          const Divider(),
-        ],
-        _Line(label: l.sendFeeLine, amount: s.fee),
-        if (s.fee * BigInt.from(20) > paid) ...[
-          ErrorLine(l.sendHighFeeWarning),
-          const SizedBox(height: KnSpace.xs),
-        ],
-        _Line(label: l.sendTotalLine, amount: paid + s.fee, strong: true),
-        if (s.change > BigInt.zero)
-          _Line(label: l.sendChangeLine, amount: s.change),
-        const SizedBox(height: KnSpace.sm),
-        Text(l.sendViaLine(_host(s.via)), style: text.bodySmall),
+        ),
         const SizedBox(height: KnSpace.lg),
         PasswordField(
           controller: _password,
@@ -530,59 +601,72 @@ class _ConfirmViewState extends State<_ConfirmView> {
           onSubmitted: (_) => _send(),
         ),
         const SizedBox(height: KnSpace.md),
-        Wrap(
-          spacing: KnSpace.sm,
-          runSpacing: KnSpace.sm,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            FilledButton(
-              onPressed: _busy ? null : _send,
-              child: Text(l.sendConfirmAction),
-            ),
-            if (_biometric)
-              TextButton(
-                onPressed: _busy ? null : _sendWithBiometric,
-                child: Text(l.biometricSendAction),
+        if (!isPhone)
+          Wrap(
+            spacing: KnSpace.sm,
+            runSpacing: KnSpace.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              KnButton.primary(l.sendConfirmAction, onPressed: _busy ? null : _send),
+              KnButton.text(l.sendEditAction, onPressed: _busy ? null : widget.onEdit),
+              if (_biometric)
+                KnButton.text(
+                  l.biometricSendAction,
+                  onPressed: _busy ? null : _sendWithBiometric,
+                ),
+              if (_busy) Text(l.sendPublishing, style: text.bodySmall),
+            ],
+          )
+        else ...[
+          if (_biometric)
+            Padding(
+              padding: const EdgeInsets.only(bottom: KnSpace.sm),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: KnButton.text(
+                  l.biometricSendAction,
+                  onPressed: _busy ? null : _sendWithBiometric,
+                ),
               ),
-            TextButton(
-              onPressed: _busy ? null : widget.onEdit,
-              child: Text(l.sendEditAction),
             ),
-            if (_busy) Text(l.sendPublishing, style: text.bodySmall),
-          ],
+          if (_busy)
+            Padding(
+              padding: const EdgeInsets.only(bottom: KnSpace.sm),
+              child: Text(l.sendPublishing, style: text.bodySmall),
+            ),
+        ],
+      ],
+    );
+
+    if (!isPhone) return content;
+
+    return Column(
+      children: [
+        Expanded(child: content),
+        Container(
+          padding: const EdgeInsets.all(KnSpace.md),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: c.border)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              KnButton.primary(
+                l.sendConfirmAction,
+                onPressed: _busy ? null : _send,
+                expand: true,
+              ),
+              const SizedBox(height: KnSpace.sm),
+              KnButton.text(l.sendEditAction, onPressed: _busy ? null : widget.onEdit),
+            ],
+          ),
         ),
       ],
     );
   }
 
   static String _host(String url) => Uri.tryParse(url)?.host ?? url;
-}
-
-class _Line extends StatelessWidget {
-  const _Line({required this.label, required this.amount, this.strong = false});
-
-  final String label;
-  final BigInt amount;
-  final bool strong;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: KnSpace.xs),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: strong ? text.labelLarge : text.bodyMedium,
-            ),
-          ),
-          AmountText(amount, size: strong ? 16 : 14),
-        ],
-      ),
-    );
-  }
 }
 
 String sendErrorMessage(BuildContext context, SendError e) {

@@ -160,10 +160,10 @@ void main() {
       await tester.pumpAndSettle();
       await _shot(tester, '05-send-empty');
       await tester.enterText(
-        find.widgetWithText(TextField, 'Recipient address'),
+        fieldWithLabel('To'),
         payee,
       );
-      await tester.enterText(find.widgetWithText(TextField, 'Amount'), '2.5');
+      await tester.enterText(fieldWithLabel('Amount'), '2.5');
       await tester.pump();
       await _shot(tester, '06-send-filled');
       await tester.tap(find.text('Review'));

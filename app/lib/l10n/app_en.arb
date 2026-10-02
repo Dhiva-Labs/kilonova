@@ -161,7 +161,7 @@
   "biometricFailed": "Biometric unlock did not work. Use the password.",
   "biometricOffAfterPasswordChange": "Password changed. Biometric unlock was turned off; turn it on again from the wallet menu.",
   "balanceTitle": "Balance",
-  "spendableAmount": "{amount} XMR can be spent now",
+  "spendableAmount": "{amount} XMR spendable",
   "@spendableAmount": {
     "placeholders": {
       "amount": {
@@ -316,7 +316,7 @@
   "sendAction": "Send",
   "sendTitle": "Send",
   "pasteAction": "Paste",
-  "sendAddressField": "Recipient address",
+  "sendAddressField": "To",
   "sendAmountField": "Amount",
   "sendAddressMissing": "Enter an address",
   "sendAddressInvalid": "Not a valid address for this wallet's network",
@@ -544,5 +544,7 @@
   "nodeErrorInsecureLws": "A light wallet server receives your view key, so it must use https. Plain http is allowed only for this device or an onion address.",
   "syncInsecureLws": "This light wallet server uses plain http, so the view key was not sent. Use its https address.",
   "sendFeeTooHigh": "The node or server suggested a fee far above normal, so nothing was built. Try again later or choose another node.",
-  "sendHighFeeWarning": "The fee is more than 5% of what you are sending."
+  "sendHighFeeWarning": "The fee is more than 5% of what you are sending.",
+  "sendAddressHint": "Monero address or payment request",
+  "sendSendingLabel": "Sending"
 }
