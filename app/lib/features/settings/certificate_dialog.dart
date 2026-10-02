@@ -4,6 +4,8 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/nodes.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_sheet.dart';
 
 /// Shows the certificate an https node presents and lets the user trust it
 /// (for nodes they run with a self-signed certificate). Returns true if it
@@ -16,17 +18,29 @@ Future<bool> offerToTrustCertificate(BuildContext context, String url) async {
     return false;
   }
   if (!context.mounted || details.publiclyTrusted) return false;
-  final trust = await showDialog<bool>(
-    context: context,
-    builder: (context) => _CertificateDialog(url: url, details: details),
+  final l = AppLocalizations.of(context);
+  final trust = await showKnDialog<bool>(
+    context,
+    _CertificateBody(url: url, details: details),
+    title: l.certTitle,
+    actions: [
+      KnButton.text(
+        l.cancelAction,
+        onPressed: () => Navigator.pop(context, false),
+      ),
+      KnButton.primary(
+        l.certTrustAction,
+        onPressed: () => Navigator.pop(context, true),
+      ),
+    ],
   );
   if (trust != true) return false;
   await trustCertificate(url: url, fingerprint: details.fingerprint);
   return true;
 }
 
-class _CertificateDialog extends StatelessWidget {
-  const _CertificateDialog({required this.url, required this.details});
+class _CertificateBody extends StatelessWidget {
+  const _CertificateBody({required this.url, required this.details});
 
   final String url;
   final CertificateDetails details;
@@ -36,47 +50,29 @@ class _CertificateDialog extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final pinned = details.pinned;
-    return AlertDialog(
-      title: Text(l.certTitle),
-      content: SizedBox(
-        width: 480,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                pinned == null ? l.certBody(url) : l.certChangedBody(url),
-                style: text.bodyMedium,
-              ),
-              const SizedBox(height: KnSpace.md),
-              Text(l.certFingerprintLabel, style: text.labelMedium),
-              const SizedBox(height: KnSpace.xs),
-              SelectableText(
-                details.fingerprint,
-                style: monoStyle(context, size: 12),
-              ),
-              if (pinned != null) ...[
-                const SizedBox(height: KnSpace.md),
-                Text(l.certPinnedLabel, style: text.labelMedium),
-                const SizedBox(height: KnSpace.xs),
-                SelectableText(pinned, style: monoStyle(context, size: 12)),
-              ],
-              const SizedBox(height: KnSpace.md),
-              Text(l.certAdvice, style: text.bodySmall),
-            ],
-          ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          pinned == null ? l.certBody(url) : l.certChangedBody(url),
+          style: text.bodyMedium,
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l.cancelAction),
+        const SizedBox(height: KnSpace.md),
+        Text(l.certFingerprintLabel, style: text.labelMedium),
+        const SizedBox(height: KnSpace.xs),
+        SelectableText(
+          details.fingerprint,
+          style: monoStyle(context, size: 12),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(l.certTrustAction),
-        ),
+        if (pinned != null) ...[
+          const SizedBox(height: KnSpace.md),
+          Text(l.certPinnedLabel, style: text.labelMedium),
+          const SizedBox(height: KnSpace.xs),
+          SelectableText(pinned, style: monoStyle(context, size: 12)),
+        ],
+        const SizedBox(height: KnSpace.md),
+        Text(l.certAdvice, style: text.bodySmall),
       ],
     );
   }

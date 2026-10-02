@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/price.dart';
+import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/kn_card.dart';
 import 'price_feed.dart';
 
 /// Turn the fiat price on in a currency, or off.
@@ -34,38 +36,40 @@ class _PricesScreenState extends State<PricesScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final phone = context.isPhoneWidth;
+
+    Widget radioRow(String? value, String title) => KnRow(
+      onTap: () => _choose(value),
+      leading: Radio<String?>(value: value),
+      title: Text(title),
+    );
+
     return Scaffold(
       appBar: AppBar(title: Text(l.pricesTitle)),
       body: Align(
         alignment: Alignment.topLeft,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: const BoxConstraints(maxWidth: 640),
           child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: KnSpace.md),
+            padding: EdgeInsets.all(phone ? KnSpace.md : KnSpace.xl),
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: KnSpace.lg),
-                child: Text(
-                  l.pricesHelp(Uri.parse(priceSource()).host),
-                  style: text.bodyMedium,
-                ),
+              Text(
+                l.pricesHelp(Uri.parse(priceSource()).host),
+                style: text.bodyMedium,
               ),
-              const SizedBox(height: KnSpace.md),
+              const SizedBox(height: KnSpace.lg),
               RadioGroup<String?>(
                 groupValue: _currency,
                 onChanged: _choose,
-                child: Column(
-                  children: [
-                    RadioListTile<String?>(
-                      value: null,
-                      title: Text(l.pricesOff),
-                    ),
-                    for (final c in priceCurrencies())
-                      RadioListTile<String?>(
-                        value: c,
-                        title: Text(c.toUpperCase()),
-                      ),
-                  ],
+                child: KnCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: withDividers([
+                      radioRow(null, l.pricesOff),
+                      for (final c in priceCurrencies())
+                        radioRow(c, c.toUpperCase()),
+                    ]),
+                  ),
                 ),
               ),
             ],

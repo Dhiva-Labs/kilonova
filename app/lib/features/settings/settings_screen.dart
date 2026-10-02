@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
+import '../../theme/theme.dart';
+import '../../theme/tokens.dart';
+import '../../widgets/kn_card.dart';
 import '../wallets/wallet_registry.dart';
 import 'about_screen.dart';
 import 'background_screen.dart';
@@ -22,68 +25,104 @@ class SettingsScreen extends StatelessWidget {
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => screen));
 
+    Widget row({
+      required IconData icon,
+      required String title,
+      required String subtitle,
+      required VoidCallback onTap,
+    }) => KnRow(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+
     return Scaffold(
       appBar: AppBar(title: Text(l.settingsTitle)),
-      body: ListView(
-        children: [
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.dns_outlined),
-            title: Text(l.nodesTitle),
-            subtitle: Text(l.nodesSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => open(const NodesScreen()),
+      body: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(
+            padding: EdgeInsets.all(
+              context.isPhoneWidth ? KnSpace.md : KnSpace.xl,
+            ),
+            children: [
+              Eyebrow(l.settingsNetworkSection),
+              const SizedBox(height: KnSpace.sm),
+              KnCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: withDividers([
+                    row(
+                      icon: Icons.dns_outlined,
+                      title: l.nodesTitle,
+                      subtitle: l.nodesSubtitle,
+                      onTap: () => open(const NodesScreen()),
+                    ),
+                    row(
+                      icon: Icons.cloud_outlined,
+                      title: l.lwsTitle,
+                      subtitle: l.lwsSubtitle,
+                      onTap: () => open(const LwsServersScreen()),
+                    ),
+                    row(
+                      icon: Icons.vpn_lock_outlined,
+                      title: l.proxyTitle,
+                      subtitle: l.proxySubtitle,
+                      onTap: () => open(const ProxyScreen()),
+                    ),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: KnSpace.lg),
+              Eyebrow(l.settingsOptionsSection),
+              const SizedBox(height: KnSpace.sm),
+              KnCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: withDividers([
+                    row(
+                      icon: Icons.currency_exchange_outlined,
+                      title: l.pricesTitle,
+                      subtitle: l.pricesSubtitle,
+                      onTap: () => open(PricesScreen(feed: registry.price)),
+                    ),
+                    row(
+                      icon: Icons.notifications_none_outlined,
+                      title: l.backgroundTitle,
+                      subtitle: l.backgroundSubtitle,
+                      onTap: () => open(BackgroundScreen(registry: registry)),
+                    ),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: KnSpace.lg),
+              Eyebrow(l.settingsAboutSection),
+              const SizedBox(height: KnSpace.sm),
+              KnCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: withDividers([
+                    row(
+                      icon: Icons.shield_outlined,
+                      title: l.privacyTitle,
+                      subtitle: l.privacySubtitle,
+                      onTap: () => open(const PrivacyScreen()),
+                    ),
+                    row(
+                      icon: Icons.info_outline,
+                      title: l.aboutTitle,
+                      subtitle: l.aboutSubtitle,
+                      onTap: () => open(const AboutScreen()),
+                    ),
+                  ]),
+                ),
+              ),
+            ],
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.cloud_outlined),
-            title: Text(l.lwsTitle),
-            subtitle: Text(l.lwsSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => open(const LwsServersScreen()),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.vpn_lock_outlined),
-            title: Text(l.proxyTitle),
-            subtitle: Text(l.proxySubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => open(const ProxyScreen()),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.currency_exchange_outlined),
-            title: Text(l.pricesTitle),
-            subtitle: Text(l.pricesSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => open(PricesScreen(feed: registry.price)),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.notifications_none_outlined),
-            title: Text(l.backgroundTitle),
-            subtitle: Text(l.backgroundSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => open(BackgroundScreen(registry: registry)),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.shield_outlined),
-            title: Text(l.privacyTitle),
-            subtitle: Text(l.privacySubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => open(const PrivacyScreen()),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: Text(l.aboutTitle),
-            subtitle: Text(l.aboutSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => open(const AboutScreen()),
-          ),
-          const Divider(),
-        ],
+        ),
       ),
     );
   }

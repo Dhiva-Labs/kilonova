@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kilonova/widgets/kn_field.dart';
 import 'package:kilonova/widgets/seed_grid.dart';
 
 import '../helpers/rust.dart';
@@ -35,8 +36,8 @@ void main() {
 
     // A wrong word is refused.
     final prompts = tester
-        .widgetList<TextField>(find.byType(TextField))
-        .map((f) => f.decoration!.labelText!)
+        .widgetList<KnField>(find.byType(KnField))
+        .map((f) => f.label!)
         .toList();
     expect(prompts, hasLength(3));
     final positions = [

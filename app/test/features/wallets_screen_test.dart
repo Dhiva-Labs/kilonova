@@ -39,6 +39,8 @@ void main() {
 
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('About Kilonova'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('About Kilonova'));
     await tester.pumpAndSettle();
 

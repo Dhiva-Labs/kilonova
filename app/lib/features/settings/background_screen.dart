@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/preferences.dart';
+import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_line.dart';
+import '../../widgets/kn_card.dart';
 import '../wallets/wallet_registry.dart';
 
 /// Payment notifications and background sync. Both start off.
@@ -40,49 +42,59 @@ class _BackgroundScreenState extends State<BackgroundScreen> {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final background = widget.registry.notifier.supportsBackgroundSync;
+    final phone = context.isPhoneWidth;
+
     return Scaffold(
       appBar: AppBar(title: Text(l.backgroundTitle)),
       body: Align(
         alignment: Alignment.topLeft,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: const BoxConstraints(maxWidth: 640),
           child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: KnSpace.md),
+            padding: EdgeInsets.all(phone ? KnSpace.md : KnSpace.xl),
             children: [
-              SwitchListTile(
-                value: _prefs.notifyIncoming,
-                title: Text(l.notifyIncomingLabel),
-                subtitle: Text(l.notifyIncomingHelp),
-                onChanged: (on) => _save(
-                  Preferences(
-                    notifyIncoming: on,
-                    backgroundSync: _prefs.backgroundSync,
-                  ),
+              KnCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: withDividers([
+                    KnRow(
+                      title: Text(l.notifyIncomingLabel),
+                      subtitle: Text(l.notifyIncomingHelp),
+                      trailing: Switch(
+                        value: _prefs.notifyIncoming,
+                        onChanged: (on) => _save(
+                          Preferences(
+                            notifyIncoming: on,
+                            backgroundSync: _prefs.backgroundSync,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (background)
+                      KnRow(
+                        title: Text(l.backgroundSyncLabel),
+                        subtitle: Text(l.backgroundSyncHelp),
+                        trailing: Switch(
+                          value: _prefs.backgroundSync,
+                          onChanged: (on) => _save(
+                            Preferences(
+                              notifyIncoming: _prefs.notifyIncoming,
+                              backgroundSync: on,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ]),
                 ),
               ),
-              if (_denied)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: KnSpace.md),
-                  child: ErrorLine(l.notifyDenied),
-                ),
-              const Divider(),
-              if (background)
-                SwitchListTile(
-                  value: _prefs.backgroundSync,
-                  title: Text(l.backgroundSyncLabel),
-                  subtitle: Text(l.backgroundSyncHelp),
-                  onChanged: (on) => _save(
-                    Preferences(
-                      notifyIncoming: _prefs.notifyIncoming,
-                      backgroundSync: on,
-                    ),
-                  ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.all(KnSpace.md),
-                  child: Text(l.backgroundDesktopNote, style: text.bodyMedium),
-                ),
+              if (!background) ...[
+                const SizedBox(height: KnSpace.md),
+                Text(l.backgroundDesktopNote, style: text.bodyMedium),
+              ],
+              if (_denied) ...[
+                const SizedBox(height: KnSpace.md),
+                ErrorLine(l.notifyDenied),
+              ],
             ],
           ),
         ),

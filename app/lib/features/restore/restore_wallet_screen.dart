@@ -4,8 +4,13 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../platform/secure_window.dart';
 import '../../src/rust/api/network.dart';
 import '../../src/rust/api/wallets.dart';
+import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_line.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_card.dart';
+import '../../widgets/kn_field.dart';
+import '../../widgets/kn_segments.dart';
 import '../../widgets/mode_label.dart';
 import '../../widgets/password_fields.dart';
 import '../../widgets/test_network_strip.dart';
@@ -103,6 +108,7 @@ class _RestoreWalletScreenState extends State<RestoreWalletScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final phone = context.isPhoneWidth;
     final secretLabel = switch (_method) {
       RestoreMethod.seed => l.seedWordsLabel,
       RestoreMethod.spendKey => l.spendKeyLabel,
@@ -118,7 +124,7 @@ class _RestoreWalletScreenState extends State<RestoreWalletScreen> {
             TestNetworkStrip(network: widget.network),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(KnSpace.lg),
+                padding: EdgeInsets.all(phone ? KnSpace.md : KnSpace.xl),
                 child: Align(
                   alignment: Alignment.topLeft,
                   child: ConstrainedBox(
@@ -128,27 +134,23 @@ class _RestoreWalletScreenState extends State<RestoreWalletScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(l.restoreMethodLabel, style: text.titleSmall),
+                          Text(l.restoreMethodLabel, style: text.titleMedium),
                           const SizedBox(height: KnSpace.sm),
-                          SegmentedButton<RestoreMethod>(
-                            showSelectedIcon: false,
+                          KnSegments<RestoreMethod>(
                             segments: [
-                              ButtonSegment(
-                                value: RestoreMethod.seed,
-                                label: Text(l.restoreFromSeed),
+                              KnSegment(RestoreMethod.seed, l.restoreFromSeed),
+                              KnSegment(
+                                RestoreMethod.spendKey,
+                                l.restoreFromSpendKey,
                               ),
-                              ButtonSegment(
-                                value: RestoreMethod.spendKey,
-                                label: Text(l.restoreFromSpendKey),
-                              ),
-                              ButtonSegment(
-                                value: RestoreMethod.viewOnly,
-                                label: Text(l.restoreViewOnly),
+                              KnSegment(
+                                RestoreMethod.viewOnly,
+                                l.restoreViewOnly,
                               ),
                             ],
-                            selected: {_method},
-                            onSelectionChanged: (s) => setState(() {
-                              _method = s.single;
+                            selected: _method,
+                            onChanged: (m) => setState(() {
+                              _method = m;
                               _secret.clear();
                               _error = null;
                             }),
@@ -158,49 +160,35 @@ class _RestoreWalletScreenState extends State<RestoreWalletScreen> {
                             Text(l.viewOnlyHelp, style: text.bodyMedium),
                           ],
                           const SizedBox(height: KnSpace.lg),
-                          TextFormField(
+                          KnField(
                             controller: _name,
-                            decoration: InputDecoration(
-                              labelText: l.walletNameLabel,
-                            ),
+                            label: l.walletNameLabel,
                             validator: (v) => (v ?? '').trim().isEmpty
                                 ? l.errorEmptyName
                                 : null,
                           ),
                           const SizedBox(height: KnSpace.md),
                           if (_method == RestoreMethod.viewOnly) ...[
-                            TextFormField(
+                            KnField(
                               controller: _address,
-                              autocorrect: false,
-                              decoration: InputDecoration(
-                                labelText: l.addressLabel,
-                              ),
+                              label: l.addressLabel,
                             ),
                             const SizedBox(height: KnSpace.md),
                           ],
-                          TextFormField(
+                          KnField(
                             controller: _secret,
-                            autocorrect: false,
-                            enableSuggestions: false,
-                            minLines: _method == RestoreMethod.seed ? 3 : 1,
-                            maxLines: _method == RestoreMethod.seed ? 5 : 1,
-                            decoration: InputDecoration(
-                              labelText: secretLabel,
-                              helperText: _method == RestoreMethod.seed
-                                  ? l.seedWordsHelp
-                                  : null,
-                              helperMaxLines: 2,
-                            ),
+                            label: secretLabel,
+                            multiline: _method == RestoreMethod.seed,
+                            helper: _method == RestoreMethod.seed
+                                ? l.seedWordsHelp
+                                : null,
                           ),
                           const SizedBox(height: KnSpace.md),
-                          TextFormField(
+                          KnField(
                             controller: _height,
                             keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              labelText: l.restoreHeightLabel,
-                              helperText: l.restoreHeightHelp,
-                              helperMaxLines: 3,
-                            ),
+                            label: l.restoreHeightLabel,
+                            helper: l.restoreHeightHelp,
                             validator: (v) {
                               final s = (v ?? '').trim();
                               return s.isEmpty ||
@@ -210,24 +198,28 @@ class _RestoreWalletScreenState extends State<RestoreWalletScreen> {
                             },
                           ),
                           const SizedBox(height: KnSpace.lg),
-                          Text(l.syncModeLabel, style: text.titleSmall),
+                          Text(l.syncModeLabel, style: text.titleMedium),
+                          const SizedBox(height: KnSpace.sm),
                           RadioGroup<SyncMode>(
                             groupValue: _mode,
                             onChanged: (v) => setState(() => _mode = v!),
-                            child: Column(
-                              children: [
-                                for (final mode in SyncMode.values)
-                                  RadioListTile<SyncMode>(
-                                    value: mode,
-                                    contentPadding: EdgeInsets.zero,
-                                    title: Text(mode.label(context)),
-                                    subtitle: Text(mode.help(context)),
-                                  ),
-                              ],
+                            child: KnCard(
+                              padding: EdgeInsets.zero,
+                              child: Column(
+                                children: withDividers([
+                                  for (final mode in SyncMode.values)
+                                    KnRow(
+                                      onTap: () => setState(() => _mode = mode),
+                                      leading: Radio<SyncMode>(value: mode),
+                                      title: Text(mode.label(context)),
+                                      subtitle: Text(mode.help(context)),
+                                    ),
+                                ]),
+                              ),
                             ),
                           ),
                           const SizedBox(height: KnSpace.lg),
-                          Text(l.passwordTitle, style: text.titleSmall),
+                          Text(l.passwordTitle, style: text.titleMedium),
                           const SizedBox(height: KnSpace.sm),
                           NewPasswordFields(
                             password: _password,
@@ -238,13 +230,19 @@ class _RestoreWalletScreenState extends State<RestoreWalletScreen> {
                             ErrorLine(_error!),
                           ],
                           const SizedBox(height: KnSpace.lg),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: FilledButton(
-                              onPressed: _busy ? null : _restore,
-                              child: Text(l.restoreAction),
-                            ),
-                          ),
+                          phone
+                              ? KnButton.primary(
+                                  l.restoreAction,
+                                  onPressed: _busy ? null : _restore,
+                                  expand: true,
+                                )
+                              : Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: KnButton.primary(
+                                    l.restoreAction,
+                                    onPressed: _busy ? null : _restore,
+                                  ),
+                                ),
                         ],
                       ),
                     ),

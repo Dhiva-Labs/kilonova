@@ -6,6 +6,10 @@ import '../../src/rust/api/nodes.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_line.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_card.dart';
+import '../../widgets/kn_field.dart';
+import '../../widgets/kn_segments.dart';
 import 'certificate_dialog.dart';
 import '../../widgets/network_label.dart';
 
@@ -100,131 +104,131 @@ class _NodesScreenState extends State<NodesScreen> {
     final text = Theme.of(context).textTheme;
     final c = context.kn;
     final selected = _nodes.where((n) => n.selected).firstOrNull?.url;
+    final phone = context.isPhoneWidth;
 
     return Scaffold(
       appBar: AppBar(title: Text(l.nodesTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(KnSpace.lg),
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l.nodesHelp, style: text.bodyMedium),
-                const SizedBox(height: KnSpace.lg),
-                SegmentedButton<Network>(
-                  showSelectedIcon: false,
-                  segments: [
-                    for (final n in allNetworks())
-                      ButtonSegment(value: n, label: Text(n.label(context))),
-                  ],
-                  selected: {_network},
-                  onSelectionChanged: (s) {
-                    setState(() {
-                      _network = s.single;
-                      _health.clear();
-                      _healthErrors.clear();
-                    });
-                    _load();
-                  },
-                ),
-                const SizedBox(height: KnSpace.lg),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _add,
-                        autocorrect: false,
-                        decoration: InputDecoration(
-                          labelText: l.nodesAddLabel,
-                          errorText: _addError,
-                        ),
-                        onSubmitted: (_) => _addNode(),
-                      ),
-                    ),
-                    const SizedBox(width: KnSpace.sm),
-                    Padding(
-                      padding: const EdgeInsets.only(top: KnSpace.xs),
-                      child: FilledButton(
-                        onPressed: _addNode,
-                        child: Text(l.nodesAddAction),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: KnSpace.lg),
-                const Divider(),
-                RadioGroup<String>(
-                  groupValue: selected,
-                  onChanged: (url) async {
-                    if (url == null) return;
-                    await selectNode(network: _network, url: url);
-                    await _load();
-                  },
-                  child: Column(
-                    children: [
-                      for (final node in _nodes) ...[
-                        RadioListTile<String>(
-                          value: node.url,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            node.url,
-                            style: monoStyle(context, size: 14),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                [
-                                  node.bundled
-                                      ? l.nodesBundledTag
-                                      : l.nodesCustomTag,
-                                  if (node.pinned) l.nodesPinnedTag,
-                                ].join(' · '),
-                                style: text.bodySmall,
-                              ),
-                              if (_health[node.url] != null)
-                                Text(
-                                  _health[node.url]!,
-                                  style: text.bodySmall!.copyWith(
-                                    color: c.received,
-                                  ),
-                                ),
-                              if (_healthErrors[node.url] != null)
-                                ErrorLine(_healthErrors[node.url]!),
-                            ],
-                          ),
-                          secondary: Wrap(
-                            children: [
-                              TextButton(
-                                onPressed: () => _check(node.url),
-                                child: Text(l.nodesCheckAction),
-                              ),
-                              if (!node.bundled)
-                                TextButton(
-                                  onPressed: () async {
-                                    await removeNode(
-                                      network: _network,
-                                      url: node.url,
-                                    );
-                                    await _load();
-                                  },
-                                  child: Text(l.nodesRemoveAction),
-                                ),
-                            ],
+      body: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(
+            padding: EdgeInsets.all(phone ? KnSpace.md : KnSpace.xl),
+            children: [
+              Text(l.nodesHelp, style: text.bodyMedium),
+              const SizedBox(height: KnSpace.lg),
+              KnSegments<Network>(
+                segments: [
+                  for (final n in allNetworks()) KnSegment(n, n.label(context)),
+                ],
+                selected: _network,
+                onChanged: (n) {
+                  setState(() {
+                    _network = n;
+                    _health.clear();
+                    _healthErrors.clear();
+                  });
+                  _load();
+                },
+              ),
+              const SizedBox(height: KnSpace.lg),
+              Flex(
+                direction: phone ? Axis.vertical : Axis.horizontal,
+                crossAxisAlignment: phone
+                    ? CrossAxisAlignment.stretch
+                    : CrossAxisAlignment.end,
+                children: [
+                  phone
+                      ? KnField(
+                          controller: _add,
+                          label: l.nodesAddLabel,
+                          error: _addError,
+                          onSubmitted: (_) => _addNode(),
+                        )
+                      : Expanded(
+                          child: KnField(
+                            controller: _add,
+                            label: l.nodesAddLabel,
+                            error: _addError,
+                            onSubmitted: (_) => _addNode(),
                           ),
                         ),
-                        const Divider(),
-                      ],
-                    ],
+                  SizedBox(
+                    width: phone ? 0 : KnSpace.sm,
+                    height: phone ? KnSpace.sm : 0,
                   ),
+                  KnButton.primary(
+                    l.nodesAddAction,
+                    onPressed: _addNode,
+                    expand: phone,
+                  ),
+                ],
+              ),
+              const SizedBox(height: KnSpace.lg),
+              KnCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: withDividers([
+                    for (final node in _nodes)
+                      KnRow(
+                        selected: node.url == selected,
+                        onTap: () async {
+                          await selectNode(network: _network, url: node.url);
+                          await _load();
+                        },
+                        title: Text(
+                          node.url,
+                          style: monoStyle(context, size: 14),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              [
+                                node.bundled
+                                    ? l.nodesBundledTag
+                                    : l.nodesCustomTag,
+                                if (node.pinned) l.nodesPinnedTag,
+                              ].join(' · '),
+                            ),
+                            if (_health[node.url] != null)
+                              Text(
+                                _health[node.url]!,
+                                style: text.bodySmall!.copyWith(
+                                  color: c.received,
+                                ),
+                              ),
+                            if (_healthErrors[node.url] != null)
+                              ErrorLine(_healthErrors[node.url]!),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            KnButton.text(
+                              l.nodesCheckAction,
+                              onPressed: () => _check(node.url),
+                            ),
+                            if (!node.bundled)
+                              KnButton.text(
+                                l.nodesRemoveAction,
+                                onPressed: () async {
+                                  await removeNode(
+                                    network: _network,
+                                    url: node.url,
+                                  );
+                                  await _load();
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                  ]),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

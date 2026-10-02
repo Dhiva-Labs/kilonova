@@ -6,6 +6,9 @@ import '../../src/rust/api/nodes.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_line.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_field.dart';
+import '../../widgets/kn_segments.dart';
 import '../../widgets/network_label.dart';
 import 'certificate_dialog.dart';
 import 'nodes_screen.dart' show nodeErrorMessage;
@@ -89,66 +92,57 @@ class _LwsServersScreenState extends State<LwsServersScreen> {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final c = context.kn;
+    final phone = context.isPhoneWidth;
 
     return Scaffold(
       appBar: AppBar(title: Text(l.lwsTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(KnSpace.lg),
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l.lwsHelp, style: text.bodyMedium),
-                const SizedBox(height: KnSpace.lg),
-                SegmentedButton<Network>(
-                  showSelectedIcon: false,
-                  segments: [
-                    for (final n in allNetworks())
-                      ButtonSegment(value: n, label: Text(n.label(context))),
-                  ],
-                  selected: {_network},
-                  onSelectionChanged: (s) {
-                    setState(() => _network = s.single);
-                    _load();
-                  },
+      body: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(
+            padding: EdgeInsets.all(phone ? KnSpace.md : KnSpace.xl),
+            children: [
+              Text(l.lwsHelp, style: text.bodyMedium),
+              const SizedBox(height: KnSpace.lg),
+              KnSegments<Network>(
+                segments: [
+                  for (final n in allNetworks()) KnSegment(n, n.label(context)),
+                ],
+                selected: _network,
+                onChanged: (n) {
+                  setState(() => _network = n);
+                  _load();
+                },
+              ),
+              const SizedBox(height: KnSpace.lg),
+              KnField(
+                controller: _url,
+                label: l.lwsServerLabel,
+                onSubmitted: (_) => _save(),
+              ),
+              const SizedBox(height: KnSpace.md),
+              Wrap(
+                spacing: KnSpace.sm,
+                runSpacing: KnSpace.sm,
+                children: [
+                  KnButton.primary(l.lwsSaveAction, onPressed: _save),
+                  if (_saved != null)
+                    KnButton.text(l.lwsClearAction, onPressed: _clear),
+                ],
+              ),
+              const SizedBox(height: KnSpace.md),
+              if (_error != null) ErrorLine(_error!),
+              if (_health != null)
+                Text(
+                  _health!,
+                  style: text.bodyMedium!.copyWith(color: c.received),
                 ),
-                const SizedBox(height: KnSpace.lg),
-                TextField(
-                  controller: _url,
-                  autocorrect: false,
-                  decoration: InputDecoration(labelText: l.lwsServerLabel),
-                  onSubmitted: (_) => _save(),
-                ),
-                const SizedBox(height: KnSpace.md),
-                Row(
-                  children: [
-                    FilledButton(
-                      onPressed: _save,
-                      child: Text(l.lwsSaveAction),
-                    ),
-                    const SizedBox(width: KnSpace.sm),
-                    if (_saved != null)
-                      TextButton(
-                        onPressed: _clear,
-                        child: Text(l.lwsClearAction),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: KnSpace.md),
-                if (_error != null) ErrorLine(_error!),
-                if (_health != null)
-                  Text(
-                    _health!,
-                    style: text.bodyMedium!.copyWith(color: c.received),
-                  ),
-                if (_saved == null && _error == null)
-                  Text(l.lwsNotSet, style: text.bodySmall),
-              ],
-            ),
+              if (_saved == null && _error == null)
+                Text(l.lwsNotSet, style: text.bodySmall),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

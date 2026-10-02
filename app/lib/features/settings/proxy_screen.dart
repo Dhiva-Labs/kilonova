@@ -4,6 +4,8 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/nodes.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_field.dart';
 import 'nodes_screen.dart' show nodeErrorMessage;
 
 /// Tor's SOCKS port as Orbot and the Tor daemon open it.
@@ -77,70 +79,66 @@ class _ProxyScreenState extends State<ProxyScreen> {
     final text = Theme.of(context).textTheme;
     final c = context.kn;
     final saved = _saved;
+    final phone = context.isPhoneWidth;
 
     return Scaffold(
       appBar: AppBar(title: Text(l.proxyTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(KnSpace.lg),
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l.proxyHelp, style: text.bodyMedium),
-                const SizedBox(height: KnSpace.sm),
-                Text(l.proxyTorHelp, style: text.bodySmall),
-                const SizedBox(height: KnSpace.lg),
-                Text(
-                  saved == null ? l.proxyOff : l.proxyOn(saved),
-                  style: saved == null
-                      ? text.bodyMedium
-                      : text.bodyMedium!.copyWith(color: c.received),
-                ),
-                const SizedBox(height: KnSpace.md),
-                TextField(
-                  controller: _url,
-                  enabled: !_busy,
-                  autocorrect: false,
-                  style: monoStyle(context, size: 14),
-                  decoration: InputDecoration(
-                    labelText: l.proxyField,
-                    hintText: _torDefault,
-                    errorText: _error,
+      body: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(
+            padding: EdgeInsets.all(phone ? KnSpace.md : KnSpace.xl),
+            children: [
+              Text(l.proxyHelp, style: text.bodyMedium),
+              const SizedBox(height: KnSpace.sm),
+              Text(l.proxyTorHelp, style: text.bodySmall),
+              const SizedBox(height: KnSpace.lg),
+              Text(
+                saved == null ? l.proxyOff : l.proxyOn(saved),
+                style: saved == null
+                    ? text.bodyMedium
+                    : text.bodyMedium!.copyWith(color: c.received),
+              ),
+              const SizedBox(height: KnSpace.md),
+              KnField(
+                controller: _url,
+                enabled: !_busy,
+                mono: true,
+                label: l.proxyField,
+                hint: _torDefault,
+                error: _error,
+                onSubmitted: (_) => _save(),
+              ),
+              const SizedBox(height: KnSpace.md),
+              Wrap(
+                spacing: KnSpace.sm,
+                runSpacing: KnSpace.sm,
+                children: [
+                  KnButton.primary(
+                    l.proxySaveAction,
+                    onPressed: _busy ? null : _save,
                   ),
-                  onSubmitted: (_) => _save(),
-                ),
-                const SizedBox(height: KnSpace.md),
-                Wrap(
-                  spacing: KnSpace.sm,
-                  runSpacing: KnSpace.sm,
-                  children: [
-                    FilledButton(
-                      onPressed: _busy ? null : _save,
-                      child: Text(l.proxySaveAction),
+                  KnButton.text(
+                    l.proxyUseTorAction,
+                    onPressed: _busy
+                        ? null
+                        : () => setState(() => _url.text = _torDefault),
+                  ),
+                  if (saved != null)
+                    KnButton.text(
+                      l.proxyOffAction,
+                      onPressed: _busy ? null : _turnOff,
                     ),
-                    TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () => setState(() => _url.text = _torDefault),
-                      child: Text(l.proxyUseTorAction),
-                    ),
-                    if (saved != null)
-                      TextButton(
-                        onPressed: _busy ? null : _turnOff,
-                        child: Text(l.proxyOffAction),
-                      ),
-                  ],
-                ),
-                if (_error == null && _busy) ...[
-                  const SizedBox(height: KnSpace.sm),
-                  Text(l.proxyChecking, style: text.bodySmall),
                 ],
+              ),
+              if (_error == null && _busy) ...[
+                const SizedBox(height: KnSpace.sm),
+                Text(l.proxyChecking, style: text.bodySmall),
               ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
 import '../theme/tokens.dart';
+import 'kn_card.dart';
 
 /// Seed words, numbered, in reading order down each column.
 class SeedGrid extends StatelessWidget {
@@ -12,17 +13,12 @@ class SeedGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.kn;
+    final body = Theme.of(context).textTheme.bodyLarge!;
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 560 ? 4 : 2;
         final rows = (words.length / columns).ceil();
-        return Container(
-          padding: const EdgeInsets.all(KnSpace.md),
-          decoration: BoxDecoration(
-            color: c.surface,
-            border: Border.all(color: c.border),
-            borderRadius: BorderRadius.circular(8),
-          ),
+        return KnCard(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -50,7 +46,7 @@ class SeedGrid extends StatelessWidget {
                                   const TextSpan(text: '  '),
                                   TextSpan(
                                     text: words[col * rows + row],
-                                    style: monoStyle(context, size: 16),
+                                    style: body,
                                   ),
                                 ],
                               ),

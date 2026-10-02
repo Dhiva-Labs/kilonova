@@ -4,6 +4,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/core.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/kn_button.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -13,6 +14,7 @@ class AboutScreen extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final c = context.kn;
+    final phone = context.isPhoneWidth;
 
     Widget row(String label, String value, {bool mono = false}) => Padding(
       padding: const EdgeInsets.symmetric(vertical: KnSpace.sm),
@@ -38,11 +40,11 @@ class AboutScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l.aboutTitle)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(KnSpace.lg),
+        padding: EdgeInsets.all(phone ? KnSpace.md : KnSpace.xl),
         child: Align(
           alignment: Alignment.topLeft,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
+            constraints: const BoxConstraints(maxWidth: 640),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -67,13 +69,13 @@ class AboutScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: KnSpace.lg),
-                TextButton(
+                KnButton.text(
+                  l.aboutOpenSourceLicenses,
                   onPressed: () => showLicensePage(
                     context: context,
                     applicationName: l.appTitle,
                     applicationVersion: coreInfo().version,
                   ),
-                  child: Text(l.aboutOpenSourceLicenses),
                 ),
               ],
             ),

@@ -7,7 +7,11 @@ import '../../platform/secure_window.dart';
 import '../../src/rust/api/network.dart';
 import '../../src/rust/api/sync.dart';
 import '../../src/rust/api/wallets.dart';
+import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/kn_button.dart';
+import '../../widgets/kn_card.dart';
+import '../../widgets/kn_field.dart';
 import '../../widgets/mode_label.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/password_fields.dart';
@@ -151,7 +155,9 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
             TestNetworkStrip(network: widget.network),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(KnSpace.lg),
+                padding: EdgeInsets.all(
+                  context.isPhoneWidth ? KnSpace.md : KnSpace.xl,
+                ),
                 child: Align(
                   alignment: Alignment.topLeft,
                   child: ConstrainedBox(
@@ -170,82 +176,108 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
   Widget _options(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final phone = context.isPhoneWidth;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
+        KnField(
           controller: _name,
+          label: l.walletNameLabel,
           autofocus: true,
-          decoration: InputDecoration(
-            labelText: l.walletNameLabel,
-            errorText: _error,
-          ),
+          error: _error,
         ),
         const SizedBox(height: KnSpace.lg),
-        Text(l.seedFormatLabel, style: text.titleSmall),
+        Text(l.seedFormatLabel, style: text.titleMedium),
+        const SizedBox(height: KnSpace.sm),
         RadioGroup<SeedFormat>(
           groupValue: _format,
           onChanged: (v) => setState(() => _format = v!),
-          child: Column(
-            children: [
-              _choice(SeedFormat.polyseed, l.seedPolyseed, l.seedPolyseedHelp),
-              _choice(SeedFormat.classic, l.seedClassic, l.seedClassicHelp),
-            ],
-          ),
-        ),
-        const SizedBox(height: KnSpace.md),
-        Text(l.syncModeLabel, style: text.titleSmall),
-        RadioGroup<SyncMode>(
-          groupValue: _mode,
-          onChanged: (v) => setState(() => _mode = v!),
-          child: Column(
-            children: [
-              for (final mode in SyncMode.values)
-                _choice(mode, mode.label(context), mode.help(context)),
-            ],
+          child: KnCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: withDividers([
+                _choice(
+                  SeedFormat.polyseed,
+                  l.seedPolyseed,
+                  l.seedPolyseedHelp,
+                ),
+                _choice(SeedFormat.classic, l.seedClassic, l.seedClassicHelp),
+              ]),
+            ),
           ),
         ),
         const SizedBox(height: KnSpace.lg),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilledButton(
-            onPressed: _generate,
-            child: Text(l.continueAction),
+        Text(l.syncModeLabel, style: text.titleMedium),
+        const SizedBox(height: KnSpace.sm),
+        RadioGroup<SyncMode>(
+          groupValue: _mode,
+          onChanged: (v) => setState(() => _mode = v!),
+          child: KnCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: withDividers([
+                for (final mode in SyncMode.values)
+                  _choice(mode, mode.label(context), mode.help(context)),
+              ]),
+            ),
           ),
         ),
+        const SizedBox(height: KnSpace.lg),
+        phone
+            ? KnButton.primary(
+                l.continueAction,
+                onPressed: _generate,
+                expand: true,
+              )
+            : Align(
+                alignment: Alignment.centerLeft,
+                child: KnButton.primary(l.continueAction, onPressed: _generate),
+              ),
       ],
     );
   }
 
-  Widget _choice<T>(T value, String title, String help) => RadioListTile<T>(
-    value: value,
-    contentPadding: EdgeInsets.zero,
-    title: Text(title),
-    subtitle: Text(help),
+  Widget _choice<T>(T value, String title, String help) => Builder(
+    builder: (context) => KnRow(
+      onTap: () => RadioGroup.maybeOf<T>(context)?.onChanged(value),
+      leading: Radio<T>(value: value),
+      title: Text(title),
+      subtitle: Text(help),
+    ),
   );
 
   Widget _seed(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final phone = context.isPhoneWidth;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l.seedTitle, style: text.titleLarge),
+        Text(l.seedTitle, style: text.headlineSmall),
         const SizedBox(height: KnSpace.sm),
         Text(l.seedWarning, style: text.bodyLarge),
         const SizedBox(height: KnSpace.lg),
         SeedGrid(words: _words),
         const SizedBox(height: KnSpace.lg),
-        Row(
-          children: [
-            FilledButton(
-              onPressed: () => setState(() => _step = _Step.verify),
-              child: Text(l.seedWrittenAction),
-            ),
-            const SizedBox(width: KnSpace.sm),
-            TextButton(onPressed: _back, child: Text(l.backAction)),
-          ],
-        ),
+        if (phone) ...[
+          KnButton.primary(
+            l.seedWrittenAction,
+            onPressed: () => setState(() => _step = _Step.verify),
+            expand: true,
+          ),
+          const SizedBox(height: KnSpace.sm),
+          KnButton.text(l.backAction, onPressed: _back),
+        ] else
+          Row(
+            children: [
+              KnButton.primary(
+                l.seedWrittenAction,
+                onPressed: () => setState(() => _step = _Step.verify),
+              ),
+              const SizedBox(width: KnSpace.sm),
+              KnButton.text(l.backAction, onPressed: _back),
+            ],
+          ),
       ],
     );
   }
@@ -253,20 +285,17 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
   Widget _verifyStep(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final phone = context.isPhoneWidth;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l.verifyTitle, style: text.titleLarge),
+        Text(l.verifyTitle, style: text.headlineSmall),
         const SizedBox(height: KnSpace.lg),
         for (var i = 0; i < 3; i++) ...[
-          TextField(
+          KnField(
             controller: _checks[i],
+            label: l.verifyPrompt(_checkPositions[i] + 1),
             autofocus: i == 0,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: InputDecoration(
-              labelText: l.verifyPrompt(_checkPositions[i] + 1),
-            ),
           ),
           const SizedBox(height: KnSpace.md),
         ],
@@ -274,13 +303,18 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
           ErrorLine(_error!),
           const SizedBox(height: KnSpace.md),
         ],
-        Row(
-          children: [
-            FilledButton(onPressed: _verify, child: Text(l.continueAction)),
-            const SizedBox(width: KnSpace.sm),
-            TextButton(onPressed: _back, child: Text(l.backAction)),
-          ],
-        ),
+        if (phone) ...[
+          KnButton.primary(l.continueAction, onPressed: _verify, expand: true),
+          const SizedBox(height: KnSpace.sm),
+          KnButton.text(l.backAction, onPressed: _back),
+        ] else
+          Row(
+            children: [
+              KnButton.primary(l.continueAction, onPressed: _verify),
+              const SizedBox(width: KnSpace.sm),
+              KnButton.text(l.backAction, onPressed: _back),
+            ],
+          ),
       ],
     );
   }
@@ -288,12 +322,13 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
   Widget _passwordStep(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final phone = context.isPhoneWidth;
     return Form(
       key: _passwordForm,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(l.passwordTitle, style: text.titleLarge),
+          Text(l.passwordTitle, style: text.headlineSmall),
           const SizedBox(height: KnSpace.sm),
           Text(l.passwordHelp, style: text.bodyLarge),
           const SizedBox(height: KnSpace.lg),
@@ -303,16 +338,25 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
             ErrorLine(_error!),
           ],
           const SizedBox(height: KnSpace.lg),
-          Row(
-            children: [
-              FilledButton(
-                onPressed: _busy ? null : _create,
-                child: Text(l.createAction),
-              ),
-              const SizedBox(width: KnSpace.sm),
-              TextButton(onPressed: _back, child: Text(l.backAction)),
-            ],
-          ),
+          if (phone) ...[
+            KnButton.primary(
+              l.createAction,
+              onPressed: _busy ? null : _create,
+              expand: true,
+            ),
+            const SizedBox(height: KnSpace.sm),
+            KnButton.text(l.backAction, onPressed: _back),
+          ] else
+            Row(
+              children: [
+                KnButton.primary(
+                  l.createAction,
+                  onPressed: _busy ? null : _create,
+                ),
+                const SizedBox(width: KnSpace.sm),
+                KnButton.text(l.backAction, onPressed: _back),
+              ],
+            ),
         ],
       ),
     );
