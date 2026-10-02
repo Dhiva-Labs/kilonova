@@ -9,12 +9,15 @@
 #![forbid(unsafe_code)]
 
 use kn_keys::{Network, WalletKeys};
-use kn_sync::{Http, OwnedOutput, SyncState};
+use kn_sync::{Http, LwsServer, OwnedOutput, SyncState};
 use monero_daemon_rpc::MoneroDaemon;
 use monero_interface::{FeePriority, ProvidesFeeRates as _, PublishTransaction as _};
 use monero_wallet::OutputWithDecoys;
 use monero_wallet::address::{MoneroAddress, Network as MoneroNetwork};
+use monero_wallet::ed25519::{CompressedPoint, Point};
+use monero_wallet::interface::FeeRate;
 use monero_wallet::ringct::RctType;
+use monero_wallet::ringct::clsag::Decoys;
 use monero_wallet::send::{Change, SendError, SignableTransaction};
 use monero_wallet::transaction::{Input, Timelock, Transaction};
 use rand_core::{OsRng, RngCore};
@@ -29,6 +32,14 @@ pub const MAX_INPUTS: usize = 100;
 
 /// Monero allows up to 16 outputs; one is kept for change.
 pub const MAX_PAYMENTS: usize = 15;
+
+/// Where decoys, fee rates and broadcasting come from: the wallet's node in
+/// full mode, its light wallet server in LWS mode.
+#[derive(Clone, Copy)]
+pub enum Backend<'a> {
+    Node(&'a MoneroDaemon<Http>),
+    Lws(&'a LwsServer),
+}
 
 /// The fee priority levels wallets and nodes agree on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -136,7 +147,7 @@ pub fn spendable(state: &SyncState, tip: u64) -> Vec<&OwnedOutput> {
 ///
 /// See [`TxError`]; nothing is sent in any case.
 pub async fn prepare(
-    daemon: &MoneroDaemon<Http>,
+    backend: Backend<'_>,
     keys: &WalletKeys,
     network: Network,
     state: &SyncState,
@@ -147,10 +158,7 @@ pub async fn prepare(
     if keys.is_view_only() {
         return Err(TxError::ViewOnly);
     }
-    let fee_rate = daemon
-        .fee_rate(priority.into(), u64::MAX)
-        .await
-        .map_err(|e| TxError::Node(e.to_string()))?;
+    let fee_rate = fee_rate(backend, keys, network, priority).await?;
     let available = spendable(state, tip);
     let total_available: u64 = available.iter().map(|o| o.amount()).sum();
     // monero-oxide wants the number of the latest block (its index), while
@@ -159,7 +167,7 @@ pub async fn prepare(
         .map_err(|_| TxError::Build("height out of range".into()))?;
 
     let ctx = Context {
-        daemon,
+        backend,
         keys,
         fee_rate,
         block_number,
@@ -174,9 +182,9 @@ pub async fn prepare(
 
 /// What building a transaction needs, shared by paying and sweeping.
 struct Context<'a> {
-    daemon: &'a MoneroDaemon<Http>,
+    backend: Backend<'a>,
     keys: &'a WalletKeys,
-    fee_rate: monero_interface::FeeRate,
+    fee_rate: FeeRate,
     block_number: usize,
     /// Spendable outputs, largest first.
     available: &'a [&'a OwnedOutput],
@@ -276,24 +284,59 @@ async fn sweep(ctx: &Context<'_>, address: &MoneroAddress) -> Result<Prepared, T
 /// [`TxError::Rejected`] if the node refuses it, [`TxError::Node`] if it
 /// cannot be reached; `state` is unchanged in both cases.
 pub async fn publish(
-    daemon: &MoneroDaemon<Http>,
+    backend: Backend<'_>,
     prepared: &Prepared,
     state: &mut SyncState,
     tip: u64,
 ) -> Result<(), TxError> {
-    daemon
-        .publish_transaction(&prepared.transaction)
-        .await
-        .map_err(|e| match e {
-            monero_interface::PublishTransactionError::TransactionRejected(why) => {
-                TxError::Rejected(why)
-            }
-            other @ monero_interface::PublishTransactionError::InterfaceError(_) => {
-                TxError::Node(other.to_string())
-            }
-        })?;
+    match backend {
+        Backend::Node(daemon) => daemon
+            .publish_transaction(&prepared.transaction)
+            .await
+            .map_err(|e| match e {
+                monero_interface::PublishTransactionError::TransactionRejected(why) => {
+                    TxError::Rejected(why)
+                }
+                other @ monero_interface::PublishTransactionError::InterfaceError(_) => {
+                    TxError::Node(other.to_string())
+                }
+            })?,
+        Backend::Lws(server) => server
+            .submit(&prepared.transaction.serialize())
+            .await
+            .map_err(|e| TxError::Rejected(e.to_string()))?,
+    }
     state.mark_pending(&prepared.spends, prepared.hash, tip);
     Ok(())
+}
+
+async fn fee_rate(
+    backend: Backend<'_>,
+    keys: &WalletKeys,
+    network: Network,
+    priority: Priority,
+) -> Result<FeeRate, TxError> {
+    match backend {
+        Backend::Node(daemon) => daemon
+            .fee_rate(priority.into(), u64::MAX)
+            .await
+            .map_err(|e| TxError::Node(e.to_string())),
+        Backend::Lws(server) => {
+            let fees = server
+                .fees(keys, network)
+                .await
+                .map_err(|e| TxError::Node(e.to_string()))?;
+            let index = match priority {
+                Priority::Low => 0,
+                Priority::Normal => 1,
+                Priority::High => 2,
+                Priority::Urgent => 3,
+            }
+            .min(fees.per_priority.len() - 1);
+            FeeRate::new(fees.per_priority[index], fees.mask)
+                .ok_or_else(|| TxError::Node("the server suggested an invalid fee".into()))
+        }
+    }
 }
 
 /// The serialized transaction, for broadcasting by other means.
@@ -352,22 +395,94 @@ fn needed_inputs(available: &[&OwnedOutput], wanted: u64) -> usize {
 }
 
 async fn with_decoys(ctx: &Context<'_>, output: &OwnedOutput) -> Result<OutputWithDecoys, TxError> {
-    OutputWithDecoys::new(
-        &mut OsRng,
-        ctx.daemon,
-        RING_LEN,
-        ctx.block_number,
-        output.output.clone(),
-    )
-    .await
-    .map_err(|e| TxError::Node(format!("choosing decoys: {e}")))
+    match ctx.backend {
+        Backend::Node(daemon) => OutputWithDecoys::new(
+            &mut OsRng,
+            daemon,
+            RING_LEN,
+            ctx.block_number,
+            output.output.clone(),
+        )
+        .await
+        .map_err(|e| TxError::Node(format!("choosing decoys: {e}"))),
+        Backend::Lws(server) => {
+            let candidates = server
+                .random_outputs(1, RING_LEN)
+                .await
+                .map_err(|e| TxError::Node(format!("choosing decoys: {e}")))?
+                .pop()
+                .unwrap_or_default();
+            lws_ring(output, &candidates)
+        }
+    }
+}
+
+/// Builds the ring for `output` from a light wallet server's candidates:
+/// the real output plus `RING_LEN - 1` distinct others, by global index.
+fn lws_ring(
+    output: &OwnedOutput,
+    candidates: &[kn_sync::RandomOutput],
+) -> Result<OutputWithDecoys, TxError> {
+    let bad = |why: &str| TxError::Node(format!("the server's decoys are unusable: {why}"));
+    let real_index = output.output.index_on_blockchain();
+    let mut members: Vec<(u64, [Point; 2])> = Vec::with_capacity(usize::from(RING_LEN));
+    members.push((
+        real_index,
+        [output.output.key(), output.output.commitment().commit()],
+    ));
+    for candidate in candidates {
+        if members.len() == usize::from(RING_LEN) {
+            break;
+        }
+        if members.iter().any(|(i, _)| *i == candidate.global_index) {
+            continue;
+        }
+        let key = CompressedPoint::from(candidate.public_key)
+            .decompress()
+            .ok_or_else(|| bad("invalid output key"))?;
+        let commitment = CompressedPoint::from(candidate.commitment)
+            .decompress()
+            .ok_or_else(|| bad("invalid commitment"))?;
+        members.push((candidate.global_index, [key, commitment]));
+    }
+    if members.len() < usize::from(RING_LEN) {
+        return Err(bad("too few distinct outputs"));
+    }
+    members.sort_by_key(|(index, _)| *index);
+    let signer = members
+        .iter()
+        .position(|(index, _)| *index == real_index)
+        .and_then(|p| u8::try_from(p).ok())
+        .ok_or_else(|| bad("ring lost the real output"))?;
+    let mut offsets = Vec::with_capacity(members.len());
+    let mut previous = 0;
+    for (index, _) in &members {
+        offsets.push(index - previous);
+        previous = *index;
+    }
+    let ring = members.into_iter().map(|(_, pair)| pair).collect();
+    let decoys = Decoys::new(offsets, signer, ring).ok_or_else(|| bad("invalid ring"))?;
+
+    // monero-oxide builds an OutputWithDecoys only through its own decoy
+    // selection or its serialization: the output's spend data (key, key
+    // offset, commitment) followed by the decoys. The spend data sits after
+    // the output's two ids (40 + 8 bytes) in WalletOutput's serialization.
+    let serialized = output.output.serialize();
+    let spend_data = serialized
+        .get(48..48 + 32 + 32 + 32 + 8)
+        .ok_or_else(|| bad("unexpected output layout"))?;
+    let mut bytes = Zeroizing::new(spend_data.to_vec());
+    decoys
+        .write(&mut *bytes)
+        .map_err(|_| bad("could not encode the ring"))?;
+    OutputWithDecoys::read(&mut bytes.as_slice()).map_err(|_| bad("could not decode the ring"))
 }
 
 fn signable(
     keys: &WalletKeys,
     inputs: Vec<OutputWithDecoys>,
     payments: Vec<(MoneroAddress, u64)>,
-    fee_rate: monero_interface::FeeRate,
+    fee_rate: FeeRate,
 ) -> Result<SignableTransaction, SendError> {
     // Seeds the transaction's internal randomness; fresh per transaction, as
     // monero-oxide requires.

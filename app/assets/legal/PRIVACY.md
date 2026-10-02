@@ -49,7 +49,10 @@ needs your **private view key**. With it, the server can see:
 - every payment you receive and its amount;
 - your IP address, unless you use Tor or a proxy.
 
-It can also see outgoing payments when it notices your coins being spent. It
+It can also see outgoing payments when it notices your coins being spent.
+When you send in LWS mode, the server also chooses the decoys for your
+transaction, suggests its fee and broadcasts it, so it sees the transaction
+before anyone else. It
 **cannot** spend your funds, because your spend key stays on your device. Only
 use a server you run yourself or one you trust, such as MyMonero. Kilonova
 does not run a light wallet server and never picks one for you.
@@ -104,4 +107,5 @@ Security issues: see SECURITY.md in the repository.
 ## Changelog
 
 - (date): first version.
+- 2026-10-02: describe what a light wallet server sees when you send.
 - 2026-10-02: describe the consent step before a view key is shared with a light wallet server.

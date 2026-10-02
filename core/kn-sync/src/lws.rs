@@ -130,6 +130,138 @@ pub async fn check_lws(url: &NodeUrl, network: Network) -> Result<LwsInfo, SyncE
     })
 }
 
+/// A ring member the server offers as a decoy.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RandomOutput {
+    pub global_index: u64,
+    pub public_key: [u8; 32],
+    pub commitment: [u8; 32],
+}
+
+/// Fee rates the server's node suggests, lowest priority first, in atomic
+/// units per byte of transaction weight, with the quantization mask.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LwsFees {
+    pub per_priority: Vec<u64>,
+    pub mask: u64,
+}
+
+impl LwsServer {
+    /// `count` random ring members for each of `inputs` inputs, chosen by the
+    /// server from the chain. Malformed entries are skipped.
+    ///
+    /// # Errors
+    ///
+    /// [`SyncError::Node`] if the server cannot answer.
+    pub async fn random_outputs(
+        &self,
+        inputs: usize,
+        count: u8,
+    ) -> Result<Vec<Vec<RandomOutput>>, SyncError> {
+        #[derive(Deserialize)]
+        struct Out {
+            #[serde(deserialize_with = "u64_from_string_or_number")]
+            global_index: u64,
+            public_key: String,
+            rct: String,
+        }
+        #[derive(Deserialize)]
+        struct AmountOuts {
+            outputs: Vec<Out>,
+        }
+        #[derive(Deserialize)]
+        struct Response {
+            amount_outs: Vec<AmountOuts>,
+        }
+        let amounts = vec!["0"; inputs];
+        let response: Response = self
+            .post(
+                "get_random_outs",
+                &json!({"amounts": amounts, "count": count}),
+            )
+            .await?;
+        Ok(response
+            .amount_outs
+            .into_iter()
+            .map(|set| {
+                set.outputs
+                    .iter()
+                    .filter_map(|o| {
+                        Some(RandomOutput {
+                            global_index: o.global_index,
+                            public_key: hex32(&o.public_key)?,
+                            commitment: hex32(o.rct.get(..64)?)?,
+                        })
+                    })
+                    .collect()
+            })
+            .collect())
+    }
+
+    /// The fee rates the server's node suggests.
+    ///
+    /// # Errors
+    ///
+    /// [`SyncError::Node`] if the server cannot answer or gives no rates.
+    pub async fn fees(&self, keys: &WalletKeys, network: Network) -> Result<LwsFees, SyncError> {
+        #[derive(Deserialize)]
+        struct Response {
+            #[serde(default)]
+            fees: Vec<u64>,
+            #[serde(deserialize_with = "u64_from_string_or_number")]
+            per_byte_fee: u64,
+            #[serde(deserialize_with = "u64_from_string_or_number")]
+            fee_mask: u64,
+        }
+        let response: Response = self
+            .post(
+                "get_unspent_outs",
+                &json!({
+                    "address": keys.primary_address(network),
+                    "view_key": keys.secret_view_key_hex().as_str(),
+                    "amount": "0", "mixin": 0, "use_dust": false, "dust_threshold": "0",
+                }),
+            )
+            .await?;
+        let per_priority = if response.fees.is_empty() {
+            vec![response.per_byte_fee]
+        } else {
+            response.fees
+        };
+        Ok(LwsFees {
+            per_priority,
+            mask: response.fee_mask.max(1),
+        })
+    }
+
+    /// Asks the server to relay a signed transaction.
+    ///
+    /// # Errors
+    ///
+    /// [`SyncError::Node`] with the server's reason if it is refused.
+    pub async fn submit(&self, raw_transaction: &[u8]) -> Result<(), SyncError> {
+        #[derive(Deserialize)]
+        struct Response {
+            #[serde(default)]
+            status: String,
+        }
+        let response: Response = self
+            .post(
+                "submit_raw_tx",
+                &json!({"tx": hex::encode(raw_transaction)}),
+            )
+            .await?;
+        if response.status.eq_ignore_ascii_case("ok") || response.status.is_empty() {
+            Ok(())
+        } else {
+            Err(SyncError::Node(format!(
+                "server refused the transaction: {}",
+                response.status
+            )))
+        }
+    }
+}
+
 #[derive(Deserialize)]
 struct Login {
     #[serde(default)]
