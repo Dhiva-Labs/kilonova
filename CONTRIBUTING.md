@@ -43,19 +43,14 @@ understand a PR in one sitting.
 ### Checks
 
 ```sh
-cd core
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
-cargo build
-
-cd ../app
-flutter analyze
-flutter test
-
-cd ..
-dart run tools/design_lint/bin/design_lint.dart
+tools/check.sh
 ```
+
+It runs what CI runs and stops at the first failure: `cargo fmt`, `clippy`,
+`cargo test`, `flutter analyze`, `flutter test` and the design lint. With the
+regtest devnet running (see `tools/devnet`), `tools/check.sh --regtest` also
+runs the end-to-end suites against monerod, monero-lws and
+monero-wallet-rpc.
 
 ### Commits
 
