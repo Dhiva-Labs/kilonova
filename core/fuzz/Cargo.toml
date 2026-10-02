@@ -1,0 +1,38 @@
+[package]
+name = "kn-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+license = "MIT"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+kn-store = { path = "../kn-store", features = ["fuzzing"] }
+kn-sync = { path = "../kn-sync", features = ["fuzzing"] }
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "lws_replies"
+path = "fuzz_targets/lws_replies.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "addresses"
+path = "fuzz_targets/addresses.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "wallet_files"
+path = "fuzz_targets/wallet_files.rs"
+test = false
+doc = false
+bench = false

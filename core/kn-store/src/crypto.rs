@@ -149,7 +149,7 @@ impl SealingKey {
     }
 }
 
-fn parse_header(file: &[u8]) -> Result<([u8; SALT_LEN], KdfParams, &[u8]), StoreError> {
+pub(crate) fn parse_header(file: &[u8]) -> Result<([u8; SALT_LEN], KdfParams, &[u8]), StoreError> {
     if file.len() < HEADER_LEN + 16 || &file[..4] != MAGIC {
         return Err(StoreError::Corrupt("not a Kilonova wallet file"));
     }

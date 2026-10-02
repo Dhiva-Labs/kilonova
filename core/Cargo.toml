@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = ["kn-ffi", "kn-keys", "kn-store", "kn-sync", "kn-tx"]
+# Needs nightly; see fuzz/README.md.
+exclude = ["fuzz"]
 
 [workspace.package]
 version = "0.1.0"

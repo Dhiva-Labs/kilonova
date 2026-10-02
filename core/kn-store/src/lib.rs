@@ -544,6 +544,23 @@ fn new_id() -> String {
     })
 }
 
+/// Entry points for the fuzz targets in `core/fuzz`; not part of the API.
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub mod fuzzing {
+    /// Reads a wallet file's header, as unlocking does before deriving the
+    /// key (which is too slow to fuzz).
+    pub fn wallet_file(data: &[u8]) {
+        let _ = super::crypto::parse_header(data);
+    }
+
+    /// Parses decrypted wallet contents and the registry.
+    pub fn contents(data: &[u8]) {
+        let _ = serde_json::from_slice::<super::WalletData>(data);
+        let _ = serde_json::from_slice::<Vec<super::WalletEntry>>(data);
+    }
+}
+
 mod network_serde {
     use kn_keys::Network;
     use serde::{Deserialize, Deserializer, Serializer, de::Error};

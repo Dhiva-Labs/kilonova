@@ -158,44 +158,14 @@ impl LwsServer {
         inputs: usize,
         count: u8,
     ) -> Result<Vec<Vec<RandomOutput>>, SyncError> {
-        #[derive(Deserialize)]
-        struct Out {
-            #[serde(deserialize_with = "u64_from_string_or_number")]
-            global_index: u64,
-            public_key: String,
-            rct: String,
-        }
-        #[derive(Deserialize)]
-        struct AmountOuts {
-            outputs: Vec<Out>,
-        }
-        #[derive(Deserialize)]
-        struct Response {
-            amount_outs: Vec<AmountOuts>,
-        }
         let amounts = vec!["0"; inputs];
-        let response: Response = self
+        let response: RandomOuts = self
             .post(
                 "get_random_outs",
                 &json!({"amounts": amounts, "count": count}),
             )
             .await?;
-        Ok(response
-            .amount_outs
-            .into_iter()
-            .map(|set| {
-                set.outputs
-                    .iter()
-                    .filter_map(|o| {
-                        Some(RandomOutput {
-                            global_index: o.global_index,
-                            public_key: hex32(&o.public_key)?,
-                            commitment: hex32(o.rct.get(..64)?)?,
-                        })
-                    })
-                    .collect()
-            })
-            .collect())
+        Ok(parse_random_outs(response))
     }
 
     /// The fee rates the server's node suggests.
@@ -260,6 +230,45 @@ impl LwsServer {
             )))
         }
     }
+}
+
+#[derive(Deserialize)]
+struct RandomOut {
+    #[serde(deserialize_with = "u64_from_string_or_number")]
+    global_index: u64,
+    public_key: String,
+    rct: String,
+}
+
+#[derive(Deserialize)]
+struct AmountOuts {
+    outputs: Vec<RandomOut>,
+}
+
+#[derive(Deserialize)]
+struct RandomOuts {
+    amount_outs: Vec<AmountOuts>,
+}
+
+/// Ring member candidates from a `get_random_outs` answer; malformed entries
+/// are skipped.
+fn parse_random_outs(response: RandomOuts) -> Vec<Vec<RandomOutput>> {
+    response
+        .amount_outs
+        .into_iter()
+        .map(|set| {
+            set.outputs
+                .iter()
+                .filter_map(|o| {
+                    Some(RandomOutput {
+                        global_index: o.global_index,
+                        public_key: hex32(&o.public_key)?,
+                        commitment: hex32(o.rct.get(..64)?)?,
+                    })
+                })
+                .collect()
+        })
+        .collect()
 }
 
 #[derive(Deserialize)]
@@ -419,6 +428,26 @@ pub async fn lws_sync(
         .await?;
     let txs: Txs = server.post("get_address_txs", &login(json!({}))).await?;
 
+    Ok(apply_replies(
+        keys,
+        &info,
+        &unspent,
+        &txs,
+        import_pending,
+        state,
+    ))
+}
+
+/// Turns the server's answers into wallet state, keeping only what the
+/// wallet's own keys confirm.
+fn apply_replies(
+    keys: &WalletKeys,
+    info: &AddressInfo,
+    unspent: &Unspent,
+    txs: &Txs,
+    import_pending: bool,
+    state: &mut SyncState,
+) -> LwsReport {
     let coinbase: HashMap<&str, bool> = txs
         .transactions
         .iter()
@@ -430,7 +459,7 @@ pub async fn lws_sync(
     for out in &unspent.outputs {
         match owned_output(keys, out, coinbase.get(out.tx_hash.as_str()).copied()) {
             Some(owned) => outputs.push(owned),
-            None => rejected_outputs += 1,
+            None => rejected_outputs = rejected_outputs.saturating_add(1),
         }
     }
 
@@ -438,17 +467,18 @@ pub async fn lws_sync(
 
     // The server reports the index of the last block; full mode and the
     // rest of the app count blocks.
-    let scanned = info.scanned_block_height + 1;
+    let scanned = info.scanned_block_height.saturating_add(1);
+    let tip = info.blockchain_height.saturating_add(1);
     state.outputs = outputs;
-    state.expire_pending(info.blockchain_height + 1);
+    state.expire_pending(tip);
     state.next_height = scanned;
     state.recent.clear();
-    Ok(LwsReport {
+    LwsReport {
         scanned,
-        tip: info.blockchain_height + 1,
+        tip,
         rejected_outputs,
         import_pending,
-    })
+    }
 }
 
 /// Marks outputs spent where a confirmed transaction's candidate key image
@@ -617,5 +647,41 @@ fn u64_from_string_or_number<'de, D: serde::Deserializer<'de>>(d: D) -> Result<u
             .ok_or_else(|| serde::de::Error::custom("negative index")),
         Value::String(s) => s.parse().map_err(serde::de::Error::custom),
         _ => Err(serde::de::Error::custom("expected a number")),
+    }
+}
+
+/// Entry points for the fuzz targets in `core/fuzz`; not part of the API.
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub mod fuzzing {
+    use super::{AddressInfo, RandomOuts, Txs, Unspent, apply_replies, parse_random_outs};
+    use crate::SyncState;
+    use kn_keys::{SeedFormat, WalletKeys};
+    use std::sync::LazyLock;
+
+    static KEYS: LazyLock<WalletKeys> =
+        LazyLock::new(|| WalletKeys::generate(SeedFormat::Classic).0);
+
+    /// Feeds arbitrary server answers through the code that checks them.
+    pub fn lws_replies(data: &[u8]) {
+        if let Ok((info, unspent, txs)) =
+            serde_json::from_slice::<(AddressInfo, Unspent, Txs)>(data)
+        {
+            let mut state = SyncState::default();
+            let _ = apply_replies(&KEYS, &info, &unspent, &txs, false, &mut state);
+            let _ = state.balance(u64::MAX);
+            let _ = state.history();
+        }
+        if let Ok(outs) = serde_json::from_slice::<RandomOuts>(data) {
+            let _ = parse_random_outs(outs);
+        }
+    }
+
+    /// Reads a decrypted sync cache.
+    pub fn cache(data: &[u8]) {
+        if let Ok(state) = SyncState::from_bytes(data) {
+            let _ = state.balance(u64::MAX);
+            let _ = state.history();
+        }
     }
 }

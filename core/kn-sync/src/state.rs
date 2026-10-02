@@ -38,12 +38,11 @@ impl OwnedOutput {
     /// First height at which the output can be spent.
     #[must_use]
     pub fn unlock_height(&self) -> u64 {
-        self.height
-            + if self.miner {
-                MINER_LOCK_BLOCKS
-            } else {
-                DEFAULT_LOCK_BLOCKS
-            }
+        self.height.saturating_add(if self.miner {
+            MINER_LOCK_BLOCKS
+        } else {
+            DEFAULT_LOCK_BLOCKS
+        })
     }
 }
 

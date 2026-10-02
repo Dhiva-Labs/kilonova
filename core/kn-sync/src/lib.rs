@@ -14,6 +14,8 @@ mod scan;
 mod state;
 mod tls;
 
+#[cfg(feature = "fuzzing")]
+pub use lws::fuzzing;
 pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, lws_sync};
 pub use node::{
     Http, NodeStatus, NodeUrl, ProxyUrl, bundled_nodes, check_proxy, connect, proxy, set_proxy,

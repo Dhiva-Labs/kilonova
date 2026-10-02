@@ -8,6 +8,10 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+# Exposes entry points for the fuzz targets in core/fuzz.
+fuzzing = []
+
 [dependencies]
 hex = "0.4"
 kn-keys = { path = "../kn-keys" }

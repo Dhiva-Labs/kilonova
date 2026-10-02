@@ -11,3 +11,6 @@ tools/devnet/data/
 # Dart and Flutter tool output
 .dart_tool/
 build/
+core/fuzz/target/
+core/fuzz/artifacts/
+core/fuzz/coverage/
