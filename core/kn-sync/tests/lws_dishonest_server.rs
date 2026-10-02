@@ -43,7 +43,7 @@ fn pay_with_mask(address: &str, index: u8) -> (String, String, DalekScalar) {
     )
 }
 
-/// A RingCT output (not a miner one): `rct` carries a commitment to
+/// A `RingCT` output (not a miner one): `rct` carries a commitment to
 /// `committed` while the server claims `claimed`.
 fn rct_output(tx: u8, address: &str, committed: u64, claimed: u64) -> Value {
     let (tx_pub, key, mask) = pay_with_mask(address, 0);
