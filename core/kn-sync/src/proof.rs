@@ -109,13 +109,16 @@ fn parse_keys(hex_text: &str) -> Result<Vec<DalekScalar>, ProofError> {
         .collect()
 }
 
-struct Fetched {
-    transaction: Transaction,
-    height: Option<u64>,
-    in_pool: bool,
+pub(crate) struct Fetched {
+    pub(crate) transaction: Transaction,
+    pub(crate) height: Option<u64>,
+    pub(crate) in_pool: bool,
 }
 
-async fn fetch(daemon: &MoneroDaemon<Http>, tx_hash: [u8; 32]) -> Result<Fetched, ProofError> {
+pub(crate) async fn fetch(
+    daemon: &MoneroDaemon<Http>,
+    tx_hash: [u8; 32],
+) -> Result<Fetched, ProofError> {
     #[derive(Deserialize)]
     struct Entry {
         as_hex: String,

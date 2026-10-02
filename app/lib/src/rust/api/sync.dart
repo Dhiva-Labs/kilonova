@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `caught_up_state`, `emit`, `fail`, `failed`, `full_round`, `go`, `hex_string`, `is_current`, `load`, `lock_current`, `lock_state`, `lws_round`, `new`, `pause`, `record`, `replace`, `reset`, `second_opinion`, `snapshot`, `starting_state`, `stop`, `stopped`
+// These functions are ignored because they are not marked as `pub`: `caught_up_state`, `confirm_with_node`, `emit`, `fail`, `failed`, `full_round`, `go`, `hex_string`, `is_current`, `load`, `lock_current`, `lock_state`, `lws_round`, `new`, `pause`, `record`, `replace`, `reset`, `second_opinion`, `snapshot`, `starting_state`, `stop`, `stopped`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Run`, `Setup`, `SyncHandle`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 

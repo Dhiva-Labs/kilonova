@@ -39,6 +39,10 @@ pub(crate) struct Settings {
     /// foreground, instead of locking them.
     #[serde(default)]
     pub(crate) background_sync: bool,
+    /// LWS-mode wallets confirm each payment the server reports with the
+    /// network's node.
+    #[serde(default)]
+    pub(crate) confirm_lws_payments: bool,
     /// Pinned certificate fingerprints by https address.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) pins: BTreeMap<String, String>,

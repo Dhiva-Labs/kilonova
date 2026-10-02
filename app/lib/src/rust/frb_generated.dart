@@ -2802,11 +2802,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Preferences dco_decode_preferences(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return Preferences(
       notifyIncoming: dco_decode_bool(arr[0]),
       backgroundSync: dco_decode_bool(arr[1]),
+      confirmLwsPayments: dco_decode_bool(arr[2]),
     );
   }
 
@@ -3441,9 +3442,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_notifyIncoming = sse_decode_bool(deserializer);
     var var_backgroundSync = sse_decode_bool(deserializer);
+    var var_confirmLwsPayments = sse_decode_bool(deserializer);
     return Preferences(
       notifyIncoming: var_notifyIncoming,
       backgroundSync: var_backgroundSync,
+      confirmLwsPayments: var_confirmLwsPayments,
     );
   }
 
@@ -4060,6 +4063,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_bool(self.notifyIncoming, serializer);
     sse_encode_bool(self.backgroundSync, serializer);
+    sse_encode_bool(self.confirmLwsPayments, serializer);
   }
 
   @protected

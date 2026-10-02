@@ -134,6 +134,14 @@ async fn full_and_lws_wallets_pay_each_other() {
     mine(&burn(), 10).await;
     lws_sync_to_tip(&light, &mut light_state).await;
     assert_eq!(received(&light_state, sent.hash), 7 * XMR);
+    // A node confirms the server's report of that payment.
+    let check = kn_sync::cross_check(&daemon().await, &mut light_state)
+        .await
+        .unwrap();
+    assert!(check.confirmed >= 1);
+    assert_eq!(check.contradicted, 0);
+    assert_eq!(light_state.cross_check_verdict(&sent.hash), Some(true));
+    assert_eq!(received(&light_state, sent.hash), 7 * XMR);
     assert_eq!(light_state.balance(tip().await).unlocked, 7 * XMR);
 
     // The LWS wallet pays back through the server.

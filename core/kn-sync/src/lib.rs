@@ -6,6 +6,7 @@
 
 #![forbid(unsafe_code)]
 
+mod crosscheck;
 mod lws;
 mod node;
 mod opinion;
@@ -16,6 +17,7 @@ mod scan;
 mod state;
 mod tls;
 
+pub use crosscheck::{CROSS_CHECK_LIMIT, CrossCheck, cross_check};
 #[cfg(feature = "fuzzing")]
 pub use lws::fuzzing;
 pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, lws_sync};

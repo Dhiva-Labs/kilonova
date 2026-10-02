@@ -483,6 +483,12 @@ fn apply_replies(
         }
     }
 
+    // Payments a node already contradicted stay out.
+    let before = outputs.len();
+    outputs.retain(|o| state.cross_check_verdict(&o.output.transaction()) != Some(false));
+    rejected_outputs =
+        rejected_outputs.saturating_add(u32::try_from(before - outputs.len()).unwrap_or(u32::MAX));
+
     mark_spends(&mut outputs, &txs.transactions, state);
 
     // The server reports the index of the last block; full mode and the

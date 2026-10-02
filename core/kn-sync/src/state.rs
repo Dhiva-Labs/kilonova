@@ -121,6 +121,10 @@ pub struct SyncState {
     /// Payments waiting in the transaction pool, as of the last sync.
     #[serde(default)]
     pub pool: Vec<PoolPayment>,
+    /// Light wallet server payments checked against a node, by transaction
+    /// id (hex): `true` if the node confirms them.
+    #[serde(default)]
+    cross_checked: BTreeMap<String, bool>,
 }
 
 impl SyncState {
@@ -139,6 +143,24 @@ impl SyncState {
             self.recent.pop_front();
         }
         self.next_height = height + 1;
+    }
+
+    /// What a node said about a light wallet server's payment in `tx`, if it
+    /// was asked.
+    #[must_use]
+    pub fn cross_check_verdict(&self, tx: &[u8; 32]) -> Option<bool> {
+        self.cross_checked.get(&hex::encode(tx)).copied()
+    }
+
+    pub(crate) fn record_cross_check(&mut self, tx: [u8; 32], agrees: bool) {
+        self.cross_checked.insert(hex::encode(tx), agrees);
+    }
+
+    /// Removes outputs of transactions a node contradicted.
+    pub(crate) fn drop_contradicted(&mut self) {
+        let checked = &self.cross_checked;
+        self.outputs
+            .retain(|o| checked.get(&hex::encode(o.output.transaction())) != Some(&false));
     }
 
     /// Forgets everything from `height` on, after a reorganization.

@@ -525,6 +525,31 @@ impl Run<'_> {
         }
     }
 
+    /// When the owner asked for it, confirms the server's payments with the
+    /// network's node. Returns how many outputs the node contradicted; a
+    /// node that cannot be reached confirms nothing and contradicts nothing.
+    async fn confirm_with_node(&self, network: kn_keys::Network, state: &mut SyncState) -> u32 {
+        let enabled = crate::node_settings::load().is_ok_and(|s| s.confirm_lws_payments);
+        if !enabled {
+            return 0;
+        }
+        let Ok(node) = current_node(network.into()) else {
+            return 0;
+        };
+        let before = state.outputs.len();
+        let checked = async {
+            let (daemon, _) = connect(&node, network).await?;
+            kn_sync::cross_check(&daemon, state).await
+        };
+        if tokio::time::timeout(Duration::from_mins(1), checked)
+            .await
+            .is_err()
+        {
+            return 0;
+        }
+        u32::try_from(before.saturating_sub(state.outputs.len())).unwrap_or(u32::MAX)
+    }
+
     /// One request round to the light wallet server.
     async fn lws_round(&self, setup: &Setup) -> Option<Duration> {
         let Ok(Some(server_url)) = lws_server(setup.network.into()) else {
@@ -563,6 +588,15 @@ impl Run<'_> {
             .await
         }
         .await;
+        let result = match result {
+            Ok(mut report) => {
+                report.rejected_outputs = report
+                    .rejected_outputs
+                    .saturating_add(self.confirm_with_node(setup.network, &mut state).await);
+                Ok(report)
+            }
+            Err(e) => Err(e),
+        };
         match result {
             Ok(report) => {
                 self.record(&state, report.tip);

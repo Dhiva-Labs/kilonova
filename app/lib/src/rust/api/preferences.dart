@@ -32,13 +32,22 @@ class Preferences {
   /// locking them when the app leaves the screen.
   final bool backgroundSync;
 
+  /// LWS-mode wallets confirm each payment the server reports with the
+  /// network's node (through the proxy). The node learns which
+  /// transactions the wallet looks up, so it is off by default.
+  final bool confirmLwsPayments;
+
   const Preferences({
     required this.notifyIncoming,
     required this.backgroundSync,
+    required this.confirmLwsPayments,
   });
 
   @override
-  int get hashCode => notifyIncoming.hashCode ^ backgroundSync.hashCode;
+  int get hashCode =>
+      notifyIncoming.hashCode ^
+      backgroundSync.hashCode ^
+      confirmLwsPayments.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -46,5 +55,6 @@ class Preferences {
       other is Preferences &&
           runtimeType == other.runtimeType &&
           notifyIncoming == other.notifyIncoming &&
-          backgroundSync == other.backgroundSync;
+          backgroundSync == other.backgroundSync &&
+          confirmLwsPayments == other.confirmLwsPayments;
 }

@@ -3054,9 +3054,11 @@ impl SseDecode for crate::api::preferences::Preferences {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_notifyIncoming = <bool>::sse_decode(deserializer);
         let mut var_backgroundSync = <bool>::sse_decode(deserializer);
+        let mut var_confirmLwsPayments = <bool>::sse_decode(deserializer);
         return crate::api::preferences::Preferences {
             notify_incoming: var_notifyIncoming,
             background_sync: var_backgroundSync,
+            confirm_lws_payments: var_confirmLwsPayments,
         };
     }
 }
@@ -3821,6 +3823,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::preferences::Preferences {
         [
             self.notify_incoming.into_into_dart().into_dart(),
             self.background_sync.into_into_dart().into_dart(),
+            self.confirm_lws_payments.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -4538,6 +4541,7 @@ impl SseEncode for crate::api::preferences::Preferences {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <bool>::sse_encode(self.notify_incoming, serializer);
         <bool>::sse_encode(self.background_sync, serializer);
+        <bool>::sse_encode(self.confirm_lws_payments, serializer);
     }
 }
 
