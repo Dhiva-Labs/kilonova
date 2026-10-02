@@ -171,6 +171,10 @@ enum SyncFailure {
 
   /// The node or server is an onion address and no Tor proxy is set.
   needsTor,
+
+  /// The light wallet server is plain http on another machine; the view
+  /// key is not sent.
+  insecureLws,
 }
 
 enum SyncPhase { connecting, scanning, synced, failed, stopped }

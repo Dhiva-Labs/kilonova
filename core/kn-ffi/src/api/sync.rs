@@ -48,6 +48,9 @@ pub enum SyncFailure {
     LwsCreationRefused,
     /// The node or server is an onion address and no Tor proxy is set.
     NeedsTor,
+    /// The light wallet server is plain http on another machine; the view
+    /// key is not sent.
+    InsecureLws,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -333,7 +336,7 @@ impl OpenWallet {
                     miner: h.miner,
                     locked: h.direction == Direction::Incoming
                         && !h.pending
-                        && tip < h.height + lock,
+                        && tip < h.height.saturating_add(lock),
                     subaddress_index: h.subaddresses.first().map(|(_, index)| *index),
                     pending: h.pending,
                     note: notes.get(&tx_hash).cloned(),
@@ -555,6 +558,7 @@ impl Run<'_> {
             SyncError::LwsDenied => SyncFailure::LwsDenied,
             SyncError::LwsCreationRefused => SyncFailure::LwsCreationRefused,
             SyncError::NeedsProxy => SyncFailure::NeedsTor,
+            SyncError::InsecureLws => SyncFailure::InsecureLws,
         };
         self.emit(SyncEvent::failed(failure));
         (failure == SyncFailure::NodeUnreachable).then_some(FOLLOW_INTERVAL)

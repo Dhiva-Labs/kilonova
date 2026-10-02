@@ -61,6 +61,9 @@ enum SendError {
   tooManyInputs,
   viewOnly,
 
+  /// The node or server suggested an absurd fee rate.
+  feeTooHigh,
+
   /// Sync has not reached the chain tip yet.
   notSynced,
 

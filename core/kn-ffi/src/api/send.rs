@@ -32,6 +32,8 @@ pub enum SendError {
     InsufficientFunds,
     TooManyInputs,
     ViewOnly,
+    /// The node or server suggested an absurd fee rate.
+    FeeTooHigh,
     /// Sync has not reached the chain tip yet.
     NotSynced,
     /// The node or light wallet server could not be reached or could not
@@ -60,6 +62,7 @@ impl From<TxError> for SendError {
             TxError::InsufficientFunds { .. } => Self::InsufficientFunds,
             TxError::TooManyInputs => Self::TooManyInputs,
             TxError::ViewOnly => Self::ViewOnly,
+            TxError::FeeTooHigh => Self::FeeTooHigh,
             TxError::Node(_) => Self::Unreachable,
             TxError::Rejected(_) => Self::Rejected,
             TxError::Build(_) => Self::Build,

@@ -19,6 +19,7 @@ String nodeErrorMessage(BuildContext context, NodeError error) {
     NodeError.badProxy => l.nodeErrorBadProxy,
     NodeError.needsTor => l.nodeErrorNeedsTor,
     NodeError.untrustedCertificate => l.nodeErrorUntrustedCertificate,
+    NodeError.insecureLws => l.nodeErrorInsecureLws,
   };
 }
 

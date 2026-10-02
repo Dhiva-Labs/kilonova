@@ -172,7 +172,7 @@ impl SyncState {
     pub fn expire_pending(&mut self, tip: u64) {
         for o in &mut self.outputs {
             if o.spent
-                .is_some_and(|s| s.pending && tip > s.height + PENDING_EXPIRY_BLOCKS)
+                .is_some_and(|s| s.pending && tip > s.height.saturating_add(PENDING_EXPIRY_BLOCKS))
             {
                 o.spent = None;
             }
@@ -196,12 +196,15 @@ impl SyncState {
     pub fn balance(&self, tip: u64) -> Balance {
         let mut balance = Balance::default();
         for o in self.outputs.iter().filter(|o| o.spent.is_none()) {
-            balance.total += o.amount();
+            balance.total = balance.total.saturating_add(o.amount());
             if tip >= o.unlock_height() {
-                balance.unlocked += o.amount();
+                balance.unlocked = balance.unlocked.saturating_add(o.amount());
             }
         }
-        balance.incoming = self.pool.iter().map(|p| p.amount).sum();
+        balance.incoming = self
+            .pool
+            .iter()
+            .fold(0u64, |sum, p| sum.saturating_add(p.amount));
         balance
     }
 
@@ -222,7 +225,7 @@ impl SyncState {
                     subaddresses: Vec::new(),
                     miner: o.miner,
                 });
-            entry.amount += o.amount();
+            entry.amount = entry.amount.saturating_add(o.amount());
             let index = o
                 .output
                 .subaddress()
@@ -236,7 +239,7 @@ impl SyncState {
         for o in &self.outputs {
             if let Some(s) = o.spent {
                 let e = spent.entry(s.tx).or_insert((s.height, 0, s.pending));
-                e.1 += o.amount();
+                e.1 = e.1.saturating_add(o.amount());
             }
         }
         // Payments still in the pool; change of this wallet's own pending

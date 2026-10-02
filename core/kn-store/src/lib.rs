@@ -524,7 +524,11 @@ impl Store {
 /// Writes to a temporary file, syncs it, then renames over the target, so a
 /// crash leaves either the old file or the new one, never a torn mix.
 fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), StoreError> {
-    let tmp = path.with_extension("tmp");
+    // A temp name per target file, so a wallet file and its cache (same
+    // stem) can never be renamed over each other.
+    let mut tmp_name = path.as_os_str().to_owned();
+    tmp_name.push(".tmp");
+    let tmp = PathBuf::from(tmp_name);
     {
         let mut file = fs::File::create(&tmp)?;
         file.write_all(bytes)?;

@@ -167,6 +167,11 @@ class _SyncStatus extends StatelessWidget {
           onPressed: onRetry,
         ),
         SyncFailure.needsTor => ErrorLine(l.syncNeedsTor),
+        SyncFailure.insecureLws => _Action(
+          message: l.syncInsecureLws,
+          action: l.syncLwsSetServer,
+          onPressed: () => _setServer(context),
+        ),
         SyncFailure.lwsCreationRefused => _Action(
           message: l.syncLwsCreationRefused,
           action: l.syncLwsSetServer,

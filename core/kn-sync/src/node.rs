@@ -46,13 +46,49 @@ impl NodeUrl {
         &self.0
     }
 
+    /// Like [`NodeUrl::parse`], but `host:port` means https: for light
+    /// wallet servers, which receive the view key.
+    ///
+    /// # Errors
+    ///
+    /// [`SyncError::BadNodeUrl`] for anything but `host:port` or an http(s)
+    /// URL.
+    pub fn parse_https_default(input: &str) -> Result<Self, SyncError> {
+        let trimmed = input.trim();
+        if trimmed.contains("://") {
+            Self::parse(trimmed)
+        } else {
+            Self::parse(&format!("https://{trimmed}"))
+        }
+    }
+
+    fn host(&self) -> Option<String> {
+        reqwest::Url::parse(&self.0)
+            .ok()?
+            .host_str()
+            .map(|h| h.trim_end_matches('.').to_ascii_lowercase())
+    }
+
     /// Whether this is a Tor onion service, reachable only through a proxy.
     #[must_use]
     pub fn is_onion(&self) -> bool {
-        reqwest::Url::parse(&self.0)
-            .ok()
-            .and_then(|u| u.host_str().map(|h| h.rsplit('.').next() == Some("onion")))
-            .unwrap_or(false)
+        self.host()
+            .is_some_and(|h| h.rsplit('.').next() == Some("onion"))
+    }
+
+    /// Whether traffic to this address is protected in transit: https, an
+    /// onion service (encrypted by Tor), or this device itself.
+    #[must_use]
+    pub fn is_private_channel(&self) -> bool {
+        if self.0.starts_with("https://") || self.is_onion() {
+            return true;
+        }
+        self.host().is_some_and(|h| {
+            let h = h.trim_start_matches('[').trim_end_matches(']');
+            h == "localhost"
+                || h.parse::<std::net::IpAddr>()
+                    .is_ok_and(|ip| ip.is_loopback())
+        })
     }
 }
 
@@ -249,6 +285,26 @@ impl HttpTransport for Http {
         }
         Ok(out)
     }
+}
+
+/// Reads a response body, failing once it passes `limit` bytes instead of
+/// buffering whatever a server sends.
+pub(crate) async fn read_limited(
+    mut response: reqwest::Response,
+    limit: usize,
+) -> Result<Vec<u8>, SyncError> {
+    let mut out = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|e| SyncError::Node(format!("reading response: {e}")))?
+    {
+        out.extend_from_slice(&chunk);
+        if out.len() > limit {
+            return Err(SyncError::Node("response larger than allowed".into()));
+        }
+    }
+    Ok(out)
 }
 
 /// What a node reports about itself.

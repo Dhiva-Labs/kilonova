@@ -14,6 +14,8 @@ permissions:
 env:
   FLUTTER_VERSION: 3.44.6
   CARGO_TERM_COLOR: always
+  # Trial runs from a branch get a version packaging tools accept.
+  VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('0.0.0~{0}', github.sha) }}
 
 jobs:
   android:
@@ -51,7 +53,7 @@ jobs:
         run: flutter build apk --release --split-per-abi
       - name: Name the files
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${VERSION#v}"
           mkdir dist
           for abi in arm64-v8a armeabi-v7a x86_64; do
             cp "app/build/app/outputs/flutter-apk/app-$abi-release.apk" "dist/kilonova-$version-android-$abi.apk"
@@ -81,7 +83,7 @@ jobs:
         run: flutter build linux --release
       - name: Package
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${VERSION#v}"
           mkdir dist
           tar -C app/build/linux/x64/release -czf "dist/kilonova-$version-linux-x64.tar.gz" \
             --transform "s,^bundle,kilonova-$version," bundle
@@ -107,7 +109,7 @@ jobs:
         run: flutter build windows --release
       - name: Package
         run: |
-          $version = "$env:GITHUB_REF_NAME".TrimStart('v')
+          $version = "$env:VERSION".TrimStart('v') -replace '~', '-'
           New-Item -ItemType Directory dist | Out-Null
           $release = "app\build\windows\x64\runner\Release"
           Compress-Archive -Path "$release\*" -DestinationPath "dist\kilonova-$version-windows-x64.zip"
@@ -121,6 +123,7 @@ jobs:
 
   draft:
     name: Draft release
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: [android, linux, windows]
     runs-on: ubuntu-24.04
     permissions:

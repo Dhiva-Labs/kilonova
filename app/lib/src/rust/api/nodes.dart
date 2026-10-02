@@ -251,6 +251,9 @@ enum NodeError {
   /// The server's certificate is not from a public authority (or not the
   /// one pinned). See [`server_certificate_info`].
   untrustedCertificate,
+
+  /// A light wallet server on plain http elsewhere than this device.
+  insecureLws,
 }
 
 /// What a node reported when checked.

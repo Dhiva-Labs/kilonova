@@ -513,6 +513,10 @@ class _ConfirmViewState extends State<_ConfirmView> {
           const Divider(),
         ],
         _Line(label: l.sendFeeLine, amount: s.fee),
+        if (s.fee * BigInt.from(20) > paid) ...[
+          ErrorLine(l.sendHighFeeWarning),
+          const SizedBox(height: KnSpace.xs),
+        ],
         _Line(label: l.sendTotalLine, amount: paid + s.fee, strong: true),
         if (s.change > BigInt.zero)
           _Line(label: l.sendChangeLine, amount: s.change),
@@ -590,6 +594,7 @@ String sendErrorMessage(BuildContext context, SendError e) {
     SendError.insufficientFunds => l.sendInsufficientFunds,
     SendError.tooManyInputs => l.sendTooManyInputs,
     SendError.viewOnly => l.sendViewOnly,
+    SendError.feeTooHigh => l.sendFeeTooHigh,
     SendError.notSynced => l.sendNotSynced,
     SendError.unreachable => l.sendUnreachable,
     SendError.rejected => l.sendRejected,

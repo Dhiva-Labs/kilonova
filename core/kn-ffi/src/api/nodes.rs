@@ -44,6 +44,8 @@ pub enum NodeError {
     /// The server's certificate is not from a public authority (or not the
     /// one pinned). See [`server_certificate_info`].
     UntrustedCertificate,
+    /// A light wallet server on plain http elsewhere than this device.
+    InsecureLws,
 }
 
 impl From<SyncError> for NodeError {
@@ -53,6 +55,7 @@ impl From<SyncError> for NodeError {
             SyncError::WrongNetwork => Self::WrongNetwork,
             SyncError::BadProxyUrl => Self::BadProxy,
             SyncError::NeedsProxy => Self::NeedsTor,
+            SyncError::InsecureLws => Self::InsecureLws,
             SyncError::Node(_)
             | SyncError::Cancelled
             | SyncError::LwsDenied
@@ -235,7 +238,12 @@ pub fn lws_server(network: Network) -> Result<Option<String>, NodeError> {
 /// [`NodeError::BadUrl`] for anything that is not `host:port` or an
 /// http(s) URL.
 pub fn set_lws_server(network: Network, url: String) -> Result<String, NodeError> {
-    let url = NodeUrl::parse(&url)?.as_str().to_owned();
+    // `host:port` means https here: the server receives the view key.
+    let parsed = NodeUrl::parse_https_default(&url)?;
+    if !parsed.is_private_channel() {
+        return Err(NodeError::InsecureLws);
+    }
+    let url = parsed.as_str().to_owned();
     let mut settings = load()?;
     settings
         .networks
@@ -275,7 +283,7 @@ pub struct LwsHealth {
 ///
 /// [`NodeError::WrongNetwork`] or [`NodeError::Unreachable`].
 pub fn check_lws_server(network: Network, url: String) -> Result<LwsHealth, NodeError> {
-    let url = NodeUrl::parse(&url)?;
+    let url = NodeUrl::parse_https_default(&url)?;
     let info = RUNTIME
         .block_on(check_lws(&url, network.into()))
         .map_err(|e| explain(&url, e))?;
@@ -481,11 +489,19 @@ mod tests {
         assert_eq!(lws_server(Network::Stagenet).unwrap(), None);
         assert_eq!(
             set_lws_server(Network::Stagenet, "lws.example:8443".into()).unwrap(),
-            "http://lws.example:8443"
+            "https://lws.example:8443"
+        );
+        assert_eq!(
+            set_lws_server(Network::Stagenet, "http://lws.example:8443".into()),
+            Err(NodeError::InsecureLws)
+        );
+        assert_eq!(
+            set_lws_server(Network::Stagenet, "http://127.0.0.1:8443".into()).unwrap(),
+            "http://127.0.0.1:8443"
         );
         assert_eq!(
             lws_server(Network::Stagenet).unwrap().as_deref(),
-            Some("http://lws.example:8443")
+            Some("http://127.0.0.1:8443")
         );
         assert_eq!(lws_server(Network::Testnet).unwrap(), None);
         clear_lws_server(Network::Stagenet).unwrap();

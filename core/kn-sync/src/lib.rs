@@ -47,6 +47,10 @@ pub enum SyncError {
     BadProxyUrl,
     #[error("onion addresses need a Tor proxy")]
     NeedsProxy,
+    #[error(
+        "a light wallet server receives the view key, so it must use https (or be an onion or local address)"
+    )]
+    InsecureLws,
 }
 
 impl From<monero_interface::InterfaceError> for SyncError {

@@ -24,7 +24,11 @@ use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
 use crate::SyncError;
-use crate::node::{NodeUrl, http_client};
+use crate::node::{NodeUrl, http_client, read_limited};
+
+/// Largest answer accepted from a light wallet server. A busy wallet's
+/// history is a few megabytes; this leaves ample room.
+const MAX_RESPONSE: usize = 64 << 20;
 use crate::scan::SUBADDRESS_LOOKAHEAD;
 use crate::state::{OwnedOutput, Spend, SyncState};
 
@@ -55,8 +59,13 @@ pub struct LwsReport {
 impl LwsServer {
     /// # Errors
     ///
-    /// Fails only if the TLS stack cannot be set up.
+    /// [`SyncError::InsecureLws`] for a plain-http address that is neither an
+    /// onion service nor this device: the view key would cross the network
+    /// unencrypted.
     pub fn new(url: &NodeUrl) -> Result<Self, SyncError> {
+        if !url.is_private_channel() {
+            return Err(SyncError::InsecureLws);
+        }
         Ok(Self {
             client: http_client(url)?,
             base: url.as_str().into(),
@@ -78,10 +87,7 @@ impl LwsServer {
             501 => return Err(SyncError::LwsCreationRefused),
             status => return Err(SyncError::Node(format!("server answered HTTP {status}"))),
         }
-        let bytes = response
-            .bytes()
-            .await
-            .map_err(|e| SyncError::Node(format!("reading response: {e}")))?;
+        let bytes = read_limited(response, MAX_RESPONSE).await?;
         serde_json::from_slice(&bytes)
             .map_err(|e| SyncError::Node(format!("unexpected response to {route}: {e}")))
     }
@@ -454,12 +460,26 @@ fn apply_replies(
         .map(|t| (t.hash.as_str(), t.coinbase))
         .collect();
 
-    let mut outputs = Vec::new();
+    let mut outputs: Vec<OwnedOutput> = Vec::new();
+    let mut by_key: HashMap<[u8; 32], usize> = HashMap::new();
     let mut rejected_outputs = 0u32;
     for out in &unspent.outputs {
-        match owned_output(keys, out, coinbase.get(out.tx_hash.as_str()).copied()) {
-            Some(owned) => outputs.push(owned),
-            None => rejected_outputs = rejected_outputs.saturating_add(1),
+        let Some(owned) = owned_output(keys, out, coinbase.get(out.tx_hash.as_str()).copied())
+        else {
+            rejected_outputs = rejected_outputs.saturating_add(1);
+            continue;
+        };
+        // One spendable output per one-time key (see the burning bug note in
+        // scan.rs): a duplicate keeps the larger and counts as rejected.
+        let key = owned.output.key().compress().to_bytes();
+        if let Some(&i) = by_key.get(&key) {
+            rejected_outputs = rejected_outputs.saturating_add(1);
+            if owned.amount() > outputs[i].amount() {
+                outputs[i] = owned;
+            }
+        } else {
+            by_key.insert(key, outputs.len());
+            outputs.push(owned);
         }
     }
 

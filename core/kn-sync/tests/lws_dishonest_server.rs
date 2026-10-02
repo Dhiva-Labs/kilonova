@@ -128,6 +128,11 @@ async fn dishonest_outputs_and_spends_are_ignored() {
     let ours = keys.primary_address(Network::Mainnet);
     let our_sub = keys.address(Network::Mainnet, 0, 2).unwrap();
 
+    let burned = pay(&ours, 0);
+    let same_key = [
+        output(7, burned.clone(), (0, 0), 2),
+        output(8, burned, (0, 0), 20),
+    ];
     let routes = vec![
         ("login", json!({"new_address": false, "start_height": 0})),
         (
@@ -150,6 +155,10 @@ async fn dishonest_outputs_and_spends_are_ignored() {
                 rct_output(5, &ours, 11, 11),
                 // Ours, but the server inflates the amount.
                 rct_output(6, &ours, 3, 3_000),
+                // The same one-time key twice (the "burning bug"): only one
+                // can ever be spent, so only the larger counts.
+                same_key[0].clone(),
+                same_key[1].clone(),
             ]}),
         ),
         (
@@ -171,18 +180,18 @@ async fn dishonest_outputs_and_spends_are_ignored() {
         .await
         .unwrap();
 
-    assert_eq!(report.rejected_outputs, 3);
-    assert_eq!(state.outputs.len(), 3);
+    assert_eq!(report.rejected_outputs, 4);
+    assert_eq!(state.outputs.len(), 4);
     let amounts: Vec<u64> = state
         .outputs
         .iter()
         .map(kn_sync::OwnedOutput::amount)
         .collect();
-    assert_eq!(amounts, vec![5, 7, 11]);
+    assert_eq!(amounts, vec![5, 7, 11, 20]);
     assert!(
         state.outputs.iter().all(|o| o.spent.is_none()),
         "a spend without our key image must not count"
     );
-    assert_eq!(state.balance(1_000).total, 23);
+    assert_eq!(state.balance(1_000).total, 43);
     assert_eq!((report.scanned, report.tip), (200, 200));
 }

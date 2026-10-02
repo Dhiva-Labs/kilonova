@@ -251,7 +251,7 @@
   "lwsTitle": "Light wallet servers",
   "lwsSubtitle": "For wallets that sync through a server",
   "lwsHelp": "A light wallet server scans the blockchain for your wallet, so syncing is fast. To do that it needs your private view key, which lets it see every payment you receive. It cannot spend your funds. Use a server you run yourself, or one you trust. Kilonova does not run one and never picks one for you.",
-  "lwsServerLabel": "Server address, as host:port or https://host:port",
+  "lwsServerLabel": "Server address, as host:port (https) or a full URL",
   "lwsSaveAction": "Save",
   "lwsClearAction": "Remove",
   "lwsNotSet": "No server set for this network.",
@@ -540,5 +540,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "nodeErrorInsecureLws": "A light wallet server receives your view key, so it must use https. Plain http is allowed only for this device or an onion address.",
+  "syncInsecureLws": "This light wallet server uses plain http, so the view key was not sent. Use its https address.",
+  "sendFeeTooHigh": "The node or server suggested a fee far above normal, so nothing was built. Try again later or choose another node.",
+  "sendHighFeeWarning": "The fee is more than 5% of what you are sending."
 }

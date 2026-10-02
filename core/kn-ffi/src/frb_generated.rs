@@ -2896,6 +2896,7 @@ impl SseDecode for crate::api::nodes::NodeError {
             5 => crate::api::nodes::NodeError::BadProxy,
             6 => crate::api::nodes::NodeError::NeedsTor,
             7 => crate::api::nodes::NodeError::UntrustedCertificate,
+            8 => crate::api::nodes::NodeError::InsecureLws,
             _ => unreachable!("Invalid variant for NodeError: {}", inner),
         };
     }
@@ -3026,16 +3027,17 @@ impl SseDecode for crate::api::send::SendError {
             3 => crate::api::send::SendError::InsufficientFunds,
             4 => crate::api::send::SendError::TooManyInputs,
             5 => crate::api::send::SendError::ViewOnly,
-            6 => crate::api::send::SendError::NotSynced,
-            7 => crate::api::send::SendError::Unreachable,
-            8 => crate::api::send::SendError::Rejected,
-            9 => crate::api::send::SendError::Build,
-            10 => crate::api::send::SendError::LwsServerNotSet,
-            11 => crate::api::send::SendError::LwsConsentNeeded,
-            12 => crate::api::send::SendError::WrongPassword,
-            13 => crate::api::send::SendError::AlreadyUsed,
-            14 => crate::api::send::SendError::Locked,
-            15 => crate::api::send::SendError::Storage,
+            6 => crate::api::send::SendError::FeeTooHigh,
+            7 => crate::api::send::SendError::NotSynced,
+            8 => crate::api::send::SendError::Unreachable,
+            9 => crate::api::send::SendError::Rejected,
+            10 => crate::api::send::SendError::Build,
+            11 => crate::api::send::SendError::LwsServerNotSet,
+            12 => crate::api::send::SendError::LwsConsentNeeded,
+            13 => crate::api::send::SendError::WrongPassword,
+            14 => crate::api::send::SendError::AlreadyUsed,
+            15 => crate::api::send::SendError::Locked,
+            16 => crate::api::send::SendError::Storage,
             _ => unreachable!("Invalid variant for SendError: {}", inner),
         };
     }
@@ -3094,6 +3096,7 @@ impl SseDecode for crate::api::sync::SyncFailure {
             5 => crate::api::sync::SyncFailure::LwsDenied,
             6 => crate::api::sync::SyncFailure::LwsCreationRefused,
             7 => crate::api::sync::SyncFailure::NeedsTor,
+            8 => crate::api::sync::SyncFailure::InsecureLws,
             _ => unreachable!("Invalid variant for SyncFailure: {}", inner),
         };
     }
@@ -3666,6 +3669,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::nodes::NodeError {
             Self::BadProxy => 5.into_dart(),
             Self::NeedsTor => 6.into_dart(),
             Self::UntrustedCertificate => 7.into_dart(),
+            Self::InsecureLws => 8.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -3764,16 +3768,17 @@ impl flutter_rust_bridge::IntoDart for crate::api::send::SendError {
             Self::InsufficientFunds => 3.into_dart(),
             Self::TooManyInputs => 4.into_dart(),
             Self::ViewOnly => 5.into_dart(),
-            Self::NotSynced => 6.into_dart(),
-            Self::Unreachable => 7.into_dart(),
-            Self::Rejected => 8.into_dart(),
-            Self::Build => 9.into_dart(),
-            Self::LwsServerNotSet => 10.into_dart(),
-            Self::LwsConsentNeeded => 11.into_dart(),
-            Self::WrongPassword => 12.into_dart(),
-            Self::AlreadyUsed => 13.into_dart(),
-            Self::Locked => 14.into_dart(),
-            Self::Storage => 15.into_dart(),
+            Self::FeeTooHigh => 6.into_dart(),
+            Self::NotSynced => 7.into_dart(),
+            Self::Unreachable => 8.into_dart(),
+            Self::Rejected => 9.into_dart(),
+            Self::Build => 10.into_dart(),
+            Self::LwsServerNotSet => 11.into_dart(),
+            Self::LwsConsentNeeded => 12.into_dart(),
+            Self::WrongPassword => 13.into_dart(),
+            Self::AlreadyUsed => 14.into_dart(),
+            Self::Locked => 15.into_dart(),
+            Self::Storage => 16.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -3842,6 +3847,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::sync::SyncFailure {
             Self::LwsDenied => 5.into_dart(),
             Self::LwsCreationRefused => 6.into_dart(),
             Self::NeedsTor => 7.into_dart(),
+            Self::InsecureLws => 8.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -4306,6 +4312,7 @@ impl SseEncode for crate::api::nodes::NodeError {
                 crate::api::nodes::NodeError::BadProxy => 5,
                 crate::api::nodes::NodeError::NeedsTor => 6,
                 crate::api::nodes::NodeError::UntrustedCertificate => 7,
+                crate::api::nodes::NodeError::InsecureLws => 8,
                 _ => {
                     unimplemented!("");
                 }
@@ -4426,16 +4433,17 @@ impl SseEncode for crate::api::send::SendError {
                 crate::api::send::SendError::InsufficientFunds => 3,
                 crate::api::send::SendError::TooManyInputs => 4,
                 crate::api::send::SendError::ViewOnly => 5,
-                crate::api::send::SendError::NotSynced => 6,
-                crate::api::send::SendError::Unreachable => 7,
-                crate::api::send::SendError::Rejected => 8,
-                crate::api::send::SendError::Build => 9,
-                crate::api::send::SendError::LwsServerNotSet => 10,
-                crate::api::send::SendError::LwsConsentNeeded => 11,
-                crate::api::send::SendError::WrongPassword => 12,
-                crate::api::send::SendError::AlreadyUsed => 13,
-                crate::api::send::SendError::Locked => 14,
-                crate::api::send::SendError::Storage => 15,
+                crate::api::send::SendError::FeeTooHigh => 6,
+                crate::api::send::SendError::NotSynced => 7,
+                crate::api::send::SendError::Unreachable => 8,
+                crate::api::send::SendError::Rejected => 9,
+                crate::api::send::SendError::Build => 10,
+                crate::api::send::SendError::LwsServerNotSet => 11,
+                crate::api::send::SendError::LwsConsentNeeded => 12,
+                crate::api::send::SendError::WrongPassword => 13,
+                crate::api::send::SendError::AlreadyUsed => 14,
+                crate::api::send::SendError::Locked => 15,
+                crate::api::send::SendError::Storage => 16,
                 _ => {
                     unimplemented!("");
                 }
@@ -4482,6 +4490,7 @@ impl SseEncode for crate::api::sync::SyncFailure {
                 crate::api::sync::SyncFailure::LwsDenied => 5,
                 crate::api::sync::SyncFailure::LwsCreationRefused => 6,
                 crate::api::sync::SyncFailure::NeedsTor => 7,
+                crate::api::sync::SyncFailure::InsecureLws => 8,
                 _ => {
                     unimplemented!("");
                 }

@@ -172,13 +172,21 @@ impl WalletKeys {
     ///
     /// Returns an error if the word count, any word, or the checksum is wrong.
     pub fn from_mnemonic(phrase: &str) -> Result<(Self, Mnemonic), KeyError> {
-        let normalized = Zeroizing::new(
+        // Each lowercased word is a copy of the secret; keep them all in
+        // zeroizing buffers.
+        let words: Zeroizing<Vec<Zeroizing<String>>> = Zeroizing::new(
             phrase
                 .split_whitespace()
-                .map(str::to_lowercase)
-                .collect::<Vec<_>>()
-                .join(" "),
+                .map(|w| Zeroizing::new(w.to_lowercase()))
+                .collect(),
         );
+        let mut normalized = Zeroizing::new(String::with_capacity(phrase.len()));
+        for (i, word) in words.iter().enumerate() {
+            if i > 0 {
+                normalized.push(' ');
+            }
+            normalized.push_str(word);
+        }
         match normalized.split(' ').filter(|w| !w.is_empty()).count() {
             25 => {
                 let seed = ClassicSeed::from_string(ClassicLanguage::English, normalized).map_err(

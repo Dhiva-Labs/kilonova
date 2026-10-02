@@ -66,6 +66,7 @@ pub async fn sync(
     }
 
     let mut owned = key_image_index(state);
+    let mut by_output_key = output_key_index(state);
 
     loop {
         if cancel.load(Ordering::Relaxed) {
@@ -74,6 +75,7 @@ pub async fn sync(
         let tip = to_u64(daemon.latest_block_number().await?)? + 1;
         if rewind_if_reorganized(daemon, state).await? {
             owned = key_image_index(state);
+            by_output_key = output_key_index(state);
         }
         on_batch(
             state,
@@ -95,7 +97,15 @@ pub async fn sync(
             .await?;
         for block in blocks {
             let height = state.next_height;
-            scan_block(&mut scanner, keys, state, &mut owned, height, block)?;
+            scan_block(
+                &mut scanner,
+                keys,
+                state,
+                &mut owned,
+                &mut by_output_key,
+                height,
+                block,
+            )?;
         }
     }
 }
@@ -105,6 +115,7 @@ fn scan_block(
     keys: &WalletKeys,
     state: &mut SyncState,
     owned: &mut HashMap<[u8; 32], usize>,
+    by_output_key: &mut HashMap<[u8; 32], usize>,
     height: u64,
     block: ScannableBlock,
 ) -> Result<(), SyncError> {
@@ -136,16 +147,30 @@ fn scan_block(
     // them come with sending.
     for output in found.ignore_additional_timelock() {
         let key_image = keys.key_image(output.key(), output.key_offset());
-        if let Some(ki) = key_image {
-            owned.insert(ki, state.outputs.len());
-        }
-        state.outputs.push(OwnedOutput {
+        let new = OwnedOutput {
             miner: output.transaction() == miner_tx,
             output,
             height,
             key_image,
             spent: None,
-        });
+        };
+        // Two outputs with the same one-time key share one key image, so
+        // only one of them can ever be spent (the "burning bug"). Keep the
+        // larger, as Monero's own wallet does, so the balance never counts
+        // money that cannot be spent.
+        let key = new.output.key().compress().to_bytes();
+        if let Some(&i) = by_output_key.get(&key) {
+            let existing = &state.outputs[i];
+            if existing.spent.is_none() && new.amount() > existing.amount() {
+                state.outputs[i] = new;
+            }
+            continue;
+        }
+        if let Some(ki) = key_image {
+            owned.insert(ki, state.outputs.len());
+        }
+        by_output_key.insert(key, state.outputs.len());
+        state.outputs.push(new);
     }
     state.record_block(height, hash);
     Ok(())
@@ -225,7 +250,7 @@ async fn scan_pool(
         let amount = output.commitment().amount;
         match payments.iter_mut().find(|p| p.tx == tx) {
             Some(p) => {
-                p.amount += amount;
+                p.amount = p.amount.saturating_add(amount);
                 if !p.subaddresses.contains(&index) {
                     p.subaddresses.push(index);
                 }
@@ -259,6 +284,15 @@ async fn rewind_if_reorganized(
 }
 
 /// Owned outputs by key image, pointing into `state.outputs`.
+fn output_key_index(state: &SyncState) -> HashMap<[u8; 32], usize> {
+    state
+        .outputs
+        .iter()
+        .enumerate()
+        .map(|(i, o)| (o.output.key().compress().to_bytes(), i))
+        .collect()
+}
+
 fn key_image_index(state: &SyncState) -> HashMap<[u8; 32], usize> {
     state
         .outputs

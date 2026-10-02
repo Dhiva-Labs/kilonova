@@ -34,6 +34,16 @@ pub const MAX_INPUTS: usize = 100;
 /// Monero allows up to 16 outputs; one is kept for change.
 pub const MAX_PAYMENTS: usize = 15;
 
+/// Highest fee rate accepted from a node or light wallet server, in atomic
+/// units per byte of weight: about 2,500 times mainnet's normal rate, so a
+/// lying server cannot make a transaction pay an absurd fee. Regtest chains
+/// suggest higher rates than mainnet; their normal rate stays below this.
+pub const MAX_FEE_PER_WEIGHT: u64 = 50_000_000;
+
+/// Fee rounding (quantization) masks larger than this are refused; Monero's
+/// is 10,000.
+const MAX_FEE_MASK: u64 = 10_000;
+
 /// Where decoys, fee rates and broadcasting come from: the wallet's node in
 /// full mode, its light wallet server in LWS mode.
 #[derive(Clone, Copy)]
@@ -86,6 +96,8 @@ pub enum TxError {
     TooManyInputs,
     #[error("view-only wallets cannot send")]
     ViewOnly,
+    #[error("the node or server suggested a fee far above normal; choose another")]
+    FeeTooHigh,
     #[error("the node could not provide what sending needs: {0}")]
     Node(String),
     #[error("the network rejected the transaction: {0}")]
@@ -169,7 +181,9 @@ pub async fn prepare(
     }
     let fee_rate = fee_rate(backend, keys, network, priority).await?;
     let available = spendable(state, tip);
-    let total_available: u64 = available.iter().map(|o| o.amount()).sum();
+    let total_available = available
+        .iter()
+        .fold(0u64, |sum, o| sum.saturating_add(o.amount()));
     // monero-oxide wants the number of the latest block (its index), while
     // `tip` counts blocks.
     let block_number = usize::try_from(tip.saturating_sub(1))
@@ -203,7 +217,13 @@ struct Context<'a> {
 /// Pays `payments`: enough of the largest outputs for the amount, then one
 /// more at a time until the fee is covered too.
 async fn pay(ctx: &Context<'_>, payments: Vec<(MoneroAddress, u64)>) -> Result<Prepared, TxError> {
-    let wanted: u64 = payments.iter().map(|(_, amount)| amount).sum();
+    let wanted = payments
+        .iter()
+        .try_fold(0u64, |sum, (_, amount)| sum.checked_add(*amount))
+        .ok_or(TxError::InsufficientFunds {
+            available: ctx.total_available,
+            needed: u64::MAX,
+        })?;
     let mut used = needed_inputs(ctx.available, wanted);
     if used > ctx.available.len() {
         return Err(TxError::InsufficientFunds {
@@ -327,9 +347,12 @@ async fn fee_rate(
 ) -> Result<FeeRate, TxError> {
     match backend {
         Backend::Node(daemon) => daemon
-            .fee_rate(priority.into(), u64::MAX)
+            .fee_rate(priority.into(), MAX_FEE_PER_WEIGHT)
             .await
-            .map_err(|e| TxError::Node(e.to_string())),
+            .map_err(|e| match e {
+                monero_interface::FeeError::InvalidFee => TxError::FeeTooHigh,
+                other => TxError::Node(other.to_string()),
+            }),
         Backend::Lws(server) => {
             let fees = server
                 .fees(keys, network)
@@ -342,7 +365,11 @@ async fn fee_rate(
                 Priority::Urgent => 3,
             }
             .min(fees.per_priority.len() - 1);
-            FeeRate::new(fees.per_priority[index], fees.mask)
+            let per_weight = fees.per_priority[index];
+            if per_weight > MAX_FEE_PER_WEIGHT || fees.mask > MAX_FEE_MASK {
+                return Err(TxError::FeeTooHigh);
+            }
+            FeeRate::new(per_weight, fees.mask)
                 .ok_or_else(|| TxError::Node("the server suggested an invalid fee".into()))
         }
     }
@@ -608,7 +635,9 @@ fn finish(
         key_candidates,
     } = signable;
     let fee = signable.necessary_fee();
-    let input_total: u64 = inputs.iter().map(|o| o.amount()).sum();
+    let input_total = inputs
+        .iter()
+        .fold(0u64, |sum, o| sum.saturating_add(o.amount()));
     let transaction = keys.sign(signable).map_err(|e| match e {
         kn_keys::KeyError::ViewOnly => TxError::ViewOnly,
         other => TxError::Build(other.to_string()),
@@ -627,7 +656,7 @@ fn finish(
         hash: transaction.hash(),
         amount,
         fee,
-        change: input_total.saturating_sub(amount + fee),
+        change: input_total.saturating_sub(amount.saturating_add(fee)),
         spends,
         destinations: payments
             .iter()

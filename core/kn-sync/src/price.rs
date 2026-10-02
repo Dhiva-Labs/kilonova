@@ -5,7 +5,7 @@
 use serde_json::Value;
 
 use crate::SyncError;
-use crate::node::{NodeUrl, http_client};
+use crate::node::{NodeUrl, http_client, read_limited};
 
 /// Currencies offered, as ISO 4217 codes in lower case.
 pub const PRICE_CURRENCIES: &[&str] = &[
@@ -35,10 +35,8 @@ pub async fn xmr_price(source: &NodeUrl, currency: &str) -> Result<f64, SyncErro
         .await
         .map_err(|e| SyncError::Node(format!("price: {e}")))?
         .error_for_status()
-        .map_err(|e| SyncError::Node(format!("price: {e}")))?
-        .bytes()
-        .await
         .map_err(|e| SyncError::Node(format!("price: {e}")))?;
+    let body = read_limited(body, 64 << 10).await?;
     let reply: Value =
         serde_json::from_slice(&body).map_err(|e| SyncError::Node(format!("price: {e}")))?;
     reply["monero"][currency]

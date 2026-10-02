@@ -122,19 +122,22 @@ async fn requests_go_through_the_proxy() {
     );
 
     set_proxy(Some(proxy));
-    // A name no resolver here knows: only the proxy can look it up.
+    // Plain http to a named host would expose the view key; refused before
+    // anything is sent, proxy or not.
     let named = NodeUrl::parse("http://lws.kilonova.invalid:8443").unwrap();
-    let info = check_lws(&named, Network::Mainnet).await.unwrap();
-    assert_eq!(info.height, 42);
+    assert!(matches!(
+        check_lws(&named, Network::Mainnet).await,
+        Err(SyncError::InsecureLws)
+    ));
+    // Onion names resolve only inside Tor: reaching one proves the name
+    // went to the proxy.
     let info = check_lws(&onion, Network::Mainnet).await.unwrap();
+    assert_eq!(info.height, 42);
     assert_eq!(info.server_type.as_deref(), Some("fake"));
     set_proxy(None);
 
     assert_eq!(
         *seen.lock().unwrap(),
-        [
-            "lws.kilonova.invalid",
-            "kilonovaexampleexampleexampleexampleexampleexample.onion"
-        ]
+        ["kilonovaexampleexampleexampleexampleexampleexample.onion"]
     );
 }
