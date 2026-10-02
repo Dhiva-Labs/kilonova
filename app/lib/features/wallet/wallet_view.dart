@@ -210,7 +210,8 @@ void _showQr(BuildContext context, String title, String address) {
             ColoredBox(
               color: KnQr.paper,
               child: Padding(
-                padding: const EdgeInsets.all(KnSpace.md),
+                // A quiet zone of about four modules, as scanners expect.
+                padding: const EdgeInsets.all(KnSpace.lg),
                 child: QrImageView(
                   data: paymentRequestUri(address),
                   size: 248,

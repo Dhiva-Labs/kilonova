@@ -1,14 +1,19 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_zxing/flutter_zxing.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kilonova/app.dart';
+import 'package:kilonova/features/send/monero_uri.dart';
 import 'package:kilonova/features/wallets/wallet_registry.dart';
 import 'package:kilonova/platform/biometric_unlock.dart';
 import 'package:kilonova/src/rust/api/network.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
 import 'package:kilonova/src/rust/frb_generated.dart';
+import 'package:kilonova/theme/tokens.dart';
 
 /// Runs the real app with the Rust core built by the platform toolchain,
 /// proving the flutter_rust_bridge wiring end to end.
@@ -39,6 +44,43 @@ void main() {
     expect(find.text('Stagenet'), findsOneWidget);
     expect(find.text('Testnet'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Create wallet'), findsOneWidget);
+  });
+
+  testWidgets('QR codes the app shows can be read back by its scanner', (
+    tester,
+  ) async {
+    const address =
+        '44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A';
+    final uri = paymentRequestUri(address, amount: BigInt.from(1500000000));
+    // Dark modules on white with a quiet zone, as the receive dialog shows.
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)
+      ..drawRect(
+        const Rect.fromLTWH(0, 0, 700, 700),
+        Paint()..color = KnQr.paper,
+      );
+    canvas.translate(50, 50);
+    QrPainter(
+      data: uri,
+      version: QrVersions.auto,
+      gapless: true,
+      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: KnQr.ink),
+      dataModuleStyle: const QrDataModuleStyle(
+        dataModuleShape: QrDataModuleShape.square,
+        color: KnQr.ink,
+      ),
+    ).paint(canvas, const Size(600, 600));
+    final image = await recorder.endRecording().toImage(700, 700);
+    final png = await image.toByteData(format: ui.ImageByteFormat.png);
+    final file = File('${Directory.systemTemp.createTempSync().path}/qr.png')
+      ..writeAsBytesSync(png!.buffer.asUint8List());
+    final code = await zx.readBarcodeImagePath(
+      XFile(file.path),
+      DecodeParams(format: Format.qrCode, tryHarder: true, maxSize: 1600),
+    );
+    expect(code.isValid, isTrue, reason: code.error);
+    expect(code.text, uri);
+    expect(parsePaymentRequest(code.text!)!.payments.single.address, address);
   });
 
   testWidgets('privacy policy renders from the bundled asset', (tester) async {

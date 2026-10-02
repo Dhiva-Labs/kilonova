@@ -81,6 +81,11 @@ or font/CDN providers. Fonts and icons are bundled with the app.
 ## Permissions
 
 - **Camera (Android):** only to scan QR codes, only while the scanner is open.
+  Frames are read on the device and never saved or sent. On desktop you pick an
+  image file instead, which is read the same way.
+- **Fingerprint or face (Android):** only if you turn on biometric unlock.
+
+Kilonova does not ask for the microphone, contacts, location or shared storage.
 - **Notifications:** to tell you about incoming payments, if you enable it.
 - **Network:** to reach the node, server or price service you configured.
 
@@ -106,6 +111,9 @@ Security issues: see SECURITY.md in the repository.
 
 ## Changelog
 
-- (date): first version.
+Newest first.
+
+- 2026-10-02: QR scanning: what the camera is used for, and permissions the app never asks for.
 - 2026-10-02: describe what a light wallet server sees when you send.
 - 2026-10-02: describe the consent step before a view key is shared with a light wallet server.
+- 2026-10-02: first version.

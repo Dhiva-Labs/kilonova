@@ -13,6 +13,7 @@ import '../../widgets/error_line.dart';
 import '../../widgets/password_fields.dart';
 import '../wallets/wallet_registry.dart';
 import 'monero_uri.dart';
+import 'scan_qr.dart';
 
 /// Most recipients one transaction can pay; matches the Rust core.
 const _maxRecipients = 15;
@@ -90,6 +91,23 @@ class _SendScreenState extends State<SendScreen> {
     if (text == null || !mounted) return;
     if (!_applyRequest(recipient, text)) {
       recipient.address.text = text.trim();
+    }
+  }
+
+  Future<void> _scan(_Recipient recipient) async {
+    final l = AppLocalizations.of(context);
+    final text = await scanQr(context);
+    if (text == null || !mounted) return;
+    final request = parsePaymentRequest(text);
+    if (request == null) {
+      setState(() => recipient.addressError = l.scanNotMonero);
+      return;
+    }
+    if (!_applyRequest(recipient, text)) {
+      setState(() {
+        recipient.address.text = request.payments.first.address;
+        recipient.addressError = null;
+      });
     }
   }
 
@@ -252,10 +270,20 @@ class _SendScreenState extends State<SendScreen> {
             decoration: InputDecoration(
               labelText: l.sendAddressField,
               errorText: r.addressError,
-              suffixIcon: IconButton(
-                tooltip: l.pasteAction,
-                icon: const Icon(Icons.content_paste_outlined, size: 20),
-                onPressed: _busy ? null : () => _paste(r),
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: scansWithCamera ? l.scanAction : l.scanImageAction,
+                    icon: const Icon(Icons.qr_code_scanner, size: 20),
+                    onPressed: _busy ? null : () => _scan(r),
+                  ),
+                  IconButton(
+                    tooltip: l.pasteAction,
+                    icon: const Icon(Icons.content_paste_outlined, size: 20),
+                    onPressed: _busy ? null : () => _paste(r),
+                  ),
+                ],
               ),
             ),
             onChanged: (v) => _applyRequest(r, v),
