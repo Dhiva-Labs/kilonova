@@ -9,7 +9,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-argon2 = { version = "0.5", features = ["zeroize"] }
+argon2 = { version = "0.6", features = ["zeroize"] }
 chacha20poly1305 = "0.10"
 kn-keys = { path = "../kn-keys" }
 rand_core = { version = "0.6", features = ["getrandom"] }
