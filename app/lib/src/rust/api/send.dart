@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `for_wallet`, `prepare_unsigned`, `prepare`, `publish_signed`, `publish`, `url`
+// These functions are ignored because they are not marked as `pub`: `for_wallet`, `parse_keys`, `prepare_send_inner`, `prepare_unsigned`, `prepare`, `publish_signed`, `publish`, `url`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Route`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
 
@@ -103,12 +103,17 @@ class SendSummary {
   /// The node or light wallet server that will publish it.
   final String via;
 
+  /// How many of this wallet's addresses the spent coins arrived on. More
+  /// than one lets whoever paid them see they belong to one wallet.
+  final int linkedAddresses;
+
   const SendSummary({
     required this.txHash,
     required this.payments,
     required this.fee,
     required this.change,
     required this.via,
+    required this.linkedAddresses,
   });
 
   @override
@@ -117,7 +122,8 @@ class SendSummary {
       payments.hashCode ^
       fee.hashCode ^
       change.hashCode ^
-      via.hashCode;
+      via.hashCode ^
+      linkedAddresses.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -128,5 +134,6 @@ class SendSummary {
           payments == other.payments &&
           fee == other.fee &&
           change == other.change &&
-          via == other.via;
+          via == other.via &&
+          linkedAddresses == other.linkedAddresses;
 }

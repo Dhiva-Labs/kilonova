@@ -4,6 +4,7 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/book.dart';
+import 'api/coins.dart';
 import 'api/cold.dart';
 import 'api/core.dart';
 import 'api/network.dart';
@@ -11,6 +12,7 @@ import 'api/nodes.dart';
 import 'api/preferences.dart';
 import 'api/price.dart';
 import 'api/proof.dart';
+import 'api/requests.dart';
 import 'api/send.dart';
 import 'api/sync.dart';
 import 'api/wallets.dart';
@@ -175,6 +177,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CertificateDetails dco_decode_certificate_details(dynamic raw);
 
   @protected
+  CoinRow dco_decode_coin_row(dynamic raw);
+
+  @protected
   ColdFailure dco_decode_cold_failure(dynamic raw);
 
   @protected
@@ -214,6 +219,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AddressRow> dco_decode_list_address_row(dynamic raw);
 
   @protected
+  List<CoinRow> dco_decode_list_coin_row(dynamic raw);
+
+  @protected
   List<ContactRow> dco_decode_list_contact_row(dynamic raw);
 
   @protected
@@ -233,6 +241,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  List<RequestRow> dco_decode_list_request_row(dynamic raw);
 
   @protected
   List<WalletSummary> dco_decode_list_wallet_summary(dynamic raw);
@@ -284,6 +295,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProofFailure dco_decode_proof_failure(dynamic raw);
+
+  @protected
+  RequestRow dco_decode_request_row(dynamic raw);
+
+  @protected
+  RequestStatus dco_decode_request_status(dynamic raw);
 
   @protected
   ScanProgress dco_decode_scan_progress(dynamic raw);
@@ -467,6 +484,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoinRow sse_decode_coin_row(SseDeserializer deserializer);
+
+  @protected
   ColdFailure sse_decode_cold_failure(SseDeserializer deserializer);
 
   @protected
@@ -508,6 +528,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AddressRow> sse_decode_list_address_row(SseDeserializer deserializer);
 
   @protected
+  List<CoinRow> sse_decode_list_coin_row(SseDeserializer deserializer);
+
+  @protected
   List<ContactRow> sse_decode_list_contact_row(SseDeserializer deserializer);
 
   @protected
@@ -527,6 +550,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  List<RequestRow> sse_decode_list_request_row(SseDeserializer deserializer);
 
   @protected
   List<WalletSummary> sse_decode_list_wallet_summary(
@@ -582,6 +608,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProofFailure sse_decode_proof_failure(SseDeserializer deserializer);
+
+  @protected
+  RequestRow sse_decode_request_row(SseDeserializer deserializer);
+
+  @protected
+  RequestStatus sse_decode_request_status(SseDeserializer deserializer);
 
   @protected
   ScanProgress sse_decode_scan_progress(SseDeserializer deserializer);
@@ -791,6 +823,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_coin_row(CoinRow self, SseSerializer serializer);
+
+  @protected
   void sse_encode_cold_failure(ColdFailure self, SseSerializer serializer);
 
   @protected
@@ -836,6 +871,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_coin_row(List<CoinRow> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_contact_row(
     List<ContactRow> self,
     SseSerializer serializer,
@@ -865,6 +903,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_request_row(
+    List<RequestRow> self,
     SseSerializer serializer,
   );
 
@@ -924,6 +968,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_proof_failure(ProofFailure self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_request_row(RequestRow self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_request_status(RequestStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_scan_progress(ScanProgress self, SseSerializer serializer);

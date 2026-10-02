@@ -144,7 +144,7 @@ pub struct HistoryItem {
 /// Sync state shared between the wallet and its background task.
 pub(crate) struct SyncHandle {
     state: Mutex<SyncState>,
-    tip: AtomicU64,
+    pub(crate) tip: AtomicU64,
     /// Cancel flag of the current run. Starting a run cancels the previous
     /// one.
     current: Mutex<Arc<AtomicBool>>,

@@ -250,18 +250,28 @@ async fn scan_pool(
             .subaddress()
             .map_or((0, 0), |s| (s.account(), s.address()));
         let amount = output.commitment().amount;
-        match payments.iter_mut().find(|p| p.tx == tx) {
-            Some(p) => {
-                p.amount = p.amount.saturating_add(amount);
-                if !p.subaddresses.contains(&index) {
-                    p.subaddresses.push(index);
-                }
-            }
-            None => payments.push(PoolPayment {
+        let payment = if let Some(p) = payments.iter_mut().find(|p| p.tx == tx) {
+            p
+        } else {
+            payments.push(PoolPayment {
                 tx,
-                amount,
-                subaddresses: vec![index],
-            }),
+                amount: 0,
+                subaddresses: Vec::new(),
+                by_subaddress: Vec::new(),
+            });
+            payments.last_mut().expect("just pushed")
+        };
+        payment.amount = payment.amount.saturating_add(amount);
+        if !payment.subaddresses.contains(&index) {
+            payment.subaddresses.push(index);
+        }
+        match payment
+            .by_subaddress
+            .iter_mut()
+            .find(|(at, _)| *at == index)
+        {
+            Some((_, sum)) => *sum = sum.saturating_add(amount),
+            None => payment.by_subaddress.push((index, amount)),
         }
     }
     state.pool = payments;

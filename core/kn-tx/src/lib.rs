@@ -122,6 +122,9 @@ pub struct Prepared {
     pub spends: Vec<[u8; 32]>,
     /// Recipients and what each receives, as requested.
     pub destinations: Vec<(String, u64)>,
+    /// How many of this wallet's addresses the spent coins arrived on; see
+    /// [`linked_addresses`].
+    pub linked_addresses: usize,
     /// The transaction's secret key(s) as hex, the format other wallets'
     /// "check transaction key" expects: the main key, then any additional
     /// keys in output order. With it and a recipient's address, anyone can
@@ -140,9 +143,53 @@ impl std::fmt::Debug for Prepared {
     }
 }
 
+/// Which coins a transaction may use.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Selection {
+    /// One-time output keys never to spend: the owner's frozen coins.
+    pub exclude: Vec<[u8; 32]>,
+    /// If set, spend only these coins (the owner picked them).
+    pub only: Option<Vec<[u8; 32]>>,
+}
+
+impl Selection {
+    fn allows(&self, output: &OwnedOutput) -> bool {
+        let key = output.output.key().compress().to_bytes();
+        !self.exclude.contains(&key) && self.only.as_ref().is_none_or(|only| only.contains(&key))
+    }
+}
+
+/// How many different addresses of this wallet the given coins arrived
+/// on. Spending coins from several together lets whoever paid those
+/// addresses see they belong to one wallet.
+#[must_use]
+pub fn linked_addresses(coins: &[&OwnedOutput]) -> usize {
+    let mut seen: Vec<(u32, u32)> = Vec::new();
+    for c in coins {
+        let at = c
+            .output
+            .subaddress()
+            .map_or((0, 0), |s| (s.account(), s.address()));
+        if !seen.contains(&at) {
+            seen.push(at);
+        }
+    }
+    seen.len()
+}
+
 /// Outputs that can be spent at chain height `tip`, largest first.
 #[must_use]
 pub fn spendable(state: &SyncState, tip: u64) -> Vec<&OwnedOutput> {
+    spendable_selected(state, tip, &Selection::default())
+}
+
+/// [`spendable`], limited by `selection`.
+#[must_use]
+pub fn spendable_selected<'a>(
+    state: &'a SyncState,
+    tip: u64,
+    selection: &Selection,
+) -> Vec<&'a OwnedOutput> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
@@ -154,6 +201,7 @@ pub fn spendable(state: &SyncState, tip: u64) -> Vec<&OwnedOutput> {
                 && o.key_image.is_some()
                 && tip >= o.unlock_height()
                 && timelock_passed(o.output.additional_timelock(), tip, now)
+                && selection.allows(o)
         })
         .collect();
     outputs.sort_by_key(|o| std::cmp::Reverse(o.amount()));
@@ -178,12 +226,40 @@ pub async fn prepare(
     request: &Request,
     priority: Priority,
 ) -> Result<Prepared, TxError> {
+    let selection = Selection::default();
+    prepare_selected(
+        backend, keys, network, state, tip, request, priority, &selection,
+    )
+    .await
+}
+
+/// [`prepare`], spending only coins `selection` allows.
+///
+/// # Errors
+///
+/// See [`TxError`].
+// The parameters are what building a transaction needs; grouping them into
+// a struct would only move the list.
+#[allow(clippy::too_many_arguments)]
+pub async fn prepare_selected(
+    backend: Backend<'_>,
+    keys: &WalletKeys,
+    network: Network,
+    state: &SyncState,
+    tip: u64,
+    request: &Request,
+    priority: Priority,
+    selection: &Selection,
+) -> Result<Prepared, TxError> {
     if keys.is_view_only() {
         return Err(TxError::ViewOnly);
     }
-    let available = spendable(state, tip);
+    let available = spendable_selected(state, tip, selection);
     let built = build(backend, keys, network, &available, tip, request, priority).await?;
-    finish(keys, built.signable, &built.used, built.amount)
+    let linked = linked_addresses(&built.used);
+    let mut prepared = finish(keys, built.signable, &built.used, built.amount)?;
+    prepared.linked_addresses = linked;
+    Ok(prepared)
 }
 
 /// A transaction built but not signed, for a cold wallet to sign.
@@ -199,6 +275,8 @@ pub struct Unsigned {
     pub destinations: Vec<(String, u64)>,
     /// One-time keys of the outputs it spends.
     pub inputs: Vec<[u8; 32]>,
+    /// See [`linked_addresses`].
+    pub linked_addresses: usize,
 }
 
 /// Builds a transaction for `request` without signing it, so a view-only
@@ -218,7 +296,30 @@ pub async fn prepare_unsigned(
     request: &Request,
     priority: Priority,
 ) -> Result<Unsigned, TxError> {
-    let available = spendable(state, tip);
+    let selection = Selection::default();
+    prepare_unsigned_selected(
+        backend, keys, network, state, tip, request, priority, &selection,
+    )
+    .await
+}
+
+/// [`prepare_unsigned`], spending only coins `selection` allows.
+///
+/// # Errors
+///
+/// See [`TxError`].
+#[allow(clippy::too_many_arguments)]
+pub async fn prepare_unsigned_selected(
+    backend: Backend<'_>,
+    keys: &WalletKeys,
+    network: Network,
+    state: &SyncState,
+    tip: u64,
+    request: &Request,
+    priority: Priority,
+    selection: &Selection,
+) -> Result<Unsigned, TxError> {
+    let available = spendable_selected(state, tip, selection);
     let built = build(backend, keys, network, &available, tip, request, priority).await?;
     let input_total = built
         .used
@@ -240,6 +341,7 @@ pub async fn prepare_unsigned(
             .iter()
             .map(|o| o.output.key().compress().to_bytes())
             .collect(),
+        linked_addresses: linked_addresses(&built.used),
         signable: built.signable.transaction.serialize(),
     })
 }
@@ -785,6 +887,7 @@ fn finish(
             .map(|(address, amount)| (address.to_string(), *amount))
             .collect(),
         tx_key,
+        linked_addresses: 1,
         transaction,
     })
 }

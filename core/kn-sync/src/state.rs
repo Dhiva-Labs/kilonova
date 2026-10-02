@@ -107,6 +107,9 @@ pub struct PoolPayment {
     pub amount: u64,
     /// Account/index pairs that receive it.
     pub subaddresses: Vec<(u32, u32)>,
+    /// What each of those receives, atomic units.
+    #[serde(default)]
+    pub by_subaddress: Vec<((u32, u32), u64)>,
 }
 
 /// Everything sync has learned about one wallet.
@@ -148,6 +151,30 @@ impl SyncState {
             self.recent.pop_front();
         }
         self.next_height = height + 1;
+    }
+
+    /// What subaddress `(account, index)` received: in blocks, and waiting
+    /// in the pool.
+    #[must_use]
+    pub fn received_by(&self, account: u32, index: u32) -> (u64, u64) {
+        let at = |o: &&OwnedOutput| {
+            o.output
+                .subaddress()
+                .map_or((0, 0), |s| (s.account(), s.address()))
+                == (account, index)
+        };
+        let confirmed = self
+            .outputs
+            .iter()
+            .filter(at)
+            .fold(0u64, |sum, o| sum.saturating_add(o.amount()));
+        let pending = self
+            .pool
+            .iter()
+            .flat_map(|p| p.by_subaddress.iter())
+            .filter(|(at, _)| *at == (account, index))
+            .fold(0u64, |sum, (_, amount)| sum.saturating_add(*amount));
+        (confirmed, pending)
     }
 
     /// What a node said about a light wallet server's payment in `tx`, if it

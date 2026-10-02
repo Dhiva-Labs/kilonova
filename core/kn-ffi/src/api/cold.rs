@@ -415,6 +415,13 @@ impl OpenWallet {
                     .collect(),
             ),
         };
+        let frozen = self
+            .inner
+            .with(|w| Ok(w.data.frozen.iter().cloned().collect::<Vec<_>>()))?;
+        let selection = kn_tx::Selection {
+            exclude: super::send::parse_keys(&frozen),
+            only: None,
+        };
         let unsigned = RUNTIME.block_on(route.prepare_unsigned(
             &keys,
             network,
@@ -422,6 +429,7 @@ impl OpenWallet {
             tip,
             &request,
             Priority::from(priority),
+            &selection,
         ))?;
         let envelope = cold::sign_request(&keys, network, &state, &unsigned);
         Ok(ColdSend {
@@ -438,6 +446,7 @@ impl OpenWallet {
                 fee: unsigned.fee,
                 change: unsigned.change,
                 via: route.url().as_str().to_owned(),
+                linked_addresses: u32::try_from(unsigned.linked_addresses).unwrap_or(u32::MAX),
             },
             message: ColdMessage::of(&envelope),
         })

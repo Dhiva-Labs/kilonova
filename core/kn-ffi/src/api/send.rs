@@ -15,7 +15,7 @@ use flutter_rust_bridge::frb;
 use kn_keys::WalletKeys;
 use kn_store::SyncMode as StoreSyncMode;
 use kn_sync::{LwsServer, NodeUrl, SyncState, connect};
-use kn_tx::{Backend, Prepared, Priority, Request, TxError};
+use kn_tx::{Backend, Prepared, Priority, Request, Selection, TxError};
 use zeroize::Zeroizing;
 
 use super::network::Network;
@@ -126,6 +126,9 @@ pub struct SendSummary {
     pub change: u64,
     /// The node or light wallet server that will publish it.
     pub via: String,
+    /// How many of this wallet's addresses the spent coins arrived on. More
+    /// than one lets whoever paid them see they belong to one wallet.
+    pub linked_addresses: u32,
 }
 
 /// A signed transaction waiting for the owner's confirmation. It can be
@@ -182,6 +185,7 @@ impl Route {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn prepare(
         &self,
         keys: &WalletKeys,
@@ -190,6 +194,7 @@ impl Route {
         tip: u64,
         request: &Request,
         priority: Priority,
+        selection: &Selection,
     ) -> Result<Prepared, SendError> {
         Ok(match self {
             Self::Node(url) => {
@@ -197,16 +202,23 @@ impl Route {
                     .await
                     .map_err(|_| SendError::Unreachable)?;
                 let backend = Backend::Node(&daemon);
-                kn_tx::prepare(backend, keys, network, state, tip, request, priority).await?
+                kn_tx::prepare_selected(
+                    backend, keys, network, state, tip, request, priority, selection,
+                )
+                .await?
             }
             Self::Lws(url) => {
                 let server = LwsServer::new(url).map_err(|_| SendError::Unreachable)?;
                 let backend = Backend::Lws(&server);
-                kn_tx::prepare(backend, keys, network, state, tip, request, priority).await?
+                kn_tx::prepare_selected(
+                    backend, keys, network, state, tip, request, priority, selection,
+                )
+                .await?
             }
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn prepare_unsigned(
         &self,
         keys: &WalletKeys,
@@ -215,6 +227,7 @@ impl Route {
         tip: u64,
         request: &Request,
         priority: Priority,
+        selection: &Selection,
     ) -> Result<kn_tx::Unsigned, SendError> {
         Ok(match self {
             Self::Node(url) => {
@@ -222,14 +235,18 @@ impl Route {
                     .await
                     .map_err(|_| SendError::Unreachable)?;
                 let backend = Backend::Node(&daemon);
-                kn_tx::prepare_unsigned(backend, keys, network, state, tip, request, priority)
-                    .await?
+                kn_tx::prepare_unsigned_selected(
+                    backend, keys, network, state, tip, request, priority, selection,
+                )
+                .await?
             }
             Self::Lws(url) => {
                 let server = LwsServer::new(url).map_err(|_| SendError::Unreachable)?;
                 let backend = Backend::Lws(&server);
-                kn_tx::prepare_unsigned(backend, keys, network, state, tip, request, priority)
-                    .await?
+                kn_tx::prepare_unsigned_selected(
+                    backend, keys, network, state, tip, request, priority, selection,
+                )
+                .await?
             }
         })
     }
@@ -308,14 +325,46 @@ impl OpenWallet {
         sweep_to: Option<String>,
         priority: FeePriority,
     ) -> Result<PreparedSend, SendError> {
-        let (keys, network, mode, consent) = self.inner.with(|w| {
+        self.prepare_send_inner(payments, sweep_to, priority, None)
+    }
+
+    /// [`OpenWallet::prepare_send`], spending only the coins with these
+    /// one-time keys (hex), as listed by [`OpenWallet::coins`].
+    ///
+    /// # Errors
+    ///
+    /// As [`OpenWallet::prepare_send`]; [`SendError::InsufficientFunds`] if
+    /// the chosen coins do not cover the amount and fee.
+    pub fn prepare_send_from_coins(
+        &self,
+        payments: Vec<Payment>,
+        sweep_to: Option<String>,
+        priority: FeePriority,
+        coins: Vec<String>,
+    ) -> Result<PreparedSend, SendError> {
+        self.prepare_send_inner(payments, sweep_to, priority, Some(parse_keys(&coins)))
+    }
+
+    fn prepare_send_inner(
+        &self,
+        payments: Vec<Payment>,
+        sweep_to: Option<String>,
+        priority: FeePriority,
+        only: Option<Vec<[u8; 32]>>,
+    ) -> Result<PreparedSend, SendError> {
+        let (keys, network, mode, consent, frozen) = self.inner.with(|w| {
             Ok((
                 w.keys.clone(),
                 w.entry.network,
                 w.entry.mode,
                 w.data.lws_consent.clone(),
+                parse_keys(&w.data.frozen.iter().cloned().collect::<Vec<_>>()),
             ))
         })?;
+        let selection = Selection {
+            exclude: frozen,
+            only,
+        };
         if keys.is_view_only() {
             return Err(SendError::ViewOnly);
         }
@@ -341,6 +390,7 @@ impl OpenWallet {
             tip,
             &request,
             priority.into(),
+            &selection,
         ))?;
         let payments = match &request {
             Request::Pay(payments) => payments
@@ -363,6 +413,7 @@ impl OpenWallet {
                 fee: prepared.fee,
                 change: prepared.change,
                 via,
+                linked_addresses: u32::try_from(prepared.linked_addresses).unwrap_or(u32::MAX),
             },
             prepared: Mutex::new(Some(prepared)),
             route,
@@ -416,4 +467,12 @@ impl OpenWallet {
         });
         Ok(())
     }
+}
+
+/// One-time keys from their hex form; anything malformed is skipped.
+pub(crate) fn parse_keys(hex_keys: &[String]) -> Vec<[u8; 32]> {
+    hex_keys
+        .iter()
+        .filter_map(|k| hex::decode(k).ok()?.try_into().ok())
+        .collect()
 }
