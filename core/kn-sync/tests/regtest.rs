@@ -70,9 +70,16 @@ async fn sync_from(keys: &WalletKeys, state: &mut SyncState) {
     let (daemon, _) = connect(&NodeUrl::parse(NODE).unwrap(), Network::Mainnet)
         .await
         .unwrap();
-    sync(&daemon, keys, &[1], state, &AtomicBool::new(false), |_| {})
-        .await
-        .unwrap();
+    sync(
+        &daemon,
+        keys,
+        &[1],
+        state,
+        &AtomicBool::new(false),
+        |_, _| {},
+    )
+    .await
+    .unwrap();
 }
 
 fn other_address() -> String {

@@ -49,7 +49,7 @@ async fn scans_recent_stagenet_blocks_from_a_public_node() {
         &[1],
         &mut state,
         &AtomicBool::new(false),
-        |_| {
+        |_, _| {
             reports += 1;
         },
     )

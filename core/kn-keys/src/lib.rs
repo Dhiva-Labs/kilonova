@@ -92,7 +92,9 @@ impl fmt::Debug for Mnemonic {
     }
 }
 
-/// The keys of one wallet.
+/// The keys of one wallet. Cloning copies the secrets; every copy is wiped
+/// when dropped.
+#[derive(Clone)]
 pub struct WalletKeys {
     /// `None` for view-only wallets.
     spend: Option<Zeroizing<DalekScalar>>,

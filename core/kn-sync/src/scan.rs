@@ -37,9 +37,10 @@ pub struct Progress {
 /// Scans `daemon`'s chain from `state.next_height` to its tip.
 ///
 /// `accounts[i]` is how many subaddresses account `i` has handed out; each
-/// is watched with [`SUBADDRESS_LOOKAHEAD`] more. `progress` is called after
-/// every batch. Setting `cancel` stops after the current batch; the state is
-/// consistent at every batch boundary.
+/// is watched with [`SUBADDRESS_LOOKAHEAD`] more. `on_batch` is called with
+/// the state after every batch, which is the moment to save it. Setting
+/// `cancel` stops after the current batch; the state is consistent at every
+/// batch boundary.
 ///
 /// # Errors
 ///
@@ -51,7 +52,7 @@ pub async fn sync(
     accounts: &[u32],
     state: &mut SyncState,
     cancel: &AtomicBool,
-    mut progress: impl FnMut(Progress),
+    mut on_batch: impl FnMut(&SyncState, Progress),
 ) -> Result<(), SyncError> {
     let mut scanner = Scanner::new(keys.view_pair());
     for (account, handed_out) in accounts.iter().enumerate() {
@@ -74,10 +75,13 @@ pub async fn sync(
         if rewind_if_reorganized(daemon, state).await? {
             owned = key_image_index(state);
         }
-        progress(Progress {
-            scanned: state.next_height,
-            tip,
-        });
+        on_batch(
+            state,
+            Progress {
+                scanned: state.next_height,
+                tip,
+            },
+        );
         if state.next_height >= tip {
             return Ok(());
         }
