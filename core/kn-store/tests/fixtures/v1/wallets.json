@@ -1,0 +1,10 @@
+[
+  {
+    "id": "4c9e046dc961168abbc47a506e7604d8",
+    "name": "Fixture",
+    "network": "stagenet",
+    "mode": "full",
+    "view_only": false,
+    "created_at": 1790000000
+  }
+]
