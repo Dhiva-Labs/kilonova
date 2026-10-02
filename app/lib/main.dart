@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'app.dart';
+import 'features/wallets/wallet_registry.dart';
+import 'src/rust/api/wallets.dart';
 import 'src/rust/frb_generated.dart';
 
 Future<void> main() async {
@@ -15,5 +18,11 @@ Future<void> main() async {
       'IBM Plex Mono',
     ], ofl);
   });
-  runApp(const KilonovaApp());
+
+  final support = await getApplicationSupportDirectory();
+  await initWalletStore(dir: '${support.path}/wallets');
+  final registry = WalletRegistry();
+  await registry.reload();
+
+  runApp(KilonovaApp(registry: registry));
 }

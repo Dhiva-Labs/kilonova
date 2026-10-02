@@ -68,10 +68,54 @@ ThemeData buildTheme(Brightness brightness) {
       titleTextStyle: text.titleLarge,
     ),
     dividerTheme: DividerThemeData(color: c.border, thickness: 1, space: 1),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: c.surface,
+      labelStyle: text.bodyMedium!.copyWith(color: c.textSecondary),
+      helperStyle: text.bodySmall,
+      errorStyle: text.bodySmall!.copyWith(color: c.error),
+      border: _outline(c.border),
+      enabledBorder: _outline(c.border),
+      focusedBorder: _outline(c.accent, width: 2),
+      errorBorder: _outline(c.error),
+      focusedErrorBorder: _outline(c.error, width: 2),
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: c.accent,
+      selectionColor: c.border,
+      selectionHandleColor: c.accent,
+    ),
+    radioTheme: RadioThemeData(
+      fillColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? c.accent : c.textSecondary,
+      ),
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: c.surface,
+      surfaceTintColor: c.surface,
+      titleTextStyle: text.titleLarge,
+      contentTextStyle: text.bodyLarge,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: c.surface,
+      surfaceTintColor: c.surface,
+      textStyle: text.bodyMedium,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: c.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: c.text,
+      contentTextStyle: text.bodyMedium!.copyWith(color: c.bg),
+      behavior: SnackBarBehavior.floating,
+    ),
     listTileTheme: ListTileThemeData(
       iconColor: c.textSecondary,
       textColor: c.text,
-      tileColor: c.surface,
+      tileColor: c.bg,
       contentPadding: const EdgeInsets.symmetric(horizontal: KnSpace.md),
     ),
     filledButtonTheme: FilledButtonThemeData(
@@ -81,6 +125,10 @@ ThemeData buildTheme(Brightness brightness) {
         overlayColor: const WidgetStatePropertyAll(Colors.transparent),
         elevation: const WidgetStatePropertyAll(0),
         textStyle: WidgetStatePropertyAll(text.labelLarge),
+        shape: _controlShape,
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: KnSpace.md, vertical: 12),
+        ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -88,6 +136,7 @@ ThemeData buildTheme(Brightness brightness) {
         foregroundColor: _states(c.accent, c.accentHover),
         overlayColor: const WidgetStatePropertyAll(Colors.transparent),
         textStyle: WidgetStatePropertyAll(text.labelLarge),
+        shape: _controlShape,
       ),
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
@@ -101,6 +150,7 @@ ThemeData buildTheme(Brightness brightness) {
         overlayColor: const WidgetStatePropertyAll(Colors.transparent),
         side: WidgetStatePropertyAll(BorderSide(color: c.border)),
         textStyle: WidgetStatePropertyAll(text.labelLarge),
+        shape: _controlShape,
       ),
     ),
     iconButtonTheme: IconButtonThemeData(
@@ -114,6 +164,17 @@ ThemeData buildTheme(Brightness brightness) {
     ),
   );
 }
+
+/// Buttons and inputs share one corner radius, rather than Material's pills.
+const _controlShape = WidgetStatePropertyAll(
+  RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
+);
+
+OutlineInputBorder _outline(Color color, {double width = 1}) =>
+    OutlineInputBorder(
+      borderRadius: BorderRadius.circular(6),
+      borderSide: BorderSide(color: color, width: width),
+    );
 
 bool _isActive(Set<WidgetState> s) =>
     s.contains(WidgetState.hovered) ||

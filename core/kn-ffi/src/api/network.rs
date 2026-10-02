@@ -18,6 +18,26 @@ impl Network {
     }
 }
 
+impl From<Network> for kn_keys::Network {
+    fn from(network: Network) -> Self {
+        match network {
+            Network::Mainnet => Self::Mainnet,
+            Network::Stagenet => Self::Stagenet,
+            Network::Testnet => Self::Testnet,
+        }
+    }
+}
+
+impl From<kn_keys::Network> for Network {
+    fn from(network: kn_keys::Network) -> Self {
+        match network {
+            kn_keys::Network::Mainnet => Self::Mainnet,
+            kn_keys::Network::Stagenet => Self::Stagenet,
+            kn_keys::Network::Testnet => Self::Testnet,
+        }
+    }
+}
+
 /// All networks, in the order the network switcher shows them.
 #[flutter_rust_bridge::frb(sync)]
 #[must_use]

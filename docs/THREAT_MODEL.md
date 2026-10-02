@@ -41,7 +41,11 @@ XChaCha20-Poly1305; Android cloud backup and device transfer are disabled for
 app data.
 
 **Someone with the device, unlocked and the wallet open.** Can spend.
-Not defended beyond app-level re-authentication for sending (planned).
+Mitigations: on Android every unlocked wallet is locked when the app leaves
+the foreground; showing the seed, changing the password and deleting a
+wallet all ask for the password again; seed screens block screenshots and
+the recent-apps thumbnail (`FLAG_SECURE`). Re-authentication before sending
+is planned with M4.
 
 **Malicious dependency or build pipeline.** Could ship code that leaks keys.
 Mitigations: few dependencies with exact pins for crypto crates, reviewed
