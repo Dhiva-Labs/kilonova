@@ -36,7 +36,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'daily password');
     await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
-    await pumpUntilFound(tester, find.text('Main address'));
+    await pumpUntilFound(tester, find.text('Balance'));
 
     await tester.tap(find.byTooltip('Wallet options'));
     await tester.pumpAndSettle();

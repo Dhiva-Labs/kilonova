@@ -73,7 +73,7 @@ void main() {
 
     await tester.enterText(pw.at(1), 'correct horse');
     await tester.tap(find.widgetWithText(FilledButton, 'Create wallet'));
-    await pumpUntilFound(tester, find.text('Main address'));
+    await pumpUntilFound(tester, find.text('Balance'));
 
     // Back on the wallet list, opened beside it.
     expect(find.text('Savings'), findsWidgets);

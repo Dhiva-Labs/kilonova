@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import 'about_screen.dart';
+import 'nodes_screen.dart';
 import 'privacy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -18,6 +19,14 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(title: Text(l.settingsTitle)),
       body: ListView(
         children: [
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.dns_outlined),
+            title: Text(l.nodesTitle),
+            subtitle: Text(l.nodesSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => open(const NodesScreen()),
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.shield_outlined),

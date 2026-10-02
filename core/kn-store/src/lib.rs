@@ -413,6 +413,34 @@ impl Store {
             .ok_or(StoreError::NotFound)
     }
 
+    /// Reads a plain, non-secret settings file such as node choices.
+    /// `None` if it does not exist.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file exists but cannot be read.
+    pub fn read_settings(&self, name: &str) -> Result<Option<Vec<u8>>, StoreError> {
+        match fs::read(self.settings_path(name)) {
+            Ok(bytes) => Ok(Some(bytes)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// Writes a plain settings file. Never use this for anything secret.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on I/O failure.
+    pub fn write_settings(&self, name: &str, bytes: &[u8]) -> Result<(), StoreError> {
+        write_atomic(&self.settings_path(name), bytes)
+    }
+
+    fn settings_path(&self, name: &str) -> PathBuf {
+        debug_assert!(name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'));
+        self.dir.join(format!("{name}.json"))
+    }
+
     fn cache_path(&self, id: &str) -> PathBuf {
         self.dir.join(format!("{id}.{CACHE_EXTENSION}"))
     }

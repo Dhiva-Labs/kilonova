@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../platform/secure_window.dart';
 import '../../src/rust/api/network.dart';
+import '../../src/rust/api/sync.dart';
 import '../../src/rust/api/wallets.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/mode_label.dart';
@@ -102,6 +103,8 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
         mode: _mode,
         words: _words.join(' '),
         password: _password.text,
+        // A new wallet has no history before today.
+        restoreHeight: restoreHeightForNewWallet(network: widget.network),
       );
       _words = const [];
       await widget.registry.opened(wallet);

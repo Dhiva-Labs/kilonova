@@ -6,9 +6,11 @@
 import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'sync.dart';
 
-// These functions are ignored because they are not marked as `pub`: `address_row`, `create`, `new`, `set_label`, `store`, `with`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `address_row`, `create`, `new`, `set_label`, `store`, `with`, `with`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Inner`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `drop`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
 
 /// Opens the wallet directory. Call once at startup with the app's private
 /// data directory.
@@ -148,6 +150,9 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// Fails if the wallet has been locked.
   List<AddressRow> addresses();
 
+  /// Balance from what has been scanned so far.
+  WalletBalance balance();
+
   /// Re-encrypts the wallet under a new password.
   ///
   /// # Errors
@@ -157,6 +162,9 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required String current,
     required String newPassword,
   });
+
+  /// Transactions found so far, newest first.
+  List<HistoryItem> history();
 
   /// Wipes the keys now instead of waiting for Dart to release the object.
   void lock();
@@ -186,6 +194,14 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required int index,
     required String label,
   });
+
+  /// Starts syncing in the background and reports through `sink`. Keeps
+  /// following new blocks until [`OpenWallet::stop_sync`] or
+  /// [`OpenWallet::lock`]. Calling it while sync runs does nothing.
+  Stream<SyncEvent> startSync();
+
+  /// Stops background sync after the current batch.
+  void stopSync();
 
   /// The wallet's registry entry.
   ///

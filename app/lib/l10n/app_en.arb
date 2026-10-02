@@ -127,7 +127,6 @@
   "deleteAction": "Delete wallet",
   "deleteWarning": "This removes the wallet from this device. Without the seed, the funds cannot be recovered. Enter the password to confirm.",
   "doneAction": "Done",
-  "syncNotYet": "Balance and history arrive with syncing in the next milestone.",
   "verifyPrompt": "Word number {position}",
   "@verifyPrompt": {
     "placeholders": {
@@ -160,5 +159,94 @@
   "biometricDisabledNotice": "Biometric unlock is off",
   "biometricInvalidated": "New fingerprints or faces were added to this device, so biometric unlock was turned off. Unlock with the password.",
   "biometricFailed": "Biometric unlock did not work. Use the password.",
-  "biometricOffAfterPasswordChange": "Password changed. Biometric unlock was turned off; turn it on again from the wallet menu."
+  "biometricOffAfterPasswordChange": "Password changed. Biometric unlock was turned off; turn it on again from the wallet menu.",
+  "balanceTitle": "Balance",
+  "spendableAmount": "{amount} XMR can be spent now",
+  "@spendableAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "syncConnecting": "Connecting to {node}",
+  "@syncConnecting": {
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
+  },
+  "syncScanning": "Scanning block {scanned} of {tip}",
+  "@syncScanning": {
+    "placeholders": {
+      "scanned": {
+        "type": "String"
+      },
+      "tip": {
+        "type": "String"
+      }
+    }
+  },
+  "syncSynced": "Up to date at block {tip}",
+  "@syncSynced": {
+    "placeholders": {
+      "tip": {
+        "type": "String"
+      }
+    }
+  },
+  "syncStarting": "Starting sync",
+  "syncStopped": "Sync stopped",
+  "syncNodeUnreachable": "The node is not answering. Retrying in 30 seconds.",
+  "syncWrongNetwork": "The selected node serves a different network. Choose another in Settings, Nodes.",
+  "syncBadNode": "The selected node address is not valid. Choose another in Settings, Nodes.",
+  "syncLwsNotYet": "Light wallet server sync arrives in the next update. Balance and history will appear then.",
+  "syncRetry": "Try again",
+  "viewOnlyBalanceNote": "View-only wallets cannot see their own spends, so this shows everything received.",
+  "historyTitle": "History",
+  "historyEmpty": "No transactions yet.",
+  "historyReceived": "Received",
+  "historySent": "Sent",
+  "historyMined": "Mined",
+  "historyLocked": "Locked",
+  "historyBlock": "Block {height}",
+  "@historyBlock": {
+    "placeholders": {
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "historyCopyTx": "Copy transaction ID",
+  "txCopiedNotice": "Transaction ID copied",
+  "nodesTitle": "Nodes",
+  "nodesSubtitle": "Which Monero node each network syncs from",
+  "nodesHelp": "Kilonova downloads blocks from this node and scans them on this device. The node sees your IP address and when you sync, but not which payments are yours. Your own node gives the most privacy.",
+  "nodesBundledTag": "Public node",
+  "nodesCustomTag": "Your node",
+  "nodesAddLabel": "Add a node, as host:port or https://host:port",
+  "nodesAddAction": "Add",
+  "nodesCheckAction": "Check",
+  "nodesRemoveAction": "Remove",
+  "nodesHealthy": "Answering, at block {height}",
+  "@nodesHealthy": {
+    "placeholders": {
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "nodesBehind": "Answering, but still syncing (block {height})",
+  "@nodesBehind": {
+    "placeholders": {
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeErrorBadUrl": "Use host:port or http(s)://host:port.",
+  "nodeErrorWrongNetwork": "This node serves a different Monero network.",
+  "nodeErrorUnreachable": "This node is not answering.",
+  "nodeErrorStorage": "Node settings could not be saved."
 }

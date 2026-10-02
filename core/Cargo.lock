@@ -1014,7 +1014,12 @@ dependencies = [
  "flutter_rust_bridge",
  "kn-keys",
  "kn-store",
+ "kn-sync",
+ "rand_core",
+ "serde",
+ "serde_json",
  "tempfile",
+ "tokio",
  "zeroize",
 ]
 

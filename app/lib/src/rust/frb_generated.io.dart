@@ -5,6 +5,8 @@
 
 import 'api/core.dart';
 import 'api/network.dart';
+import 'api/nodes.dart';
+import 'api/sync.dart';
 import 'api/wallets.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -25,6 +27,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWalletPtr;
 
   @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
   OpenWallet
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
     dynamic raw,
@@ -43,6 +48,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<SyncEvent> dco_decode_StreamSink_sync_event_Sse(dynamic raw);
+
+  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
@@ -52,10 +60,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  SyncFailure dco_decode_box_autoadd_sync_failure(dynamic raw);
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
   BigInt dco_decode_box_autoadd_u_64(dynamic raw);
 
   @protected
   CoreInfo dco_decode_core_info(dynamic raw);
+
+  @protected
+  HistoryItem dco_decode_history_item(dynamic raw);
 
   @protected
   int dco_decode_i_32(dynamic raw);
@@ -67,7 +84,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AddressRow> dco_decode_list_address_row(dynamic raw);
 
   @protected
+  List<HistoryItem> dco_decode_list_history_item(dynamic raw);
+
+  @protected
   List<Network> dco_decode_list_network(dynamic raw);
+
+  @protected
+  List<NodeChoice> dco_decode_list_node_choice(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -82,6 +105,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NewSeed dco_decode_new_seed(dynamic raw);
 
   @protected
+  NodeChoice dco_decode_node_choice(dynamic raw);
+
+  @protected
+  NodeError dco_decode_node_error(dynamic raw);
+
+  @protected
+  NodeHealth dco_decode_node_health(dynamic raw);
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  SyncFailure? dco_decode_opt_box_autoadd_sync_failure(dynamic raw);
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
+
+  @protected
   BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
 
   @protected
@@ -91,7 +132,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SeedFormat dco_decode_seed_format(dynamic raw);
 
   @protected
+  SyncEvent dco_decode_sync_event(dynamic raw);
+
+  @protected
+  SyncFailure dco_decode_sync_failure(dynamic raw);
+
+  @protected
   SyncMode dco_decode_sync_mode(dynamic raw);
+
+  @protected
+  SyncPhase dco_decode_sync_phase(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -109,10 +159,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt dco_decode_usize(dynamic raw);
 
   @protected
+  WalletBalance dco_decode_wallet_balance(dynamic raw);
+
+  @protected
   WalletError dco_decode_wallet_error(dynamic raw);
 
   @protected
   WalletSummary dco_decode_wallet_summary(dynamic raw);
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
   OpenWallet
@@ -133,6 +189,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<SyncEvent> sse_decode_StreamSink_sync_event_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
@@ -142,10 +203,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  SyncFailure sse_decode_box_autoadd_sync_failure(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
   BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
 
   @protected
   CoreInfo sse_decode_core_info(SseDeserializer deserializer);
+
+  @protected
+  HistoryItem sse_decode_history_item(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
@@ -157,7 +227,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AddressRow> sse_decode_list_address_row(SseDeserializer deserializer);
 
   @protected
+  List<HistoryItem> sse_decode_list_history_item(SseDeserializer deserializer);
+
+  @protected
   List<Network> sse_decode_list_network(SseDeserializer deserializer);
+
+  @protected
+  List<NodeChoice> sse_decode_list_node_choice(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -174,6 +250,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NewSeed sse_decode_new_seed(SseDeserializer deserializer);
 
   @protected
+  NodeChoice sse_decode_node_choice(SseDeserializer deserializer);
+
+  @protected
+  NodeError sse_decode_node_error(SseDeserializer deserializer);
+
+  @protected
+  NodeHealth sse_decode_node_health(SseDeserializer deserializer);
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  SyncFailure? sse_decode_opt_box_autoadd_sync_failure(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
   BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
 
   @protected
@@ -183,7 +279,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SeedFormat sse_decode_seed_format(SseDeserializer deserializer);
 
   @protected
+  SyncEvent sse_decode_sync_event(SseDeserializer deserializer);
+
+  @protected
+  SyncFailure sse_decode_sync_failure(SseDeserializer deserializer);
+
+  @protected
   SyncMode sse_decode_sync_mode(SseDeserializer deserializer);
+
+  @protected
+  SyncPhase sse_decode_sync_phase(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -201,10 +306,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
+  WalletBalance sse_decode_wallet_balance(SseDeserializer deserializer);
+
+  @protected
   WalletError sse_decode_wallet_error(SseDeserializer deserializer);
 
   @protected
   WalletSummary sse_decode_wallet_summary(SseDeserializer deserializer);
+
+  @protected
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  );
 
   @protected
   void
@@ -228,6 +342,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_sync_event_Sse(
+    RustStreamSink<SyncEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
@@ -237,10 +357,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_sync_failure(
+    SyncFailure self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_info(CoreInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_history_item(HistoryItem self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
@@ -255,7 +387,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_history_item(
+    List<HistoryItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_network(List<Network> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_node_choice(
+    List<NodeChoice> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -276,6 +420,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_new_seed(NewSeed self, SseSerializer serializer);
 
   @protected
+  void sse_encode_node_choice(NodeChoice self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_node_error(NodeError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_node_health(NodeHealth self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_sync_failure(
+    SyncFailure? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
 
   @protected
@@ -285,7 +450,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_seed_format(SeedFormat self, SseSerializer serializer);
 
   @protected
+  void sse_encode_sync_event(SyncEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sync_failure(SyncFailure self, SseSerializer serializer);
+
+  @protected
   void sse_encode_sync_mode(SyncMode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sync_phase(SyncPhase self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
@@ -301,6 +475,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_wallet_balance(WalletBalance self, SseSerializer serializer);
 
   @protected
   void sse_encode_wallet_error(WalletError self, SseSerializer serializer);

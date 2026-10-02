@@ -5,6 +5,9 @@
 //! wallet logic of its own.
 
 pub mod api;
+mod node_settings;
+#[cfg(test)]
+mod test_store;
 
 // Generated and formatted by flutter_rust_bridge_codegen; CI checks it is
 // current, so rustfmt must leave it as generated.
