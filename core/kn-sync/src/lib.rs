@@ -17,8 +17,8 @@ pub use node::{Http, NodeStatus, NodeUrl, bundled_nodes, connect};
 pub use restore_height::approximate_height;
 pub use scan::{Progress, SUBADDRESS_LOOKAHEAD, sync};
 pub use state::{
-    Balance, DEFAULT_LOCK_BLOCKS, Direction, HistoryEntry, MINER_LOCK_BLOCKS, OwnedOutput, Spend,
-    SyncState,
+    Balance, DEFAULT_LOCK_BLOCKS, Direction, HistoryEntry, MINER_LOCK_BLOCKS, OwnedOutput,
+    PENDING_EXPIRY_BLOCKS, Spend, SyncState,
 };
 
 #[derive(Debug, thiserror::Error)]

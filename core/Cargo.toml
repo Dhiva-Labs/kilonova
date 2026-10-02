@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["kn-ffi", "kn-keys", "kn-store", "kn-sync"]
+members = ["kn-ffi", "kn-keys", "kn-store", "kn-sync", "kn-tx"]
 
 [workspace.package]
 version = "0.1.0"

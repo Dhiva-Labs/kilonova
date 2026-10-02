@@ -52,8 +52,18 @@ impl OwnedOutput {
 pub struct Spend {
     #[serde(with = "hex32")]
     pub tx: [u8; 32],
+    /// Block height of the spend; for a pending spend, the height when it
+    /// was sent.
     pub height: u64,
+    /// Sent from this wallet but not yet seen in a block.
+    #[serde(default)]
+    pub pending: bool,
 }
+
+/// Blocks a sent transaction may stay unconfirmed before its inputs are
+/// counted as unspent again. A transaction that has not been mined after
+/// an hour has almost certainly been dropped.
+pub const PENDING_EXPIRY_BLOCKS: u64 = 30;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Balance {
@@ -78,6 +88,8 @@ pub struct HistoryEntry {
     /// Received amount for incoming; amount that left the wallet (spent
     /// minus change returned to it) for outgoing. Atomic units.
     pub amount: u64,
+    /// Outgoing and not yet in a block.
+    pub pending: bool,
     /// Account/index pairs that received funds in this transaction.
     pub subaddresses: Vec<(u32, u32)>,
     pub miner: bool,
@@ -124,6 +136,44 @@ impl SyncState {
         self.next_height = height;
     }
 
+    /// Marks the outputs with these key images as spent by `tx`, which was
+    /// just sent and is not in a block yet.
+    pub fn mark_pending(&mut self, key_images: &[[u8; 32]], tx: [u8; 32], tip: u64) {
+        for o in &mut self.outputs {
+            if o.spent.is_none() && o.key_image.is_some_and(|ki| key_images.contains(&ki)) {
+                o.spent = Some(Spend {
+                    tx,
+                    height: tip,
+                    pending: true,
+                });
+            }
+        }
+    }
+
+    /// Counts outputs as unspent again if the transaction that was to spend
+    /// them has stayed unconfirmed for [`PENDING_EXPIRY_BLOCKS`].
+    pub fn expire_pending(&mut self, tip: u64) {
+        for o in &mut self.outputs {
+            if o.spent
+                .is_some_and(|s| s.pending && tip > s.height + PENDING_EXPIRY_BLOCKS)
+            {
+                o.spent = None;
+            }
+        }
+    }
+
+    /// Pending spends by key image, to carry across a rebuild of the output
+    /// list (LWS mode replaces it on every sync).
+    pub(crate) fn pending_spends(&self) -> Vec<([u8; 32], Spend)> {
+        self.outputs
+            .iter()
+            .filter_map(|o| match (o.key_image, o.spent) {
+                (Some(ki), Some(s)) if s.pending => Some((ki, s)),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// Balance as of chain height `tip` (the number of blocks).
     #[must_use]
     pub fn balance(&self, tip: u64) -> Balance {
@@ -150,6 +200,7 @@ impl SyncState {
                     height: o.height,
                     direction: Direction::Incoming,
                     amount: 0,
+                    pending: false,
                     subaddresses: Vec::new(),
                     miner: o.miner,
                 });
@@ -163,15 +214,15 @@ impl SyncState {
             }
         }
         // Spent per transaction.
-        let mut spent: BTreeMap<[u8; 32], (u64, u64)> = BTreeMap::new();
+        let mut spent: BTreeMap<[u8; 32], (u64, u64, bool)> = BTreeMap::new();
         for o in &self.outputs {
             if let Some(s) = o.spent {
-                let e = spent.entry(s.tx).or_insert((s.height, 0));
+                let e = spent.entry(s.tx).or_insert((s.height, 0, s.pending));
                 e.1 += o.amount();
             }
         }
         let mut history: Vec<HistoryEntry> = Vec::new();
-        for (tx, (height, amount_spent)) in spent {
+        for (tx, (height, amount_spent, pending)) in spent {
             // Change comes back as outputs of the spending transaction.
             let change = received.remove(&tx).map_or(0, |r| r.amount);
             history.push(HistoryEntry {
@@ -179,6 +230,7 @@ impl SyncState {
                 height,
                 direction: Direction::Outgoing,
                 amount: amount_spent.saturating_sub(change),
+                pending,
                 subaddresses: Vec::new(),
                 miner: false,
             });
