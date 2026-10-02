@@ -124,8 +124,14 @@ pub struct HistoryItem {
     pub locked: bool,
     /// Index of the first receiving subaddress in its account, if incoming.
     pub subaddress_index: Option<u32>,
-    /// Outgoing and not yet seen in a block.
+    /// Not yet in a block: sent from this wallet, or incoming and waiting
+    /// in the transaction pool.
     pub pending: bool,
+    /// The owner's note.
+    pub note: Option<String>,
+    /// For transactions this wallet sent: the first recipient, by contact
+    /// name if it is in the address book, else by address.
+    pub sent_to: Option<String>,
 }
 
 /// Sync state shared between the wallet and its background task.
@@ -289,6 +295,27 @@ impl OpenWallet {
     pub fn history(&self) -> Vec<HistoryItem> {
         let tip = self.inner.sync.tip.load(Ordering::Relaxed);
         let state = self.inner.sync.snapshot();
+        // Notes and recipients live in the wallet file; copy what history
+        // needs so the wallet lock is held briefly.
+        let (notes, sent_to) = self
+            .inner
+            .with(|w| {
+                let name_of = |address: &str| {
+                    w.data
+                        .contacts
+                        .iter()
+                        .find(|c| c.address == address)
+                        .map_or_else(|| address.to_owned(), |c| c.name.clone())
+                };
+                let sent_to: std::collections::HashMap<String, String> = w
+                    .data
+                    .sent
+                    .iter()
+                    .filter_map(|(tx, s)| Some((tx.clone(), name_of(&s.destinations.first()?.0))))
+                    .collect();
+                Ok((w.data.notes.clone(), sent_to))
+            })
+            .unwrap_or_default();
         state
             .history()
             .into_iter()
@@ -298,8 +325,8 @@ impl OpenWallet {
                 } else {
                     kn_sync::DEFAULT_LOCK_BLOCKS
                 };
+                let tx_hash = hex_string(&h.tx);
                 HistoryItem {
-                    tx_hash: hex_string(&h.tx),
                     height: h.height,
                     incoming: h.direction == Direction::Incoming,
                     amount: h.amount,
@@ -309,6 +336,9 @@ impl OpenWallet {
                         && tip < h.height + lock,
                     subaddress_index: h.subaddresses.first().map(|(_, index)| *index),
                     pending: h.pending,
+                    note: notes.get(&tx_hash).cloned(),
+                    sent_to: sent_to.get(&tx_hash).cloned(),
+                    tx_hash,
                 }
             })
             .collect()

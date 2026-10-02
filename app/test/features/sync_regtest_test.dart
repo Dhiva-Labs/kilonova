@@ -7,6 +7,8 @@ import 'package:kilonova/src/rust/api/network.dart';
 import 'package:kilonova/src/rust/api/nodes.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
 
+import 'package:kilonova/widgets/password_fields.dart';
+
 import '../helpers/rust.dart';
 
 /// Syncs a wallet in the app against the regtest chain from tools/devnet.
@@ -218,6 +220,47 @@ void main() {
         timeout: const Duration(seconds: 90),
       );
       expect(find.textContaining('Sent'), findsWidgets);
+
+      // The sent transaction remembers who was paid and its key.
+      await tester.tap(find.textContaining('To ').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Paid to'), findsOneWidget);
+      expect(find.text(payee), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Note, only on this device'),
+        'test payment',
+      );
+      await tester.pump();
+      await tester.ensureVisible(find.text('Save note'));
+      await tester.tap(find.text('Save note'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Show transaction key'));
+      await tester.tap(find.text('Show transaction key'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(PasswordField), 'regtest password');
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Show transaction key'),
+        ),
+      );
+      await pumpUntil(
+        tester,
+        () => find
+            .byWidgetPredicate(
+              (w) =>
+                  w is SelectableText &&
+                  RegExp(r'^[0-9a-f]{64,}$').hasMatch(w.data ?? ''),
+            )
+            .evaluate()
+            .isNotEmpty,
+        what: 'the transaction key',
+      );
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('test payment'), findsOneWidget);
     },
     skip: Platform.environment['KN_REGTEST'] != '1',
   );

@@ -11,6 +11,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/amount.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/password_fields.dart';
+import '../book/address_book_screen.dart';
 import '../wallets/wallet_registry.dart';
 import 'monero_uri.dart';
 import 'scan_qr.dart';
@@ -92,6 +93,19 @@ class _SendScreenState extends State<SendScreen> {
     if (!_applyRequest(recipient, text)) {
       recipient.address.text = text.trim();
     }
+  }
+
+  Future<void> _pickContact(_Recipient recipient) async {
+    final address = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => AddressBookScreen(wallet: widget.wallet, pick: true),
+      ),
+    );
+    if (address == null || !mounted) return;
+    setState(() {
+      recipient.address.text = address;
+      recipient.addressError = null;
+    });
   }
 
   Future<void> _scan(_Recipient recipient) async {
@@ -273,6 +287,11 @@ class _SendScreenState extends State<SendScreen> {
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  IconButton(
+                    tooltip: l.bookChooseAction,
+                    icon: const Icon(Icons.contacts_outlined, size: 20),
+                    onPressed: _busy ? null : () => _pickContact(r),
+                  ),
                   IconButton(
                     tooltip: scansWithCamera ? l.scanAction : l.scanImageAction,
                     icon: const Icon(Icons.qr_code_scanner, size: 20),

@@ -14,11 +14,12 @@ use monero_daemon_rpc::MoneroDaemon;
 use monero_interface::{FeePriority, ProvidesFeeRates as _, PublishTransaction as _};
 use monero_wallet::OutputWithDecoys;
 use monero_wallet::address::{MoneroAddress, Network as MoneroNetwork};
-use monero_wallet::ed25519::{CompressedPoint, Point};
+use monero_wallet::ed25519::{CompressedPoint, Point, Scalar};
+use monero_wallet::extra::Extra;
 use monero_wallet::interface::FeeRate;
 use monero_wallet::ringct::RctType;
 use monero_wallet::ringct::clsag::Decoys;
-use monero_wallet::send::{Change, SendError, SignableTransaction};
+use monero_wallet::send::{Change, SendError, SignableTransaction, TransactionKeys};
 use monero_wallet::transaction::{Input, Timelock, Transaction};
 use rand_core::{OsRng, RngCore};
 use zeroize::Zeroizing;
@@ -105,6 +106,14 @@ pub struct Prepared {
     pub change: u64,
     /// Key images of the outputs it spends.
     pub spends: Vec<[u8; 32]>,
+    /// Recipients and what each receives, as requested.
+    pub destinations: Vec<(String, u64)>,
+    /// The transaction's secret key(s) as hex, the format other wallets'
+    /// "check transaction key" expects: the main key, then any additional
+    /// keys in output order. With it and a recipient's address, anyone can
+    /// prove that recipient was paid. `None` if it could not be confirmed
+    /// against the transaction.
+    pub tx_key: Option<Zeroizing<String>>,
 }
 
 impl std::fmt::Debug for Prepared {
@@ -503,33 +512,101 @@ fn lws_ring(
     OutputWithDecoys::read(&mut bytes.as_slice()).map_err(|_| bad("could not decode the ring"))
 }
 
+/// A transaction ready to sign, with the secret keys monero-oxide will
+/// derive for it.
+struct Signable {
+    transaction: SignableTransaction,
+    payments: Vec<(MoneroAddress, u64)>,
+    /// The main transaction key, then candidates for additional keys (one
+    /// per output, in output order, when the transaction has them).
+    key_candidates: Vec<Zeroizing<Scalar>>,
+}
+
 fn signable(
     keys: &WalletKeys,
     inputs: Vec<OutputWithDecoys>,
     payments: Vec<(MoneroAddress, u64)>,
     fee_rate: FeeRate,
-) -> Result<SignableTransaction, SendError> {
+) -> Result<Signable, SendError> {
     // Seeds the transaction's internal randomness; fresh per transaction, as
     // monero-oxide requires.
     let mut outgoing_view_key = Zeroizing::new([0u8; 32]);
     OsRng.fill_bytes(outgoing_view_key.as_mut());
-    SignableTransaction::new(
+    // monero-oxide draws the transaction keys from this seed and the inputs,
+    // in this order: main key first, then one per output.
+    let input_keys = inputs
+        .iter()
+        .map(|o| (o.key(), o.commitment().commit()))
+        .collect();
+    let key_candidates = TransactionKeys::new(&outgoing_view_key, input_keys)
+        .take(payments.len() + 2)
+        .collect();
+    let transaction = SignableTransaction::new(
         RctType::ClsagBulletproofPlus,
         outgoing_view_key,
         inputs,
-        payments,
+        payments.clone(),
         Change::new(keys.view_pair(), None),
         Vec::new(),
         fee_rate,
-    )
+    )?;
+    Ok(Signable {
+        transaction,
+        payments,
+        key_candidates,
+    })
+}
+
+/// The transaction key string for `transaction`, if the candidates produce
+/// exactly the public keys in its extra field.
+fn confirmed_tx_key(
+    transaction: &Transaction,
+    payments: &[(MoneroAddress, u64)],
+    candidates: &[Zeroizing<Scalar>],
+) -> Option<Zeroizing<String>> {
+    use curve25519_dalek::constants::ED25519_BASEPOINT_TABLE;
+    use curve25519_dalek::{EdwardsPoint, Scalar as DalekScalar};
+
+    let extra = Extra::read(&mut transaction.prefix().extra.as_slice()).ok()?;
+    let (main, additional) = extra.keys()?;
+    let additional = additional.unwrap_or_default();
+    let used = candidates.get(..=additional.len())?;
+    // Each public key is the secret times G, or times the spend key of the
+    // subaddress it pays.
+    let opens = |secret: &Zeroizing<Scalar>, public: &Point| {
+        let secret: DalekScalar = (**secret).into();
+        let public: EdwardsPoint = (*public).into();
+        &secret * ED25519_BASEPOINT_TABLE == public
+            || payments
+                .iter()
+                .any(|(address, _)| secret * address.spend().into() == public)
+    };
+    if !opens(&used[0], main.first()?) {
+        return None;
+    }
+    for public in &additional {
+        if !used[1..].iter().any(|secret| opens(secret, public)) {
+            return None;
+        }
+    }
+    let mut out = Zeroizing::new(String::with_capacity(64 * used.len()));
+    for secret in used {
+        out.push_str(&hex::encode(<[u8; 32]>::from(**secret)));
+    }
+    Some(out)
 }
 
 fn finish(
     keys: &WalletKeys,
-    signable: SignableTransaction,
+    signable: Signable,
     inputs: &[&OwnedOutput],
     amount: u64,
 ) -> Result<Prepared, TxError> {
+    let Signable {
+        transaction: signable,
+        payments,
+        key_candidates,
+    } = signable;
     let fee = signable.necessary_fee();
     let input_total: u64 = inputs.iter().map(|o| o.amount()).sum();
     let transaction = keys.sign(signable).map_err(|e| match e {
@@ -545,12 +622,18 @@ fn finish(
             Input::Gen(_) => None,
         })
         .collect();
+    let tx_key = confirmed_tx_key(&transaction, &payments, &key_candidates);
     Ok(Prepared {
         hash: transaction.hash(),
         amount,
         fee,
         change: input_total.saturating_sub(amount + fee),
         spends,
+        destinations: payments
+            .iter()
+            .map(|(address, amount)| (address.to_string(), *amount))
+            .collect(),
+        tx_key,
         transaction,
     })
 }

@@ -17,6 +17,7 @@
 mod crypto;
 
 use std::{
+    collections::BTreeMap,
     fs,
     io::Write as _,
     path::{Path, PathBuf},
@@ -110,6 +111,24 @@ pub struct AddressLabel {
     pub label: String,
 }
 
+/// A saved recipient. Kept inside the encrypted wallet file, because an
+/// address book shows who the owner pays.
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct Contact {
+    pub name: String,
+    pub address: String,
+}
+
+/// What this wallet sent in one transaction, which the chain alone does not
+/// reveal to the sender later.
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct SentRecord {
+    /// Recipient address and amount (atomic units), as requested.
+    pub destinations: Vec<(String, u64)>,
+    /// The transaction's secret key(s) as hex, for payment proofs.
+    pub tx_key: Option<Zeroizing<String>>,
+}
+
 /// Everything inside a wallet file.
 #[derive(Serialize, Deserialize)]
 pub struct WalletData {
@@ -136,6 +155,14 @@ pub struct WalletData {
     /// private view key with. Changing servers asks again.
     #[serde(default)]
     pub lws_consent: Option<String>,
+    #[serde(default)]
+    pub contacts: Vec<Contact>,
+    /// The owner's notes, by transaction id (hex).
+    #[serde(default)]
+    pub notes: BTreeMap<String, String>,
+    /// Transactions sent from this wallet, by transaction id (hex).
+    #[serde(default)]
+    pub sent: BTreeMap<String, SentRecord>,
 }
 
 impl WalletData {
@@ -152,6 +179,9 @@ impl WalletData {
             labels: Vec::new(),
             created_here: false,
             lws_consent: None,
+            contacts: Vec::new(),
+            notes: BTreeMap::new(),
+            sent: BTreeMap::new(),
         }
     }
 }

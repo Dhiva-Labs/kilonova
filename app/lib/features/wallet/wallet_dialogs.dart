@@ -7,6 +7,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/password_fields.dart';
 import '../../widgets/seed_grid.dart';
 import '../../widgets/wallet_error_text.dart';
+import '../book/address_book_screen.dart';
 import '../wallets/wallet_registry.dart';
 
 /// Asks for one line of text. Returns `null` if cancelled.
@@ -71,6 +72,7 @@ class _TextDialogState extends State<_TextDialog> {
 }
 
 enum _WalletAction {
+  addressBook,
   showSeed,
   rename,
   changePassword,
@@ -127,6 +129,12 @@ class _WalletMenuState extends State<WalletMenu> {
     final l = AppLocalizations.of(context);
     final summary = wallet.summary();
     switch (action) {
+      case _WalletAction.addressBook:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => AddressBookScreen(wallet: wallet),
+          ),
+        );
       case _WalletAction.showSeed:
         await showDialog<void>(
           context: context,
@@ -219,6 +227,10 @@ class _WalletMenuState extends State<WalletMenu> {
       icon: const Icon(Icons.more_vert),
       onSelected: (a) => _run(context, a),
       itemBuilder: (_) => [
+        PopupMenuItem(
+          value: _WalletAction.addressBook,
+          child: Text(l.bookTitle),
+        ),
         PopupMenuItem(
           value: _WalletAction.showSeed,
           child: Text(l.showSeedAction),

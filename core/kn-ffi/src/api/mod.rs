@@ -1,3 +1,4 @@
+pub mod book;
 pub mod core;
 pub mod network;
 pub mod nodes;

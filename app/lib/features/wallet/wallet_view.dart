@@ -12,6 +12,7 @@ import '../send/monero_uri.dart';
 import '../send/send_screen.dart';
 import '../wallets/wallet_registry.dart';
 import 'history_list.dart';
+import 'tx_details_screen.dart';
 import 'sync_panel.dart';
 import 'wallet_dialogs.dart';
 
@@ -115,7 +116,21 @@ class _WalletViewState extends State<WalletView> {
           Text(l.historyTitle, style: text.titleMedium),
           const SizedBox(height: KnSpace.sm),
           const Divider(),
-          HistoryList(items: widget.wallet.history()),
+          HistoryList(
+            items: widget.wallet.history(),
+            onOpen: (item) async {
+              await Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => TxDetailsScreen(
+                    wallet: widget.wallet,
+                    item: item,
+                    biometric: widget.registry.biometric,
+                  ),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+          ),
           const SizedBox(height: KnSpace.xl),
           Row(
             children: [

@@ -447,5 +447,35 @@
         "type": "String"
       }
     }
+  },
+  "bookTitle": "Address book",
+  "bookPickTitle": "Choose a recipient",
+  "bookAddAction": "Add",
+  "bookAddTitle": "Add a recipient",
+  "bookEditTitle": "Edit recipient",
+  "bookNameField": "Name",
+  "bookSaveAction": "Save",
+  "bookDeleteAction": "Delete",
+  "bookContactMenu": "Recipient actions",
+  "bookEmpty": "No saved recipients yet. Saved recipients stay inside this wallet's encrypted file.",
+  "bookSaveRecipientAction": "Save to address book",
+  "bookChooseAction": "Choose from address book",
+  "txDetailsTitle": "Transaction",
+  "txIdLabel": "Transaction ID",
+  "txNoteField": "Note, only on this device",
+  "txNoteSaveAction": "Save note",
+  "txRecipientsLabel": "Paid to",
+  "txKeyHelp": "The transaction key proves this payment: with it and the recipient's address, anyone can check what the recipient received.",
+  "txKeyShowAction": "Show transaction key",
+  "txKeyTitle": "Transaction key",
+  "txKeyPrompt": "Enter the wallet password to show the transaction key.",
+  "txKeyWarning": "Share it only with someone who needs to verify this payment. It reveals this payment, not your funds.",
+  "historyTo": "To {recipient}",
+  "@historyTo": {
+    "placeholders": {
+      "recipient": {
+        "type": "String"
+      }
+    }
   }
 }

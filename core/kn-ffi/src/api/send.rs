@@ -341,6 +341,18 @@ impl OpenWallet {
             .ok_or(SendError::NotSynced)?;
         RUNTIME.block_on(send.route.publish(network, &prepared, &mut state, send.tip))?;
         self.inner.sync.replace(&self.inner, state);
+        // Remember who was paid and the transaction key; the chain does not
+        // tell the sender later. A failed save loses only these details.
+        let _ = self.inner.with(|w| {
+            w.data.sent.insert(
+                hex_string(&prepared.hash),
+                kn_store::SentRecord {
+                    destinations: prepared.destinations.clone(),
+                    tx_key: prepared.tx_key.clone(),
+                },
+            );
+            Ok(store()?.save(w)?)
+        });
         Ok(())
     }
 }

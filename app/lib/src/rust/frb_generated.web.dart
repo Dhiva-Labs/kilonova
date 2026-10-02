@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/book.dart';
 import 'api/core.dart';
 import 'api/network.dart';
 import 'api/nodes.dart';
@@ -100,6 +101,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CertificateDetails dco_decode_certificate_details(dynamic raw);
 
   @protected
+  ContactRow dco_decode_contact_row(dynamic raw);
+
+  @protected
   CoreInfo dco_decode_core_info(dynamic raw);
 
   @protected
@@ -116,6 +120,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<AddressRow> dco_decode_list_address_row(dynamic raw);
+
+  @protected
+  List<ContactRow> dco_decode_list_contact_row(dynamic raw);
 
   @protected
   List<HistoryItem> dco_decode_list_history_item(dynamic raw);
@@ -191,6 +198,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SyncPhase dco_decode_sync_phase(dynamic raw);
+
+  @protected
+  TxDetails dco_decode_tx_details(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -287,6 +297,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ContactRow sse_decode_contact_row(SseDeserializer deserializer);
+
+  @protected
   CoreInfo sse_decode_core_info(SseDeserializer deserializer);
 
   @protected
@@ -303,6 +316,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<AddressRow> sse_decode_list_address_row(SseDeserializer deserializer);
+
+  @protected
+  List<ContactRow> sse_decode_list_contact_row(SseDeserializer deserializer);
 
   @protected
   List<HistoryItem> sse_decode_list_history_item(SseDeserializer deserializer);
@@ -382,6 +398,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SyncPhase sse_decode_sync_phase(SseDeserializer deserializer);
+
+  @protected
+  TxDetails sse_decode_tx_details(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -492,6 +511,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_contact_row(ContactRow self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_info(CoreInfo self, SseSerializer serializer);
 
   @protected
@@ -509,6 +531,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_address_row(
     List<AddressRow> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_contact_row(
+    List<ContactRow> self,
     SseSerializer serializer,
   );
 
@@ -601,6 +629,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_sync_phase(SyncPhase self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tx_details(TxDetails self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);

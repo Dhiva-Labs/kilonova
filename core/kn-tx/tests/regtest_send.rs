@@ -174,7 +174,10 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
         Network::Mainnet,
         &state,
         height,
-        &Request::Pay(vec![(to_primary.clone(), 3 * XMR), (to_sub, 2 * XMR)]),
+        &Request::Pay(vec![
+            (to_primary.clone(), 3 * XMR),
+            (to_sub.clone(), 2 * XMR),
+        ]),
         Priority::Normal,
     )
     .await
@@ -194,6 +197,10 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
     publish(Backend::Node(&d), &prepared, &mut state, height)
         .await
         .unwrap();
+    assert_eq!(
+        prepared.destinations,
+        vec![(to_primary.clone(), 3 * XMR), (to_sub.clone(), 2 * XMR)]
+    );
 
     // Pending at once: the inputs are no longer counted.
     let pending = state.balance(height);
@@ -220,6 +227,20 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
         before.total - 5 * XMR - prepared.fee
     );
     assert_eq!(received_by_reference().await, 5 * XMR);
+    // The transaction key proves each payment to Monero's reference wallet.
+    let tx_key = prepared
+        .tx_key
+        .as_deref()
+        .expect("tx key confirmed")
+        .to_owned();
+    for (address, amount) in [(&to_primary, 3 * XMR), (&to_sub, 2 * XMR)] {
+        let check = wallet_rpc(
+            "check_tx_key",
+            json!({"txid": hex::encode(prepared.hash), "tx_key": tx_key, "address": address}),
+        )
+        .await;
+        assert_eq!(check["received"].as_u64(), Some(amount), "{address}");
+    }
 
     // Sweep everything spendable (the change is locked for 10 blocks, so
     // unlock it first) to the reference wallet.
@@ -233,7 +254,7 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
         Network::Mainnet,
         &state,
         height,
-        &Request::SweepAll(to_primary),
+        &Request::SweepAll(to_primary.clone()),
         Priority::Normal,
     )
     .await
@@ -257,6 +278,14 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
             .all(|o| o.unlock_height() > height)
     );
     assert_eq!(received_by_reference().await, 5 * XMR + swept.amount);
+    let check = wallet_rpc(
+        "check_tx_key",
+        json!({"txid": hex::encode(swept.hash),
+               "tx_key": swept.tx_key.as_deref().expect("tx key confirmed"),
+               "address": to_primary}),
+    )
+    .await;
+    assert_eq!(check["received"].as_u64(), Some(swept.amount));
 
     // A transaction that never reaches a block (here: never broadcast) must
     // not lock its inputs forever.

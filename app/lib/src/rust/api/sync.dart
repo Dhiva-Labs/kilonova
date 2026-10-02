@@ -33,8 +33,16 @@ class HistoryItem {
   /// Index of the first receiving subaddress in its account, if incoming.
   final int? subaddressIndex;
 
-  /// Outgoing and not yet seen in a block.
+  /// Not yet in a block: sent from this wallet, or incoming and waiting
+  /// in the transaction pool.
   final bool pending;
+
+  /// The owner's note.
+  final String? note;
+
+  /// For transactions this wallet sent: the first recipient, by contact
+  /// name if it is in the address book, else by address.
+  final String? sentTo;
 
   const HistoryItem({
     required this.txHash,
@@ -45,6 +53,8 @@ class HistoryItem {
     required this.locked,
     this.subaddressIndex,
     required this.pending,
+    this.note,
+    this.sentTo,
   });
 
   @override
@@ -56,7 +66,9 @@ class HistoryItem {
       miner.hashCode ^
       locked.hashCode ^
       subaddressIndex.hashCode ^
-      pending.hashCode;
+      pending.hashCode ^
+      note.hashCode ^
+      sentTo.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -70,7 +82,9 @@ class HistoryItem {
           miner == other.miner &&
           locked == other.locked &&
           subaddressIndex == other.subaddressIndex &&
-          pending == other.pending;
+          pending == other.pending &&
+          note == other.note &&
+          sentTo == other.sentTo;
 }
 
 /// A progress report from a running sync. Flat rather than an enum with

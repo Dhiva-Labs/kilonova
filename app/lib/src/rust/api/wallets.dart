@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'book.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'send.dart';
@@ -181,6 +182,20 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required String password,
   });
 
+  /// Saved recipients, by name.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked.
+  List<ContactRow> contacts();
+
+  /// Removes the recipient with `address`.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked or cannot be saved.
+  Future<void> deleteContact({required String address});
+
   /// Records that the owner agreed to share this wallet's private view
   /// key with `server`, and saves the wallet.
   ///
@@ -234,6 +249,27 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// [`WalletError::WrongPassword`] if the password does not open the file.
   Future<List<String>?> revealSeed({required String password});
 
+  /// The transaction key of a transaction this wallet sent, after
+  /// checking the password. With it and the recipient's address, anyone
+  /// can verify the payment (for example with `check_tx_key`).
+  ///
+  /// # Errors
+  ///
+  /// [`WalletError::WrongPassword`], or [`WalletError::NotFound`] if no key
+  /// is stored for `tx_hash`.
+  Future<String> revealTxKey({
+    required String txHash,
+    required String password,
+  });
+
+  /// Saves a recipient, replacing any entry with the same address.
+  ///
+  /// # Errors
+  ///
+  /// [`WalletError::EmptyName`], or [`WalletError::BadAddress`] for an
+  /// address not on this wallet's network.
+  Future<void> saveContact({required String name, required String address});
+
   /// Sets or clears (empty string) an address label and saves the wallet.
   ///
   /// # Errors
@@ -253,6 +289,13 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// Fails if the wallet has been locked or cannot be saved.
   Future<void> setSyncMode({required SyncMode mode});
 
+  /// Sets the note for `tx_hash`; an empty note removes it.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked or cannot be saved.
+  Future<void> setTxNote({required String txHash, required String note});
+
   /// Starts syncing in the background and reports through `sink`. Keeps
   /// following new blocks until [`OpenWallet::stop_sync`] or
   /// [`OpenWallet::lock`]. Calling it again restarts sync.
@@ -267,6 +310,13 @@ abstract class OpenWallet implements RustOpaqueInterface {
   ///
   /// Fails if the wallet has been locked.
   WalletSummary summary();
+
+  /// Notes and sending details for `tx_hash` (hex).
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked.
+  TxDetails txDetails({required String txHash});
 }
 
 /// One receiving address of an unlocked wallet.
