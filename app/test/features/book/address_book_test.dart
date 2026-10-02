@@ -43,7 +43,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), _password);
     await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
-    await pumpUntilFound(tester, find.text('Balance'));
+    await pumpUntilFound(tester, find.text('BALANCE'));
 
     await tester.tap(find.byTooltip('Wallet options'));
     await tester.pumpAndSettle();
@@ -72,9 +72,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ana'));
     await tester.pumpAndSettle();
-    final field = tester.widget<TextField>(
-      fieldWithLabel('To'),
-    );
+    final field = tester.widget<TextField>(fieldWithLabel('To'));
     expect(field.controller!.text, friend);
   });
 }

@@ -184,10 +184,7 @@ void main() {
 
       await tester.tap(find.widgetWithText(FilledButton, 'Send'));
       await tester.pumpAndSettle();
-      await tester.enterText(
-        fieldWithLabel('To'),
-        payee,
-      );
+      await tester.enterText(fieldWithLabel('To'), payee);
       await tester.enterText(fieldWithLabel('Amount'), '1.5');
       await tester.tap(find.text('Review'));
       await pumpUntilFound(

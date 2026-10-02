@@ -34,11 +34,7 @@ Future<void> openReceiveScreen(
 /// The chosen address as a QR code, with an optional amount, and the list
 /// of addresses to choose from.
 class ReceiveScreen extends StatefulWidget {
-  const ReceiveScreen({
-    super.key,
-    required this.wallet,
-    this.embedded = false,
-  });
+  const ReceiveScreen({super.key, required this.wallet, this.embedded = false});
 
   final OpenWallet wallet;
 
@@ -103,7 +99,9 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
 
   String _title(BuildContext context, AddressRow row) {
     final l = AppLocalizations.of(context);
-    return row.index == 0 ? l.primaryAddressLabel : l.subaddressLabel(row.index);
+    return row.index == 0
+        ? l.primaryAddressLabel
+        : l.subaddressLabel(row.index);
   }
 
   static String _shorten(String address) => address.length > 24

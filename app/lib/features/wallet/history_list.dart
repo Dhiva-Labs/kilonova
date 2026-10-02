@@ -54,10 +54,7 @@ class _HistoryRow extends StatelessWidget {
     final color = item.incoming ? c.received : c.text;
     final leading = item.pending
         ? Icon(Icons.schedule, size: 20, color: c.textSecondary)
-        : KnIcon(
-            item.incoming ? KnIcons.receive : KnIcons.send,
-            color: color,
-          );
+        : KnIcon(item.incoming ? KnIcons.receive : KnIcons.send, color: color);
     final rightSide = item.pending
         ? l.historyPending
         : l.historyBlock(item.height.toString());

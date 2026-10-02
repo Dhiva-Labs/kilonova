@@ -154,3 +154,29 @@ Finder fieldWithLabel(String label) {
   if (field.evaluate().isNotEmpty) return field;
   return find.widgetWithText(TextFormField, label);
 }
+
+/// Opens Settings from the wallet list, on either layout.
+Future<void> openSettings(WidgetTester tester) async {
+  final text = find.text('Settings');
+  await tester.tap(
+    text.evaluate().isNotEmpty ? text : find.byTooltip('Settings'),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Picks a network from the quiet network menu.
+Future<void> chooseNetwork(WidgetTester tester, String label) async {
+  await tester.tap(find.byType(PopupMenuButton<Network>));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(label).last);
+  await tester.pumpAndSettle();
+}
+
+/// Opens the add-wallet menu, on either layout.
+Future<void> openAddWallet(WidgetTester tester) async {
+  final text = find.text('Add wallet');
+  await tester.tap(
+    text.evaluate().isNotEmpty ? text : find.byTooltip('Add a wallet'),
+  );
+  await tester.pumpAndSettle();
+}

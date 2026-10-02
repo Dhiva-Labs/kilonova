@@ -53,14 +53,14 @@ class BalanceBlock extends StatelessWidget {
         if (balance.unlocked != balance.total) ...[
           const SizedBox(height: KnSpace.xs),
           Text(
-            l.spendableAmount(formatXmrGrouped(balance.unlocked)),
+            l.spendableAmount(formatXmrShort(balance.unlocked)),
             style: monoStyle(context, size: 13, color: c.textSecondary),
           ),
         ],
         if (balance.incoming > BigInt.zero) ...[
           const SizedBox(height: KnSpace.xs),
           Text(
-            l.incomingAmount(formatXmr(balance.incoming)),
+            l.incomingAmount(formatXmrShort(balance.incoming)),
             style: monoStyle(context, size: 13, color: c.received),
           ),
         ],

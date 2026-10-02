@@ -134,7 +134,10 @@ class _TxDetailsScreenState extends State<TxDetailsScreen> {
                 const SizedBox(height: KnSpace.sm),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: KnButton.text(l.txNoteSaveAction, onPressed: _saveNote),
+                  child: KnButton.text(
+                    l.txNoteSaveAction,
+                    onPressed: _saveNote,
+                  ),
                 ),
               ],
               if (_details.destinations.isNotEmpty) ...[
@@ -324,9 +327,11 @@ class _TxKeyDialogState extends State<_TxKeyDialog> {
       ),
       actions: [
         if (key == null && _biometric)
-          KnButton.text(l.biometricUnlockAction, onPressed: _revealWithBiometric),
-        if (key == null)
-          KnButton.text(l.txKeyShowAction, onPressed: _reveal),
+          KnButton.text(
+            l.biometricUnlockAction,
+            onPressed: _revealWithBiometric,
+          ),
+        if (key == null) KnButton.text(l.txKeyShowAction, onPressed: _reveal),
         if (key != null)
           KnButton.text(
             l.copyAction,

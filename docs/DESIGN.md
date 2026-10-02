@@ -72,6 +72,16 @@ Contrast against `bg` and `surface` is tested in
 - **Naming** may borrow from astronomy where it says something useful
   ("Scanning block 3,412,880"). It is never decoration on buttons or headings.
 
+### Primitives
+
+Screens are built from the widgets in `app/lib/widgets/`: `KnField`,
+`KnButton`, `KnIconButton`, `KnSegments`, `KnCard`, `KnRow`, `KeyValue`,
+`Eyebrow`, `AmountText`, `KnIcon`, `SyncOrbit`, `showKnDialog` and
+`showKnSheet`. Feature code never sets a radius, border color or font size
+itself, and never builds a Material form widget directly; the `widgets` lint
+rejects that. The type scale, geometry and the reasoning behind each widget
+are in [design/REDESIGN.md](design/REDESIGN.md).
+
 ### Layout and motion
 
 - Desktop (Linux, Windows) uses two panes: wallet list and detail. Android
@@ -135,6 +145,7 @@ these checks and fails CI on any hit:
 | `dash` | The em dash character | ARB files, `README.md`, `PRIVACY.md`, `docs/`, `site/` |
 | `emoji` | Emoji characters | ARB files, Markdown headings |
 | `buzzword` | Words from `tools/design_lint/buzzwords.txt` | ARB files, `README.md`, `PRIVACY.md`, `site/` |
+| `widgets` | Raw `TextField`, `ListTile`, `SegmentedButton`, `FilledButton`, `TextButton`, `Card` and friends | `app/lib/features/` |
 
 Text inside inline code spans and fenced code blocks in Markdown is skipped,
 so docs can still name what they ban.

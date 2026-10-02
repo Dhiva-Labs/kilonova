@@ -10,8 +10,7 @@ void main() {
   testWidgets('only a proxy that answers is saved', (tester) async {
     useDesktopWindow(tester);
     await tester.pumpWidget(await testApp(tester));
-    await tester.tap(find.byTooltip('Settings'));
-    await tester.pumpAndSettle();
+    await openSettings(tester);
     await tester.tap(find.text('Proxy and Tor'));
     await pumpUntilFound(
       tester,

@@ -24,6 +24,13 @@ String formatXmrGrouped(BigInt atomic, {bool full = false}) {
   return '${p.whole}.${p.head}${p.tail}';
 }
 
+/// The grouped whole part and the first four decimals, for lines where the
+/// full precision would only be noise: `2,607.4980`.
+String formatXmrShort(BigInt atomic) {
+  final p = _XmrParts.of(atomic, full: false);
+  return '${p.whole}.${p.head}';
+}
+
 /// An amount split for display: grouped whole part, the first four
 /// decimals, and the remaining significant decimals.
 class _XmrParts {
@@ -108,23 +115,33 @@ class _AmountTextState extends State<AmountText> {
     final dim = base.copyWith(color: c.textSecondary);
     final p = _XmrParts.of(widget.atomic, full: _full);
 
+    // The balance must stay on one line on a phone; the tail shrinks first
+    // through its smaller size, then the whole line scales down.
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _full = !_full),
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: '${widget.prefix}${p.whole}.${p.head}', style: base),
-            if (p.tail.isNotEmpty)
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text.rich(
+          TextSpan(
+            children: [
               TextSpan(
-                text: p.tail,
-                // Full precision is one run at one size.
-                style: _full
-                    ? base
-                    : dim.copyWith(fontSize: base.fontSize! * 0.8),
+                text: '${widget.prefix}${p.whole}.${p.head}',
+                style: base,
               ),
-            if (widget.unit.isNotEmpty) TextSpan(text: widget.unit, style: dim),
-          ],
+              if (p.tail.isNotEmpty)
+                TextSpan(
+                  text: p.tail,
+                  // Full precision is one run at one size.
+                  style: _full
+                      ? base
+                      : dim.copyWith(fontSize: base.fontSize! * 0.8),
+                ),
+              if (widget.unit.isNotEmpty)
+                TextSpan(text: widget.unit, style: dim),
+            ],
+          ),
         ),
       ),
     );

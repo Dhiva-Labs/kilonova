@@ -161,10 +161,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Send'));
       await tester.pumpAndSettle();
       await _shot(tester, '05-send-empty');
-      await tester.enterText(
-        fieldWithLabel('To'),
-        payee,
-      );
+      await tester.enterText(fieldWithLabel('To'), payee);
       await tester.enterText(fieldWithLabel('Amount'), '2.5');
       await tester.pump();
       await _shot(tester, '06-send-filled');

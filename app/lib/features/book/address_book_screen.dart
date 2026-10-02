@@ -86,7 +86,8 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
                               ),
                             ),
                             onTap: widget.pick
-                                ? () => Navigator.of(context).pop(contact.address)
+                                ? () =>
+                                      Navigator.of(context).pop(contact.address)
                                 : () => _edit(contact),
                             trailing: widget.pick
                                 ? null
@@ -96,7 +97,9 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
                                       switch (action) {
                                         case 'copy':
                                           Clipboard.setData(
-                                            ClipboardData(text: contact.address),
+                                            ClipboardData(
+                                              text: contact.address,
+                                            ),
                                           );
                                         case 'delete':
                                           _delete(contact);
@@ -154,7 +157,12 @@ Future<bool> showContactDialog(
 }
 
 class _ContactDialog extends StatefulWidget {
-  const _ContactDialog({super.key, required this.wallet, this.name, this.address});
+  const _ContactDialog({
+    super.key,
+    required this.wallet,
+    this.name,
+    this.address,
+  });
 
   final OpenWallet wallet;
   final String? name;

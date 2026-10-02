@@ -74,14 +74,17 @@ void main() {
 
     await tester.enterText(pw.at(1), 'correct horse');
     await tester.tap(find.widgetWithText(FilledButton, 'Create wallet'));
-    await pumpUntilFound(tester, find.text('Balance'));
+    await pumpUntilFound(tester, find.text('BALANCE'));
 
     // Back on the wallet list, opened beside it.
     expect(find.text('Savings'), findsWidgets);
-    expect(find.text('Receive'), findsOneWidget);
-    final address = tester.widget<SelectableText>(
-      find.byType(SelectableText).first,
+    await tester.tap(find.text('Receive'));
+    await tester.pumpAndSettle();
+    final address = tester.widget<Text>(find.text('Main address').last);
+    expect(address.data, 'Main address');
+    expect(
+      find.textContaining(RegExp(r'^4[1-9A-HJ-NP-Za-km-z]{94}$')),
+      findsOneWidget,
     );
-    expect(address.data, startsWith('4'));
   });
 }

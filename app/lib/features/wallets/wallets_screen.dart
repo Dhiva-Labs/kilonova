@@ -129,7 +129,11 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 TestNetworkStrip(network: network),
                 Expanded(
                   child: wallets.isEmpty
-                      ? _EmptyWallets(network: network, onCreate: _create, onRestore: _restore)
+                      ? _EmptyWallets(
+                          network: network,
+                          onCreate: _create,
+                          onRestore: _restore,
+                        )
                       : _WalletList(
                           wallets: wallets,
                           registry: widget.registry,
@@ -400,7 +404,12 @@ class _WalletList extends StatelessWidget {
                 context,
               ).textTheme.titleLarge!.copyWith(fontSize: 16),
             ),
-            subtitle: _WalletRowSubtitle(wallet: w, registry: registry, l: l, c: c),
+            subtitle: _WalletRowSubtitle(
+              wallet: w,
+              registry: registry,
+              l: l,
+              c: c,
+            ),
             onTap: () => onSelect(w.id),
           ),
       ],
@@ -442,7 +451,7 @@ class _WalletRowSubtitle extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: registry.syncOf(wallet.id),
       builder: (context, _, _) => Text(
-        '${formatXmrGrouped(open.balance().total)} XMR',
+        '${formatXmrShort(open.balance().total)} XMR',
         style: monoStyle(context, size: 13, color: c.textSecondary),
       ),
     );

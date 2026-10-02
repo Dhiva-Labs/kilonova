@@ -30,10 +30,7 @@ void main() {
     _phone(tester);
     await tester.pumpWidget(await testApp(tester));
 
-    await tester.tap(find.text('Mainnet'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Stagenet'));
-    await tester.pumpAndSettle();
+    await chooseNetwork(tester, 'Stagenet');
 
     expect(find.text('No Stagenet wallets yet'), findsOneWidget);
     expect(
@@ -49,8 +46,7 @@ void main() {
     _phone(tester);
     await tester.pumpWidget(await testApp(tester));
 
-    await tester.tap(find.byTooltip('Settings'));
-    await tester.pumpAndSettle();
+    await openSettings(tester);
     await tester.ensureVisible(find.text('About Kilonova'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('About Kilonova'));

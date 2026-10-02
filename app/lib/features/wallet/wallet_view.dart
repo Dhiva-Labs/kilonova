@@ -69,9 +69,7 @@ class _WalletViewState extends State<WalletView> {
           if (widget.showHeader) ...[
             Row(
               children: [
-                Expanded(
-                  child: Text(summary.name, style: text.headlineSmall),
-                ),
+                Expanded(child: Text(summary.name, style: text.headlineSmall)),
                 WalletMenu(wallet: widget.wallet, registry: widget.registry),
               ],
             ),

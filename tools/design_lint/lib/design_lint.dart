@@ -117,6 +117,13 @@ final _interFont = RegExp(
 );
 final _emDash = RegExp(r'\u2014', unicode: true);
 final _emoji = RegExp(r'\p{Extended_Pictographic}', unicode: true);
+/// Material form widgets that feature code must not build directly; the
+/// styled versions live in lib/widgets/ (see docs/design/REDESIGN.md).
+final _rawFormWidget = RegExp(
+  r'\b(TextField|TextFormField|ListTile|RadioListTile|SwitchListTile|'
+  r'SegmentedButton|FilledButton|OutlinedButton|TextButton|Card)\s*(\(|<|\.)',
+);
+
 const _bannedPackages = [
   'lucide',
   'google_fonts',
@@ -165,6 +172,18 @@ List<Violation> lintFile(String path, String text, List<String> buzzwords) {
         text,
         _colorLiteral,
         (m) => 'color literal `${m[0]}`: use a token from lib/theme/',
+      ),
+    );
+  }
+
+  if (path.startsWith('app/lib/features/') && path.endsWith('.dart')) {
+    found.addAll(
+      _matchLines(
+        'widgets',
+        path,
+        text,
+        _rawFormWidget,
+        (m) => 'raw `${m[0]}`: use the Kn widget from lib/widgets/',
       ),
     );
   }

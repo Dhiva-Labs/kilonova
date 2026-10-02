@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kilonova/widgets/kn_field.dart';
 
+import 'package:kilonova/widgets/kn_card.dart';
+
 import '../helpers/rust.dart';
 
 /// The stagenet wallet monero-wallet-rpc created for kn-keys' vectors.
@@ -19,11 +21,9 @@ Map<String, dynamic> stagenetVector() {
 }
 
 Future<void> openRestore(WidgetTester tester) async {
-  await tester.tap(find.text('Stagenet'));
-  await tester.pumpAndSettle();
+  await chooseNetwork(tester, 'Stagenet');
   // Through the add menu, which exists whether or not wallets do.
-  await tester.tap(find.byTooltip('Add a wallet'));
-  await tester.pumpAndSettle();
+  await openAddWallet(tester);
   await tester.tap(find.text('Restore wallet').last);
   await tester.pumpAndSettle();
 }
@@ -63,16 +63,24 @@ void main() {
     await fill(tester, 'Password', 'restore pw');
     await fill(tester, 'Confirm password', 'restore pw');
     await submit(tester);
-    await pumpUntilFound(tester, find.text('Balance'));
+    await pumpUntilFound(tester, find.text('BALANCE'));
 
+    // Addresses live on the Receive screen.
+    await tester.tap(find.text('Receive'));
+    await tester.pumpAndSettle();
     expect(find.text(vector['address'] as String), findsOneWidget);
 
     // The next subaddress matches monero-wallet-rpc's 0/1.
     await tester.tap(find.text('New address'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Rent');
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
-    await pumpUntilFound(tester, find.text('Address 1 · Rent'));
+    await tester.tap(find.text('Save'));
+    await pumpUntilFound(tester, find.text('Rent'));
+    // The row and the dismissed dialog's field both say Rent; the row is a KnRow.
+    await tester.tap(
+      find.descendant(of: find.byType(KnRow), matching: find.text('Rent')).last,
+    );
+    await tester.pumpAndSettle();
     final sub = (vector['subaddresses'] as List)
         .cast<Map<String, dynamic>>()
         .firstWhere((s) => s['account'] == 0 && s['index'] == 1);

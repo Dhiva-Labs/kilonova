@@ -35,8 +35,7 @@ void main() {
     expect(await tester.runAsync(priceCurrency), isNull);
     expect(fetches, 0, reason: 'nothing is fetched while prices are off');
 
-    await tester.tap(find.byTooltip('Settings'));
-    await tester.pumpAndSettle();
+    await openSettings(tester);
     await tester.tap(find.text('Prices'));
     await tester.pumpAndSettle();
     expect(find.textContaining('api.coingecko.com'), findsOneWidget);

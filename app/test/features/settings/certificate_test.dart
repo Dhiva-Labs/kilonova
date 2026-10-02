@@ -43,8 +43,7 @@ void main() {
     final url = 'https://localhost:${server.port}';
 
     await tester.pumpWidget(await testApp(tester));
-    await tester.tap(find.byTooltip('Settings'));
-    await tester.pumpAndSettle();
+    await openSettings(tester);
     await tester.tap(find.text('Light wallet servers'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), url);

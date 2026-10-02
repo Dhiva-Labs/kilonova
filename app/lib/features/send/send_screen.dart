@@ -276,7 +276,7 @@ class _SendScreenState extends State<SendScreen> {
           const SizedBox(height: KnSpace.lg),
         ],
         Text(
-          l.spendableAmount(formatXmrGrouped(balance.unlocked)),
+          l.spendableAmount(formatXmrShort(balance.unlocked)),
           style: monoStyle(context, size: 13, color: c.textSecondary),
         ),
         if (note != null && note.isNotEmpty) ...[
@@ -377,9 +377,7 @@ class _SendScreenState extends State<SendScreen> {
           ],
           selected: _priority,
           expand: true,
-          onChanged: _busy
-              ? null
-              : (v) => setState(() => _priority = v),
+          onChanged: _busy ? null : (v) => setState(() => _priority = v),
         ),
         const SizedBox(height: KnSpace.xs),
         Text(l.sendFeeHelp, style: text.bodySmall),
@@ -391,7 +389,10 @@ class _SendScreenState extends State<SendScreen> {
           const SizedBox(height: KnSpace.lg),
           Row(
             children: [
-              KnButton.primary(l.sendReviewAction, onPressed: _busy ? null : _review),
+              KnButton.primary(
+                l.sendReviewAction,
+                onPressed: _busy ? null : _review,
+              ),
               if (_busy) ...[
                 const SizedBox(width: KnSpace.md),
                 Expanded(child: Text(l.sendPreparing, style: text.bodySmall)),
@@ -586,7 +587,10 @@ class _ConfirmViewState extends State<_ConfirmView> {
                   strong: true,
                 ),
                 if (s.change > BigInt.zero)
-                  KeyValue(label: l.sendChangeLine, value: AmountText(s.change)),
+                  KeyValue(
+                    label: l.sendChangeLine,
+                    value: AmountText(s.change),
+                  ),
               ]),
               const SizedBox(height: KnSpace.sm),
               Text(l.sendViaLine(_host(s.via)), style: text.bodySmall),
@@ -607,8 +611,14 @@ class _ConfirmViewState extends State<_ConfirmView> {
             runSpacing: KnSpace.sm,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              KnButton.primary(l.sendConfirmAction, onPressed: _busy ? null : _send),
-              KnButton.text(l.sendEditAction, onPressed: _busy ? null : widget.onEdit),
+              KnButton.primary(
+                l.sendConfirmAction,
+                onPressed: _busy ? null : _send,
+              ),
+              KnButton.text(
+                l.sendEditAction,
+                onPressed: _busy ? null : widget.onEdit,
+              ),
               if (_biometric)
                 KnButton.text(
                   l.biometricSendAction,
@@ -658,7 +668,10 @@ class _ConfirmViewState extends State<_ConfirmView> {
                 expand: true,
               ),
               const SizedBox(height: KnSpace.sm),
-              KnButton.text(l.sendEditAction, onPressed: _busy ? null : widget.onEdit),
+              KnButton.text(
+                l.sendEditAction,
+                onPressed: _busy ? null : widget.onEdit,
+              ),
             ],
           ),
         ),
