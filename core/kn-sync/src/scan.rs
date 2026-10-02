@@ -146,7 +146,9 @@ fn scan_block(
     // Additionally timelocked outputs are kept and shown; spending rules for
     // them come with sending.
     for output in found.ignore_additional_timelock() {
-        let key_image = keys.key_image(output.key(), output.key_offset());
+        let key_image = keys
+            .key_image(output.key(), output.key_offset())
+            .or_else(|| state.known_key_image(&output.key().compress().to_bytes()));
         let new = OwnedOutput {
             miner: output.transaction() == miner_tx,
             output,

@@ -148,13 +148,35 @@ impl PreparedSend {
 
 /// Where decoys and fees came from, and so where the transaction goes.
 #[derive(Clone)]
-enum Route {
+pub(crate) enum Route {
     Node(NodeUrl),
     Lws(NodeUrl),
 }
 
 impl Route {
-    fn url(&self) -> &NodeUrl {
+    /// The node or light wallet server a wallet in `mode` sends through.
+    pub(crate) fn for_wallet(
+        mode: StoreSyncMode,
+        network: kn_keys::Network,
+        consent: Option<&str>,
+    ) -> Result<Self, SendError> {
+        Ok(match mode {
+            StoreSyncMode::Full => {
+                Self::Node(current_node(network.into()).map_err(|_| SendError::Storage)?)
+            }
+            StoreSyncMode::Lws => {
+                let url = lws_server(network.into())
+                    .map_err(|_| SendError::Storage)?
+                    .ok_or(SendError::LwsServerNotSet)?;
+                if consent != Some(url.as_str()) {
+                    return Err(SendError::LwsConsentNeeded);
+                }
+                Self::Lws(NodeUrl::parse(&url).map_err(|_| SendError::LwsServerNotSet)?)
+            }
+        })
+    }
+
+    pub(crate) fn url(&self) -> &NodeUrl {
         match self {
             Self::Node(url) | Self::Lws(url) => url,
         }
@@ -183,6 +205,55 @@ impl Route {
                 kn_tx::prepare(backend, keys, network, state, tip, request, priority).await?
             }
         })
+    }
+
+    pub(crate) async fn prepare_unsigned(
+        &self,
+        keys: &WalletKeys,
+        network: kn_keys::Network,
+        state: &SyncState,
+        tip: u64,
+        request: &Request,
+        priority: Priority,
+    ) -> Result<kn_tx::Unsigned, SendError> {
+        Ok(match self {
+            Self::Node(url) => {
+                let (daemon, _) = connect(url, network)
+                    .await
+                    .map_err(|_| SendError::Unreachable)?;
+                let backend = Backend::Node(&daemon);
+                kn_tx::prepare_unsigned(backend, keys, network, state, tip, request, priority)
+                    .await?
+            }
+            Self::Lws(url) => {
+                let server = LwsServer::new(url).map_err(|_| SendError::Unreachable)?;
+                let backend = Backend::Lws(&server);
+                kn_tx::prepare_unsigned(backend, keys, network, state, tip, request, priority)
+                    .await?
+            }
+        })
+    }
+
+    pub(crate) async fn publish_signed(
+        &self,
+        network: kn_keys::Network,
+        signed: &kn_tx::cold::Signed,
+        state: &mut SyncState,
+        tip: u64,
+    ) -> Result<(), SendError> {
+        match self {
+            Self::Node(url) => {
+                let (daemon, _) = connect(url, network)
+                    .await
+                    .map_err(|_| SendError::Unreachable)?;
+                kn_tx::publish_signed(Backend::Node(&daemon), signed, state, tip).await?;
+            }
+            Self::Lws(url) => {
+                let server = LwsServer::new(url).map_err(|_| SendError::Unreachable)?;
+                kn_tx::publish_signed(Backend::Lws(&server), signed, state, tip).await?;
+            }
+        }
+        Ok(())
     }
 
     async fn publish(
@@ -253,20 +324,7 @@ impl OpenWallet {
             .sync
             .caught_up_state()
             .ok_or(SendError::NotSynced)?;
-        let route = match mode {
-            StoreSyncMode::Full => {
-                Route::Node(current_node(network.into()).map_err(|_| SendError::Storage)?)
-            }
-            StoreSyncMode::Lws => {
-                let url = lws_server(network.into())
-                    .map_err(|_| SendError::Storage)?
-                    .ok_or(SendError::LwsServerNotSet)?;
-                if consent.as_deref() != Some(url.as_str()) {
-                    return Err(SendError::LwsConsentNeeded);
-                }
-                Route::Lws(NodeUrl::parse(&url).map_err(|_| SendError::LwsServerNotSet)?)
-            }
-        };
+        let route = Route::for_wallet(mode, network, consent.as_deref())?;
         let request = match sweep_to {
             Some(address) => Request::SweepAll(address),
             None => Request::Pay(
