@@ -10,7 +10,8 @@ what reviewers look for.
 - Security problems go through [SECURITY.md](SECURITY.md), never a public
   issue.
 - Every change reaches `main` through a pull request, including the
-  maintainers' own. `main` is protected: it needs a review and green CI.
+  maintainers' own. `main` is protected: it needs a review, and maintainers
+  merge only when every workflow is green.
 
 ## Set up
 
@@ -100,7 +101,7 @@ cargo install flutter_rust_bridge_codegen --version 2.13.0 --locked
 cd app && flutter_rust_bridge_codegen generate
 ```
 
-CI fails if the generated files are out of date.
+The Bindings workflow fails if the generated files are out of date.
 
 ### Text and translations
 

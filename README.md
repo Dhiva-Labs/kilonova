@@ -1,5 +1,14 @@
 # Kilonova
 
+[![Rust core](https://github.com/Dhiva-Labs/kilonova/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/rust.yml)
+[![Linux](https://github.com/Dhiva-Labs/kilonova/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/linux.yml)
+[![Windows](https://github.com/Dhiva-Labs/kilonova/actions/workflows/windows.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/windows.yml)
+[![Android](https://github.com/Dhiva-Labs/kilonova/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/android.yml)
+[![Bindings](https://github.com/Dhiva-Labs/kilonova/actions/workflows/bindings.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/bindings.yml)
+[![Design lint](https://github.com/Dhiva-Labs/kilonova/actions/workflows/design.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/design.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-7A5B00)](LICENSE)
+[![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20Android-5A6275)](#build-from-source)
+
 An open-source Monero wallet for Linux, Windows and Android, by Dhiva Labs.
 
 Kilonova can sync two ways, chosen per wallet:
