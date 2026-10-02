@@ -27,5 +27,7 @@ class MainActivity : FlutterFragmentActivity() {
             }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kilonova/biometric")
             .setMethodCallHandler(BiometricVault(this))
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kilonova/background")
+            .setMethodCallHandler(BackgroundSync(this))
     }
 }

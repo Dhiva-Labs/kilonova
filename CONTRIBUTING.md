@@ -110,6 +110,24 @@ from a second terminal:
 while true; do adb emu finger touch 1; sleep 2; done
 ```
 
+After a cold boot with a PIN set, unlock the emulator once
+(`adb shell input text 1234 && adb shell input keyevent 66`): until then
+Android cannot start apps, and `flutter test` reports that the activity
+"does not exist".
+
+### Android notifications and background sync
+
+The test `Android: background sync service and payment notifications appear`
+posts a payment notification and starts the background sync service for 15
+seconds. Grant the permission first
+(`adb shell pm grant com.dhivalabs.kilonova android.permission.POST_NOTIFICATIONS`
+after installing), then check both while it runs:
+
+```sh
+adb shell dumpsys notification --noredact | grep android.title=
+adb shell dumpsys activity services com.dhivalabs.kilonova | grep isForeground
+```
+
 ### Text and translations
 
 All user-facing strings live in `app/lib/l10n/app_en.arb`. Never hard-code

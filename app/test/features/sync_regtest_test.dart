@@ -3,6 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kilonova/features/settings/price_feed.dart';
+import 'package:kilonova/features/wallets/wallet_registry.dart';
+import 'package:kilonova/src/rust/api/preferences.dart';
+import 'package:kilonova/src/rust/api/send.dart';
+import 'package:kilonova/src/rust/api/sync.dart';
 import 'package:kilonova/src/rust/api/network.dart';
 import 'package:kilonova/src/rust/api/nodes.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
@@ -261,6 +266,90 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.text('test payment'), findsOneWidget);
+    },
+    skip: Platform.environment['KN_REGTEST'] != '1',
+  );
+
+  testWidgets(
+    'a payment arriving while the app is away is announced',
+    (tester) async {
+      final notifier = FakeNotifier();
+      final registry = WalletRegistry(
+        notifier: notifier,
+        price: PriceFeed(fetch: () async => null),
+      );
+      late OpenWallet sender;
+      late OpenWallet payee;
+      await tester.runAsync(() async {
+        await selectNode(network: Network.mainnet, url: _node);
+        await setPreferences(
+          preferences: const Preferences(
+            notifyIncoming: true,
+            backgroundSync: false,
+          ),
+        );
+        await registry.reload();
+        Future<OpenWallet> make(String name) async {
+          final seed = await generateSeed(format: SeedFormat.classic);
+          return createWalletFromSeed(
+            name: name,
+            network: Network.mainnet,
+            mode: SyncMode.full,
+            words: seed.words.join(' '),
+            password: 'regtest password',
+            restoreHeight: BigInt.zero,
+            createdHere: true,
+          );
+        }
+
+        sender = await make('Away sender');
+        payee = await make('Away payee');
+        await _mine(sender.addresses().first.address, 70);
+        await registry.opened(sender);
+        await registry.opened(payee);
+      });
+      bool synced(OpenWallet w) =>
+          registry.syncOf(w.summary().id).value?.phase == SyncPhase.synced;
+      await pumpUntil(
+        tester,
+        () => synced(sender) && synced(payee),
+        what: 'both wallets to sync',
+        timeout: const Duration(seconds: 120),
+      );
+
+      registry.foreground = false;
+      await tester.runAsync(() async {
+        final send = await sender.prepareSend(
+          payments: [
+            Payment(
+              address: payee.addresses().first.address,
+              amount: BigInt.from(250000000000),
+            ),
+          ],
+          priority: FeePriority.normal,
+        );
+        await sender.confirmSend(send: send, password: 'regtest password');
+        registry.startSync(payee.summary().id);
+      });
+      await pumpUntil(
+        tester,
+        () => notifier.payments.isNotEmpty,
+        what: 'a payment notification',
+        timeout: const Duration(seconds: 90),
+      );
+      expect(notifier.payments.single, (
+        'Payment received in Away payee',
+        '+0.25 XMR, waiting for a block',
+      ));
+      registry.lockAll();
+      await tester.runAsync(
+        () => setPreferences(
+          preferences: const Preferences(
+            notifyIncoming: false,
+            backgroundSync: false,
+          ),
+        ),
+      );
     },
     skip: Platform.environment['KN_REGTEST'] != '1',
   );

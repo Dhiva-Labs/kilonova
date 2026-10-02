@@ -90,7 +90,13 @@ or font/CDN providers. Fonts and icons are bundled with the app.
 - **Fingerprint or face (Android):** only if you turn on biometric unlock.
 
 Kilonova does not ask for the microphone, contacts, location or shared storage.
-- **Notifications:** to tell you about incoming payments, if you enable it.
+- **Notifications:** to tell you about incoming payments, if you turn that on
+  (Settings, Notifications and background). Off by default. A locked phone
+  shows only that a payment arrived, not the amount or wallet.
+- **Background sync (Android):** off by default. If you turn it on, unlocked
+  wallets stay unlocked when you leave the app so they keep syncing, behind an
+  ongoing notification. Anyone who opens Kilonova on your phone during that
+  time can use those wallets.
 - **Network:** to reach the node, server or price service you configured.
 
 ## Downloads and app stores
@@ -117,6 +123,7 @@ Security issues: see SECURITY.md in the repository.
 
 Newest first.
 
+- 2026-10-02: payment notifications and background sync, both off by default.
 - 2026-10-02: name the price service and say how often it is asked.
 - 2026-10-02: QR scanning: what the camera is used for, and permissions the app never asks for.
 - 2026-10-02: describe what a light wallet server sees when you send.

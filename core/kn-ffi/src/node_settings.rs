@@ -32,6 +32,13 @@ pub(crate) struct Settings {
     /// and the price service is never contacted.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) price_currency: Option<String>,
+    /// Notify about incoming payments while the app is not in front.
+    #[serde(default)]
+    pub(crate) notify_incoming: bool,
+    /// Android: keep unlocked wallets syncing when the app leaves the
+    /// foreground, instead of locking them.
+    #[serde(default)]
+    pub(crate) background_sync: bool,
     /// Pinned certificate fingerprints by https address.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) pins: BTreeMap<String, String>,

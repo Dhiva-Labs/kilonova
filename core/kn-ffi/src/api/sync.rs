@@ -444,9 +444,9 @@ impl Run<'_> {
             node: Some(node.as_str().to_owned()),
             ..SyncEvent::new(SyncPhase::Connecting)
         });
+        let mut state = self.inner.sync.snapshot();
         let result = async {
             let (daemon, _) = connect(&node, setup.network).await?;
-            let mut state = self.inner.sync.snapshot();
             sync(
                 &daemon,
                 &setup.keys,
@@ -468,6 +468,9 @@ impl Run<'_> {
         match result {
             Ok(()) => {
                 let tip = self.inner.sync.tip.load(Ordering::Relaxed);
+                // At the tip, sync also expires dropped spends and reads the
+                // transaction pool; keep that too.
+                self.record(&state, tip);
                 self.emit(SyncEvent {
                     scanned: tip,
                     tip,

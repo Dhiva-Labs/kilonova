@@ -10,6 +10,7 @@ import 'api/book.dart';
 import 'api/core.dart';
 import 'api/network.dart';
 import 'api/nodes.dart';
+import 'api/preferences.dart';
 import 'api/price.dart';
 import 'api/send.dart';
 import 'api/sync.dart';
@@ -91,6 +92,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  Preferences dco_decode_box_autoadd_preferences(dynamic raw);
 
   @protected
   SyncFailure dco_decode_box_autoadd_sync_failure(dynamic raw);
@@ -187,6 +191,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Payment dco_decode_payment(dynamic raw);
+
+  @protected
+  Preferences dco_decode_preferences(dynamic raw);
 
   @protected
   SeedFormat dco_decode_seed_format(dynamic raw);
@@ -296,6 +303,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
+  Preferences sse_decode_box_autoadd_preferences(SseDeserializer deserializer);
+
+  @protected
   SyncFailure sse_decode_box_autoadd_sync_failure(SseDeserializer deserializer);
 
   @protected
@@ -396,6 +406,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Payment sse_decode_payment(SseDeserializer deserializer);
+
+  @protected
+  Preferences sse_decode_preferences(SseDeserializer deserializer);
 
   @protected
   SeedFormat sse_decode_seed_format(SseDeserializer deserializer);
@@ -513,6 +526,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_preferences(
+    Preferences self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_sync_failure(
@@ -636,6 +655,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_payment(Payment self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_preferences(Preferences self, SseSerializer serializer);
 
   @protected
   void sse_encode_seed_format(SeedFormat self, SseSerializer serializer);

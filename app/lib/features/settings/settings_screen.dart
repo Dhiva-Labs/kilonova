@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
+import '../wallets/wallet_registry.dart';
 import 'about_screen.dart';
+import 'background_screen.dart';
 import 'lws_servers_screen.dart';
 import 'nodes_screen.dart';
-import 'price_feed.dart';
 import 'prices_screen.dart';
 import 'privacy_screen.dart';
 import 'proxy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, required this.prices});
+  const SettingsScreen({super.key, required this.registry});
 
-  final PriceFeed prices;
+  final WalletRegistry registry;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +56,15 @@ class SettingsScreen extends StatelessWidget {
             title: Text(l.pricesTitle),
             subtitle: Text(l.pricesSubtitle),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => open(PricesScreen(feed: prices)),
+            onTap: () => open(PricesScreen(feed: registry.price)),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.notifications_none_outlined),
+            title: Text(l.backgroundTitle),
+            subtitle: Text(l.backgroundSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => open(BackgroundScreen(registry: registry)),
           ),
           const Divider(),
           ListTile(

@@ -498,5 +498,47 @@
         "type": "String"
       }
     }
+  },
+  "notifyPaymentTitle": "Payment received in {wallet}",
+  "notifyPaymentBody": "+{amount} XMR",
+  "notifyPaymentPending": "+{amount} XMR, waiting for a block",
+  "notifyPaymentPublic": "Kilonova: payment received",
+  "keepAliveTitle": "Kilonova is syncing",
+  "keepAliveText": "{count, plural, =1{1 wallet stays unlocked and synced} other{{count} wallets stay unlocked and synced}}",
+  "backgroundTitle": "Notifications and background",
+  "backgroundSubtitle": "Payment notifications and syncing in the background",
+  "notifyIncomingLabel": "Notify me about incoming payments",
+  "notifyIncomingHelp": "While Kilonova is not on screen. The lock screen shows only that a payment arrived, not the amount.",
+  "backgroundSyncLabel": "Keep wallets syncing in the background",
+  "backgroundSyncHelp": "Unlocked wallets stay unlocked when you leave Kilonova, so they keep syncing and can notify you. Anyone who opens the app on this phone can then see and spend from them. Android shows an ongoing notification while this happens and may stop it after some hours.",
+  "backgroundDesktopNote": "On this computer, wallets keep syncing while Kilonova is open, even when its window is hidden.",
+  "notifyDenied": "Notifications are blocked for Kilonova in the system settings.",
+  "@notifyPaymentTitle": {
+    "placeholders": {
+      "wallet": {
+        "type": "String"
+      }
+    }
+  },
+  "@notifyPaymentBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@notifyPaymentPending": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@keepAliveText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

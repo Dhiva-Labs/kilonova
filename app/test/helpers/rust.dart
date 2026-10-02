@@ -7,6 +7,7 @@ import 'package:kilonova/app.dart';
 import 'package:kilonova/features/settings/price_feed.dart';
 import 'package:kilonova/features/wallets/wallet_registry.dart';
 import 'package:kilonova/platform/biometric_unlock.dart';
+import 'package:kilonova/platform/notifications.dart';
 import 'package:kilonova/src/rust/api/network.dart';
 import 'package:kilonova/src/rust/api/nodes.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
@@ -106,4 +107,35 @@ void useDesktopWindow(WidgetTester tester) {
   tester.view.physicalSize = const Size(1280, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+}
+
+/// Records what the app would show, instead of showing it.
+class FakeNotifier implements Notifier {
+  FakeNotifier({this.supportsBackgroundSync = true});
+
+  @override
+  final bool supportsBackgroundSync;
+
+  final payments = <(String, String)>[];
+  bool keptAlive = false;
+
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<void> payment({
+    required int id,
+    required String title,
+    required String body,
+    required String publicTitle,
+  }) async => payments.add((title, body));
+
+  @override
+  Future<void> startKeepAlive({
+    required String title,
+    required String text,
+  }) async => keptAlive = true;
+
+  @override
+  Future<void> stopKeepAlive() async => keptAlive = false;
 }

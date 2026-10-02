@@ -9,6 +9,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:kilonova/app.dart';
 import 'package:kilonova/features/send/monero_uri.dart';
 import 'package:kilonova/features/wallets/wallet_registry.dart';
+import 'package:kilonova/platform/notifications.dart';
 import 'package:kilonova/platform/biometric_unlock.dart';
 import 'package:kilonova/src/rust/api/network.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
@@ -82,6 +83,26 @@ void main() {
     expect(code.text, uri);
     expect(parsePaymentRequest(code.text!)!.payments.single.address, address);
   });
+
+  testWidgets(
+    'Android: background sync service and payment notifications appear',
+    (tester) async {
+      const notifier = Notifier();
+      await notifier.requestPermission();
+      await notifier.startKeepAlive(title: 'Kilonova is syncing', text: 'test');
+      await notifier.payment(
+        id: 7,
+        title: 'Payment received in Test',
+        body: '+1.5 XMR',
+        publicTitle: 'Kilonova: payment received',
+      );
+      // Long enough for `adb shell dumpsys notification` to see both; see
+      // CONTRIBUTING.md.
+      await Future<void>.delayed(const Duration(seconds: 15));
+      await notifier.stopKeepAlive();
+    },
+    skip: !Platform.isAndroid,
+  );
 
   testWidgets('privacy policy renders from the bundled asset', (tester) async {
     await tester.pumpWidget(KilonovaApp(registry: registry));

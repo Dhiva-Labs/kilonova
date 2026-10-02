@@ -20,9 +20,14 @@ class _KilonovaAppState extends State<KilonovaApp> {
   // wallets that exist.
   late final _network = ValueNotifier(_initialNetwork());
   // Unlocked wallets are locked as soon as the app leaves the foreground on
-  // mobile, so a phone handed to someone else does not expose them.
+  // mobile, so a phone handed to someone else does not expose them, unless
+  // the owner turned on background sync. Hidden desktop windows count as
+  // away for payment notifications.
   late final _lifecycle = AppLifecycleListener(
-    onPause: widget.registry.lockAll,
+    onPause: widget.registry.paused,
+    onResume: widget.registry.resumed,
+    onHide: () => widget.registry.foreground = false,
+    onShow: () => widget.registry.foreground = true,
   );
 
   Network _initialNetwork() {
