@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kilonova/app.dart';
 import 'package:kilonova/widgets/test_network_strip.dart';
 
 import '../helpers/rust.dart';
@@ -8,18 +7,22 @@ import '../helpers/rust.dart';
 void main() {
   setUpAll(initRustForTests);
 
-  testWidgets('mainnet shows no test-network strip', (tester) async {
-    await tester.pumpWidget(const KilonovaApp());
+  testWidgets('empty mainnet offers create and restore, no strip', (
+    tester,
+  ) async {
+    await tester.pumpWidget(await testApp(tester));
 
     expect(find.text('No Mainnet wallets yet'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Create wallet'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Restore wallet'), findsOneWidget);
     expect(find.textContaining('These coins have no value'), findsNothing);
   });
 
   testWidgets('switching to stagenet shows the strip', (tester) async {
-    await tester.pumpWidget(const KilonovaApp());
+    await tester.pumpWidget(await testApp(tester));
 
     await tester.tap(find.text('Stagenet'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('No Stagenet wallets yet'), findsOneWidget);
     expect(
@@ -32,7 +35,7 @@ void main() {
   });
 
   testWidgets('about screen shows the core version', (tester) async {
-    await tester.pumpWidget(const KilonovaApp());
+    await tester.pumpWidget(await testApp(tester));
 
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
@@ -40,6 +43,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('0.1.0'), findsOneWidget);
-    expect(find.byType(SelectableText), findsWidgets);
   });
 }

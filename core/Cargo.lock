@@ -666,6 +666,10 @@ name = "kn_ffi"
 version = "0.1.0"
 dependencies = [
  "flutter_rust_bridge",
+ "kn-keys",
+ "kn-store",
+ "tempfile",
+ "zeroize",
 ]
 
 [[package]]

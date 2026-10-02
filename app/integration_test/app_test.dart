@@ -1,24 +1,38 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kilonova/app.dart';
+import 'package:kilonova/features/wallets/wallet_registry.dart';
+import 'package:kilonova/src/rust/api/wallets.dart';
 import 'package:kilonova/src/rust/frb_generated.dart';
 
 /// Runs the real app with the Rust core built by the platform toolchain,
 /// proving the flutter_rust_bridge wiring end to end.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  setUpAll(RustLib.init);
+  late WalletRegistry registry;
+
+  setUpAll(() async {
+    await RustLib.init();
+    final dir = Directory.systemTemp.createTempSync('kilonova-it-');
+    await initWalletStore(dir: dir.path);
+    registry = WalletRegistry();
+    await registry.reload();
+  });
 
   testWidgets('app boots and reads the network list from Rust', (tester) async {
-    await tester.pumpWidget(const KilonovaApp());
+    await tester.pumpWidget(KilonovaApp(registry: registry));
 
     expect(find.text('Mainnet'), findsOneWidget);
     expect(find.text('Stagenet'), findsOneWidget);
     expect(find.text('Testnet'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Create wallet'), findsOneWidget);
   });
 
   testWidgets('privacy policy renders from the bundled asset', (tester) async {
-    await tester.pumpWidget(const KilonovaApp());
+    await tester.pumpWidget(KilonovaApp(registry: registry));
 
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
