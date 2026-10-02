@@ -36,7 +36,7 @@ Future<void> openWallet(WidgetTester tester, String name) async {
 Future<void> unlockWithPassword(WidgetTester tester) async {
   await tester.enterText(find.byType(TextField), password);
   await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
-  await pumpUntilFound(tester, find.text('Main address'));
+  await pumpUntilFound(tester, find.text('Balance'));
 }
 
 Future<void> openMenu(WidgetTester tester) async {
@@ -77,7 +77,7 @@ void main() {
     await tester.tap(find.text('Lock'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Unlock with fingerprint or face'));
-    await pumpUntilFound(tester, find.text('Main address'));
+    await pumpUntilFound(tester, find.text('Balance'));
 
     await openMenu(tester);
     await tester.tap(find.text('Turn off biometric unlock'));

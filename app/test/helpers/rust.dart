@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kilonova/app.dart';
 import 'package:kilonova/features/wallets/wallet_registry.dart';
 import 'package:kilonova/platform/biometric_unlock.dart';
+import 'package:kilonova/src/rust/api/network.dart';
+import 'package:kilonova/src/rust/api/nodes.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
 import 'package:kilonova/src/rust/frb_generated.dart';
 
@@ -28,6 +30,11 @@ Future<void> initRustForTests() async {
   await RustLib.init(externalLibrary: ExternalLibrary.open(path));
   final dir = Directory.systemTemp.createTempSync('kilonova-test-');
   await initWalletStore(dir: dir.path);
+  // Tests never touch the real network: sync goes to a closed local port
+  // unless a test chooses another node.
+  for (final network in Network.values) {
+    await addNode(network: network, url: 'http://127.0.0.1:1');
+  }
 }
 
 /// Builds the app around a freshly loaded wallet registry.
@@ -56,7 +63,18 @@ Future<void> pumpUntilFound(
     await tester.pump(const Duration(milliseconds: 50));
     if (finder.evaluate().isNotEmpty) return;
   }
-  throw TestFailure('Timed out waiting for $finder');
+  final texts = find
+      .byType(Text)
+      .evaluate()
+      .map(
+        (e) =>
+            (e.widget as Text).data ??
+            (e.widget as Text).textSpan?.toPlainText(),
+      )
+      .whereType<String>()
+      .take(30)
+      .join(' | ');
+  throw TestFailure('Timed out waiting for $finder. On screen: $texts');
 }
 
 /// Sets a desktop-sized window so the two-pane layout is used.

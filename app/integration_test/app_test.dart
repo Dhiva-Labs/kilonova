@@ -83,7 +83,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'emulator password');
     await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
-    await waitFor(tester, find.text('Main address'));
+    await waitFor(tester, find.text('Balance'));
     // The menu asks Android whether biometrics are available; let that
     // answer arrive before opening it.
     await tester.pump(const Duration(seconds: 1));
@@ -103,6 +103,6 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Unlock with fingerprint or face'));
-    await waitFor(tester, find.text('Main address'));
+    await waitFor(tester, find.text('Balance'));
   }, skip: !Platform.isAndroid);
 }

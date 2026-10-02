@@ -9,7 +9,7 @@
 //! way; secret ones are moved into `Zeroizing` first thing.
 #![allow(clippy::needless_pass_by_value)]
 
-use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use flutter_rust_bridge::frb;
@@ -159,7 +159,7 @@ pub fn init_wallet_store(dir: String) -> Result<(), WalletError> {
     Ok(())
 }
 
-fn store() -> Result<MutexGuard<'static, Store>, WalletError> {
+pub(crate) fn store() -> Result<MutexGuard<'static, Store>, WalletError> {
     let store = STORE.get().ok_or(WalletError::NotInitialized)?;
     Ok(store
         .lock()
@@ -301,7 +301,10 @@ fn create(
 /// [`WalletError::WrongPassword`] for a wrong password or a damaged file.
 pub fn unlock_wallet(id: String, password: String) -> Result<OpenWallet, WalletError> {
     let password = Zeroizing::new(password);
-    Ok(OpenWallet::new(store()?.unlock(&id, password.as_bytes())?))
+    // Release the store before building the wallet: loading its sync cache
+    // takes the store lock again.
+    let wallet = store()?.unlock(&id, password.as_bytes())?;
+    Ok(OpenWallet::new(wallet))
 }
 
 /// Renames a wallet. Works while locked.
@@ -326,20 +329,19 @@ pub fn delete_wallet(id: String, password: String) -> Result<(), WalletError> {
 }
 
 /// An unlocked wallet. Dropping it (or calling [`OpenWallet::lock`] and
-/// letting Dart release it) wipes its keys from memory.
+/// letting Dart release it) stops its sync and wipes its keys from memory.
 #[frb(opaque)]
 pub struct OpenWallet {
-    wallet: Mutex<Option<UnlockedWallet>>,
+    pub(crate) inner: Arc<Inner>,
 }
 
-impl OpenWallet {
-    fn new(wallet: UnlockedWallet) -> Self {
-        Self {
-            wallet: Mutex::new(Some(wallet)),
-        }
-    }
+pub(crate) struct Inner {
+    pub(crate) wallet: Mutex<Option<UnlockedWallet>>,
+    pub(crate) sync: super::sync::SyncHandle,
+}
 
-    fn with<T>(
+impl Inner {
+    pub(crate) fn with<T>(
         &self,
         f: impl FnOnce(&mut UnlockedWallet) -> Result<T, WalletError>,
     ) -> Result<T, WalletError> {
@@ -349,6 +351,31 @@ impl OpenWallet {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let wallet = guard.as_mut().ok_or(WalletError::NotFound)?;
         f(wallet)
+    }
+}
+
+impl Drop for OpenWallet {
+    fn drop(&mut self) {
+        self.inner.sync.stop();
+    }
+}
+
+impl OpenWallet {
+    fn new(wallet: UnlockedWallet) -> Self {
+        let sync = super::sync::SyncHandle::load(&wallet);
+        Self {
+            inner: Arc::new(Inner {
+                wallet: Mutex::new(Some(wallet)),
+                sync,
+            }),
+        }
+    }
+
+    fn with<T>(
+        &self,
+        f: impl FnOnce(&mut UnlockedWallet) -> Result<T, WalletError>,
+    ) -> Result<T, WalletError> {
+        self.inner.with(f)
     }
 
     /// The wallet's registry entry.
@@ -448,7 +475,9 @@ impl OpenWallet {
     /// Wipes the keys now instead of waiting for Dart to release the object.
     #[frb(sync)]
     pub fn lock(&self) {
+        self.inner.sync.stop();
         let mut guard = self
+            .inner
             .wallet
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -493,9 +522,7 @@ mod tests {
     // One test, because the store is process-global.
     #[test]
     fn wallet_lifecycle() {
-        let dir = tempfile::tempdir().unwrap();
-        assert_eq!(list_wallets().unwrap_err(), WalletError::NotInitialized);
-        init_wallet_store(dir.path().to_string_lossy().into_owned()).unwrap();
+        crate::test_store::init();
 
         let seed = generate_seed(SeedFormat::Polyseed);
         assert_eq!(seed.words.len(), 16);
@@ -517,7 +544,7 @@ mod tests {
         .unwrap();
         let summary = wallet.summary().unwrap();
         assert_eq!(summary.network, Network::Stagenet);
-        assert_eq!(list_wallets().unwrap(), vec![summary.clone()]);
+        assert!(list_wallets().unwrap().contains(&summary));
 
         let first = wallet.addresses().unwrap();
         assert_eq!(first.len(), 1);
@@ -557,7 +584,7 @@ mod tests {
             delete_wallet(summary.id.clone(), "wrong".into()).unwrap_err(),
             WalletError::WrongPassword
         );
-        delete_wallet(summary.id, "pw2".into()).unwrap();
-        assert!(list_wallets().unwrap().is_empty());
+        delete_wallet(summary.id.clone(), "pw2".into()).unwrap();
+        assert!(list_wallets().unwrap().iter().all(|w| w.id != summary.id));
     }
 }

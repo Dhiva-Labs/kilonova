@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 50021485;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1990023692;
 
 // Section: executor
 
@@ -89,6 +89,53 @@ fn wire__crate__api__wallets__OpenWallet_addresses_impl(
                 }
                 let api_that_guard = api_that_guard.unwrap();
                 let output_ok = crate::api::wallets::OpenWallet::addresses(&*api_that_guard)?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__wallets__OpenWallet_balance_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "OpenWallet_balance",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWallet>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_that_guard = api_that_guard.unwrap();
+                let output_ok =
+                    Ok::<_, ()>(crate::api::wallets::OpenWallet::balance(&*api_that_guard))?;
                 std::result::Result::Ok(output_ok)
             })())
         },
@@ -146,6 +193,53 @@ fn wire__crate__api__wallets__OpenWallet_change_password_impl(
                     std::result::Result::Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__wallets__OpenWallet_history_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "OpenWallet_history",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWallet>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_that_guard = api_that_guard.unwrap();
+                let output_ok =
+                    Ok::<_, ()>(crate::api::wallets::OpenWallet::history(&*api_that_guard))?;
+                std::result::Result::Ok(output_ok)
+            })())
         },
     )
 }
@@ -358,6 +452,109 @@ fn wire__crate__api__wallets__OpenWallet_set_address_label_impl(
         },
     )
 }
+fn wire__crate__api__wallets__OpenWallet_start_sync_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "OpenWallet_start_sync",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWallet>,
+            >>::sse_decode(&mut deserializer);
+            let api_sink = <StreamSink<
+                crate::api::sync::SyncEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::wallets::OpenWallet::start_sync(&*api_that_guard, api_sink);
+                    })?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__wallets__OpenWallet_stop_sync_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "OpenWallet_stop_sync",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWallet>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_that_guard = api_that_guard.unwrap();
+                let output_ok = Ok::<_, ()>({
+                    crate::api::wallets::OpenWallet::stop_sync(&*api_that_guard);
+                })?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__wallets__OpenWallet_summary_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -404,6 +601,40 @@ fn wire__crate__api__wallets__OpenWallet_summary_impl(
         },
     )
 }
+fn wire__crate__api__nodes__add_node_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "add_node",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_network = <crate::api::network::Network>::sse_decode(&mut deserializer);
+            let api_url = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::nodes::NodeError>((move || {
+                    let output_ok = crate::api::nodes::add_node(api_network, api_url)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__network__all_networks_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -430,6 +661,40 @@ fn wire__crate__api__network__all_networks_impl(
                 let output_ok = Ok::<_, ()>(crate::api::network::all_networks())?;
                 std::result::Result::Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__api__nodes__check_node_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "check_node",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_network = <crate::api::network::Network>::sse_decode(&mut deserializer);
+            let api_url = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::nodes::NodeError>((move || {
+                    let output_ok = crate::api::nodes::check_node(api_network, api_url)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
         },
     )
 }
@@ -829,6 +1094,73 @@ fn wire__crate__api__network__network_is_test_network_impl(
         },
     )
 }
+fn wire__crate__api__nodes__nodes_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "nodes",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_network = <crate::api::network::Network>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::nodes::NodeError>((move || {
+                    let output_ok = crate::api::nodes::nodes(api_network)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__nodes__remove_node_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "remove_node",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_network = <crate::api::network::Network>::sse_decode(&mut deserializer);
+            let api_url = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::nodes::NodeError>((move || {
+                    let output_ok = crate::api::nodes::remove_node(api_network, api_url)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__wallets__rename_wallet_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -857,6 +1189,71 @@ fn wire__crate__api__wallets__rename_wallet_impl(
             move |context| {
                 transform_result_sse::<_, crate::api::wallets::WalletError>((move || {
                     let output_ok = crate::api::wallets::rename_wallet(api_id, api_name)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__sync__restore_height_for_new_wallet_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "restore_height_for_new_wallet",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_network = <crate::api::network::Network>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Ok::<_, ()>(crate::api::sync::restore_height_for_new_wallet(api_network))?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__nodes__select_node_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "select_node",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_network = <crate::api::network::Network>::sse_decode(&mut deserializer);
+            let api_url = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::nodes::NodeError>((move || {
+                    let output_ok = crate::api::nodes::select_node(api_network, api_url)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -906,6 +1303,14 @@ flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
 
 // Section: dart2rust
 
+impl SseDecode for flutter_rust_bridge::for_generated::anyhow::Error {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::anyhow::anyhow!("{}", inner);
+    }
+}
+
 impl SseDecode for OpenWallet {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -923,6 +1328,16 @@ impl SseDecode
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <usize>::sse_decode(deserializer);
         return decode_rust_opaque_moi(inner);
+    }
+}
+
+impl SseDecode
+    for StreamSink<crate::api::sync::SyncEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
     }
 }
 
@@ -967,6 +1382,28 @@ impl SseDecode for crate::api::core::CoreInfo {
     }
 }
 
+impl SseDecode for crate::api::sync::HistoryItem {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_txHash = <String>::sse_decode(deserializer);
+        let mut var_height = <u64>::sse_decode(deserializer);
+        let mut var_incoming = <bool>::sse_decode(deserializer);
+        let mut var_amount = <u64>::sse_decode(deserializer);
+        let mut var_miner = <bool>::sse_decode(deserializer);
+        let mut var_locked = <bool>::sse_decode(deserializer);
+        let mut var_subaddressIndex = <Option<u32>>::sse_decode(deserializer);
+        return crate::api::sync::HistoryItem {
+            tx_hash: var_txHash,
+            height: var_height,
+            incoming: var_incoming,
+            amount: var_amount,
+            miner: var_miner,
+            locked: var_locked,
+            subaddress_index: var_subaddressIndex,
+        };
+    }
+}
+
 impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -998,6 +1435,18 @@ impl SseDecode for Vec<crate::api::wallets::AddressRow> {
     }
 }
 
+impl SseDecode for Vec<crate::api::sync::HistoryItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::sync::HistoryItem>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::network::Network> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1005,6 +1454,18 @@ impl SseDecode for Vec<crate::api::network::Network> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::network::Network>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::nodes::NodeChoice> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::nodes::NodeChoice>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -1061,6 +1522,80 @@ impl SseDecode for crate::api::wallets::NewSeed {
     }
 }
 
+impl SseDecode for crate::api::nodes::NodeChoice {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_url = <String>::sse_decode(deserializer);
+        let mut var_bundled = <bool>::sse_decode(deserializer);
+        let mut var_selected = <bool>::sse_decode(deserializer);
+        return crate::api::nodes::NodeChoice {
+            url: var_url,
+            bundled: var_bundled,
+            selected: var_selected,
+        };
+    }
+}
+
+impl SseDecode for crate::api::nodes::NodeError {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::nodes::NodeError::BadUrl,
+            1 => crate::api::nodes::NodeError::WrongNetwork,
+            2 => crate::api::nodes::NodeError::Unreachable,
+            3 => crate::api::nodes::NodeError::Storage,
+            4 => crate::api::nodes::NodeError::NotInitialized,
+            _ => unreachable!("Invalid variant for NodeError: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::nodes::NodeHealth {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_height = <u64>::sse_decode(deserializer);
+        let mut var_synced = <bool>::sse_decode(deserializer);
+        return crate::api::nodes::NodeHealth {
+            height: var_height,
+            synced: var_synced,
+        };
+    }
+}
+
+impl SseDecode for Option<String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<String>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::sync::SyncFailure> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::sync::SyncFailure>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<u32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<u32>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<u64> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1095,6 +1630,38 @@ impl SseDecode for crate::api::wallets::SeedFormat {
     }
 }
 
+impl SseDecode for crate::api::sync::SyncEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_phase = <crate::api::sync::SyncPhase>::sse_decode(deserializer);
+        let mut var_scanned = <u64>::sse_decode(deserializer);
+        let mut var_tip = <u64>::sse_decode(deserializer);
+        let mut var_node = <Option<String>>::sse_decode(deserializer);
+        let mut var_failure = <Option<crate::api::sync::SyncFailure>>::sse_decode(deserializer);
+        return crate::api::sync::SyncEvent {
+            phase: var_phase,
+            scanned: var_scanned,
+            tip: var_tip,
+            node: var_node,
+            failure: var_failure,
+        };
+    }
+}
+
+impl SseDecode for crate::api::sync::SyncFailure {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::sync::SyncFailure::NodeUnreachable,
+            1 => crate::api::sync::SyncFailure::WrongNetwork,
+            2 => crate::api::sync::SyncFailure::BadNode,
+            3 => crate::api::sync::SyncFailure::LwsNotAvailable,
+            _ => unreachable!("Invalid variant for SyncFailure: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for crate::api::wallets::SyncMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1103,6 +1670,21 @@ impl SseDecode for crate::api::wallets::SyncMode {
             0 => crate::api::wallets::SyncMode::Full,
             1 => crate::api::wallets::SyncMode::Lws,
             _ => unreachable!("Invalid variant for SyncMode: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::sync::SyncPhase {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::sync::SyncPhase::Connecting,
+            1 => crate::api::sync::SyncPhase::Scanning,
+            2 => crate::api::sync::SyncPhase::Synced,
+            3 => crate::api::sync::SyncPhase::Failed,
+            4 => crate::api::sync::SyncPhase::Stopped,
+            _ => unreachable!("Invalid variant for SyncPhase: {}", inner),
         };
     }
 }
@@ -1137,6 +1719,18 @@ impl SseDecode for usize {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_u64::<NativeEndian>().unwrap() as _
+    }
+}
+
+impl SseDecode for crate::api::sync::WalletBalance {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_total = <u64>::sse_decode(deserializer);
+        let mut var_unlocked = <u64>::sse_decode(deserializer);
+        return crate::api::sync::WalletBalance {
+            total: var_total,
+            unlocked: var_unlocked,
+        };
     }
 }
 
@@ -1195,56 +1789,64 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        2 => wire__crate__api__wallets__OpenWallet_change_password_impl(
+        3 => wire__crate__api__wallets__OpenWallet_change_password_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        4 => wire__crate__api__wallets__OpenWallet_new_address_impl(
+        6 => wire__crate__api__wallets__OpenWallet_new_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        5 => wire__crate__api__wallets__OpenWallet_reveal_seed_impl(
+        7 => wire__crate__api__wallets__OpenWallet_reveal_seed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        6 => wire__crate__api__wallets__OpenWallet_set_address_label_impl(
+        8 => wire__crate__api__wallets__OpenWallet_set_address_label_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__wallets__check_seed_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__wallets__create_view_only_wallet_impl(
+        9 => {
+            wire__crate__api__wallets__OpenWallet_start_sync_impl(port, ptr, rust_vec_len, data_len)
+        }
+        12 => wire__crate__api__nodes__add_node_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__nodes__check_node_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__wallets__check_seed_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__wallets__create_view_only_wallet_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__wallets__create_wallet_from_seed_impl(
+        18 => wire__crate__api__wallets__create_wallet_from_seed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        13 => wire__crate__api__wallets__create_wallet_from_spend_key_impl(
+        19 => wire__crate__api__wallets__create_wallet_from_spend_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__wallets__delete_wallet_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__wallets__generate_seed_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__core__init_app_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__wallets__init_wallet_store_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__wallets__list_wallets_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__wallets__rename_wallet_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__wallets__unlock_wallet_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__wallets__delete_wallet_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__wallets__generate_seed_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__core__init_app_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__wallets__init_wallet_store_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__wallets__list_wallets_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__nodes__nodes_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__nodes__remove_node_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__wallets__rename_wallet_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__nodes__select_node_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__wallets__unlock_wallet_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1258,11 +1860,17 @@ fn pde_ffi_dispatcher_sync_impl(
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
         1 => wire__crate__api__wallets__OpenWallet_addresses_impl(ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__wallets__OpenWallet_lock_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__wallets__OpenWallet_summary_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__network__all_networks_impl(ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__core__core_info_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__network__network_is_test_network_impl(ptr, rust_vec_len, data_len),
+        2 => wire__crate__api__wallets__OpenWallet_balance_impl(ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__wallets__OpenWallet_history_impl(ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__wallets__OpenWallet_lock_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__wallets__OpenWallet_stop_sync_impl(ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__wallets__OpenWallet_summary_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__network__all_networks_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__core__core_info_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__network__network_is_test_network_impl(ptr, rust_vec_len, data_len),
+        29 => {
+            wire__crate__api__sync__restore_height_for_new_wallet_impl(ptr, rust_vec_len, data_len)
+        }
         _ => unreachable!(),
     }
 }
@@ -1320,6 +1928,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::core::CoreInfo> for crate::ap
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::sync::HistoryItem {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.tx_hash.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.incoming.into_into_dart().into_dart(),
+            self.amount.into_into_dart().into_dart(),
+            self.miner.into_into_dart().into_dart(),
+            self.locked.into_into_dart().into_dart(),
+            self.subaddress_index.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::sync::HistoryItem {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::HistoryItem>
+    for crate::api::sync::HistoryItem
+{
+    fn into_into_dart(self) -> crate::api::sync::HistoryItem {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::network::Network {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -1357,6 +1988,64 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::wallets::NewSeed>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::nodes::NodeChoice {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.url.into_into_dart().into_dart(),
+            self.bundled.into_into_dart().into_dart(),
+            self.selected.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::nodes::NodeChoice {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::nodes::NodeChoice>
+    for crate::api::nodes::NodeChoice
+{
+    fn into_into_dart(self) -> crate::api::nodes::NodeChoice {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::nodes::NodeError {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::BadUrl => 0.into_dart(),
+            Self::WrongNetwork => 1.into_dart(),
+            Self::Unreachable => 2.into_dart(),
+            Self::Storage => 3.into_dart(),
+            Self::NotInitialized => 4.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::nodes::NodeError {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::nodes::NodeError>
+    for crate::api::nodes::NodeError
+{
+    fn into_into_dart(self) -> crate::api::nodes::NodeError {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::nodes::NodeHealth {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.height.into_into_dart().into_dart(),
+            self.synced.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::nodes::NodeHealth {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::nodes::NodeHealth>
+    for crate::api::nodes::NodeHealth
+{
+    fn into_into_dart(self) -> crate::api::nodes::NodeHealth {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::wallets::SeedFormat {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -1378,6 +2067,47 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::wallets::SeedFormat>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::sync::SyncEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.phase.into_into_dart().into_dart(),
+            self.scanned.into_into_dart().into_dart(),
+            self.tip.into_into_dart().into_dart(),
+            self.node.into_into_dart().into_dart(),
+            self.failure.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::sync::SyncEvent {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::SyncEvent>
+    for crate::api::sync::SyncEvent
+{
+    fn into_into_dart(self) -> crate::api::sync::SyncEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::sync::SyncFailure {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::NodeUnreachable => 0.into_dart(),
+            Self::WrongNetwork => 1.into_dart(),
+            Self::BadNode => 2.into_dart(),
+            Self::LwsNotAvailable => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::sync::SyncFailure {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::SyncFailure>
+    for crate::api::sync::SyncFailure
+{
+    fn into_into_dart(self) -> crate::api::sync::SyncFailure {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::wallets::SyncMode {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -1392,6 +2122,48 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::wallets::SyncMode>
     for crate::api::wallets::SyncMode
 {
     fn into_into_dart(self) -> crate::api::wallets::SyncMode {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::sync::SyncPhase {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Connecting => 0.into_dart(),
+            Self::Scanning => 1.into_dart(),
+            Self::Synced => 2.into_dart(),
+            Self::Failed => 3.into_dart(),
+            Self::Stopped => 4.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::sync::SyncPhase {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::SyncPhase>
+    for crate::api::sync::SyncPhase
+{
+    fn into_into_dart(self) -> crate::api::sync::SyncPhase {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::sync::WalletBalance {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.total.into_into_dart().into_dart(),
+            self.unlocked.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::sync::WalletBalance
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::WalletBalance>
+    for crate::api::sync::WalletBalance
+{
+    fn into_into_dart(self) -> crate::api::sync::WalletBalance {
         self
     }
 }
@@ -1456,6 +2228,13 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::wallets::WalletSummary>
     }
 }
 
+impl SseEncode for flutter_rust_bridge::for_generated::anyhow::Error {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(format!("{:?}", self), serializer);
+    }
+}
+
 impl SseEncode for OpenWallet {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1471,6 +2250,15 @@ impl SseEncode
         let (ptr, size) = self.sse_encode_raw();
         <usize>::sse_encode(ptr, serializer);
         <i32>::sse_encode(size, serializer);
+    }
+}
+
+impl SseEncode
+    for StreamSink<crate::api::sync::SyncEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
     }
 }
 
@@ -1505,6 +2293,19 @@ impl SseEncode for crate::api::core::CoreInfo {
     }
 }
 
+impl SseEncode for crate::api::sync::HistoryItem {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.tx_hash, serializer);
+        <u64>::sse_encode(self.height, serializer);
+        <bool>::sse_encode(self.incoming, serializer);
+        <u64>::sse_encode(self.amount, serializer);
+        <bool>::sse_encode(self.miner, serializer);
+        <bool>::sse_encode(self.locked, serializer);
+        <Option<u32>>::sse_encode(self.subaddress_index, serializer);
+    }
+}
+
 impl SseEncode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1532,12 +2333,32 @@ impl SseEncode for Vec<crate::api::wallets::AddressRow> {
     }
 }
 
+impl SseEncode for Vec<crate::api::sync::HistoryItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::sync::HistoryItem>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::network::Network> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::network::Network>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::nodes::NodeChoice> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::nodes::NodeChoice>::sse_encode(item, serializer);
         }
     }
 }
@@ -1587,6 +2408,72 @@ impl SseEncode for crate::api::wallets::NewSeed {
     }
 }
 
+impl SseEncode for crate::api::nodes::NodeChoice {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.url, serializer);
+        <bool>::sse_encode(self.bundled, serializer);
+        <bool>::sse_encode(self.selected, serializer);
+    }
+}
+
+impl SseEncode for crate::api::nodes::NodeError {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::nodes::NodeError::BadUrl => 0,
+                crate::api::nodes::NodeError::WrongNetwork => 1,
+                crate::api::nodes::NodeError::Unreachable => 2,
+                crate::api::nodes::NodeError::Storage => 3,
+                crate::api::nodes::NodeError::NotInitialized => 4,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::nodes::NodeHealth {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.height, serializer);
+        <bool>::sse_encode(self.synced, serializer);
+    }
+}
+
+impl SseEncode for Option<String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <String>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::sync::SyncFailure> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::sync::SyncFailure>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<u32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <u32>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<u64> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1623,6 +2510,35 @@ impl SseEncode for crate::api::wallets::SeedFormat {
     }
 }
 
+impl SseEncode for crate::api::sync::SyncEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::sync::SyncPhase>::sse_encode(self.phase, serializer);
+        <u64>::sse_encode(self.scanned, serializer);
+        <u64>::sse_encode(self.tip, serializer);
+        <Option<String>>::sse_encode(self.node, serializer);
+        <Option<crate::api::sync::SyncFailure>>::sse_encode(self.failure, serializer);
+    }
+}
+
+impl SseEncode for crate::api::sync::SyncFailure {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::sync::SyncFailure::NodeUnreachable => 0,
+                crate::api::sync::SyncFailure::WrongNetwork => 1,
+                crate::api::sync::SyncFailure::BadNode => 2,
+                crate::api::sync::SyncFailure::LwsNotAvailable => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::api::wallets::SyncMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1630,6 +2546,25 @@ impl SseEncode for crate::api::wallets::SyncMode {
             match self {
                 crate::api::wallets::SyncMode::Full => 0,
                 crate::api::wallets::SyncMode::Lws => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::sync::SyncPhase {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::sync::SyncPhase::Connecting => 0,
+                crate::api::sync::SyncPhase::Scanning => 1,
+                crate::api::sync::SyncPhase::Synced => 2,
+                crate::api::sync::SyncPhase::Failed => 3,
+                crate::api::sync::SyncPhase::Stopped => 4,
                 _ => {
                     unimplemented!("");
                 }
@@ -1672,6 +2607,14 @@ impl SseEncode for usize {
             .cursor
             .write_u64::<NativeEndian>(self as _)
             .unwrap();
+    }
+}
+
+impl SseEncode for crate::api::sync::WalletBalance {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.total, serializer);
+        <u64>::sse_encode(self.unlocked, serializer);
     }
 }
 

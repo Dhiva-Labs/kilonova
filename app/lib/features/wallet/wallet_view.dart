@@ -5,11 +5,15 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/wallets.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../src/rust/api/sync.dart';
 import '../../widgets/mode_label.dart';
 import '../wallets/wallet_registry.dart';
+import 'history_list.dart';
+import 'sync_panel.dart';
 import 'wallet_dialogs.dart';
 
-/// An unlocked wallet: its receiving addresses and wallet actions.
+/// An unlocked wallet: balance, sync status, history, receiving addresses
+/// and wallet actions.
 class WalletView extends StatefulWidget {
   const WalletView({super.key, required this.wallet, required this.registry});
 
@@ -55,45 +59,56 @@ class _WalletViewState extends State<WalletView> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
-    final c = context.kn;
     final summary = widget.wallet.summary();
 
-    return ListView(
-      padding: const EdgeInsets.all(KnSpace.lg),
-      children: [
-        Row(
-          children: [
-            Expanded(child: Text(summary.name, style: text.titleLarge)),
-            WalletMenu(wallet: widget.wallet, registry: widget.registry),
-          ],
-        ),
-        const SizedBox(height: KnSpace.xs),
-        Text(
-          [
-            summary.mode.label(context),
-            if (summary.viewOnly) l.viewOnlyTag,
-          ].join(' · '),
-          style: text.bodySmall,
-        ),
-        const SizedBox(height: KnSpace.md),
-        Text(
-          l.syncNotYet,
-          style: text.bodyMedium!.copyWith(color: c.textSecondary),
-        ),
-        const SizedBox(height: KnSpace.lg),
-        Row(
-          children: [
-            Expanded(child: Text(l.receiveTitle, style: text.titleMedium)),
-            TextButton(onPressed: _newAddress, child: Text(l.newAddressAction)),
-          ],
-        ),
-        const SizedBox(height: KnSpace.sm),
-        const Divider(),
-        for (final row in _addresses) ...[
-          _AddressTile(row: row, onEditLabel: () => _editLabel(row)),
+    return ValueListenableBuilder<SyncEvent?>(
+      valueListenable: widget.registry.syncOf(summary.id),
+      builder: (context, event, _) => ListView(
+        padding: const EdgeInsets.all(KnSpace.lg),
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(summary.name, style: text.titleLarge)),
+              WalletMenu(wallet: widget.wallet, registry: widget.registry),
+            ],
+          ),
+          const SizedBox(height: KnSpace.xs),
+          Text(
+            [
+              summary.mode.label(context),
+              if (summary.viewOnly) l.viewOnlyTag,
+            ].join(' · '),
+            style: text.bodySmall,
+          ),
+          const SizedBox(height: KnSpace.lg),
+          SyncPanel(
+            wallet: widget.wallet,
+            event: event,
+            onRetry: () => widget.registry.startSync(summary.id),
+          ),
+          const SizedBox(height: KnSpace.xl),
+          Text(l.historyTitle, style: text.titleMedium),
+          const SizedBox(height: KnSpace.sm),
           const Divider(),
+          HistoryList(items: widget.wallet.history()),
+          const SizedBox(height: KnSpace.xl),
+          Row(
+            children: [
+              Expanded(child: Text(l.receiveTitle, style: text.titleMedium)),
+              TextButton(
+                onPressed: _newAddress,
+                child: Text(l.newAddressAction),
+              ),
+            ],
+          ),
+          const SizedBox(height: KnSpace.sm),
+          const Divider(),
+          for (final row in _addresses) ...[
+            _AddressTile(row: row, onEditLabel: () => _editLabel(row)),
+            const Divider(),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

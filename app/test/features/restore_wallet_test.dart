@@ -57,7 +57,7 @@ void main() {
     await fill(tester, 'Password', 'restore pw');
     await fill(tester, 'Confirm password', 'restore pw');
     await submit(tester);
-    await pumpUntilFound(tester, find.text('Main address'));
+    await pumpUntilFound(tester, find.text('Balance'));
 
     expect(find.text(vector['address'] as String), findsOneWidget);
 
