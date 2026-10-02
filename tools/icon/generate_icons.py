@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the Kilonova app icon and writes the Android and Windows sizes.
+"""Draws the Kilonova app icon and writes the Android, Linux and Windows sizes.
 
 The 1024px master is kept for store listings and Linux packaging.
 
@@ -50,6 +50,12 @@ def main() -> None:
     for density, px in android.items():
         out = app / f"android/app/src/main/res/mipmap-{density}/ic_launcher.png"
         draw(px).convert("RGB").save(out)
+
+    linux = Path("packaging/linux/icons")
+    for px in (64, 128, 256, 512):
+        out = linux / f"{px}x{px}" / "com.dhivalabs.kilonova.png"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        draw(px).save(out)
 
     master.save(
         app / "windows/runner/resources/app_icon.ico",

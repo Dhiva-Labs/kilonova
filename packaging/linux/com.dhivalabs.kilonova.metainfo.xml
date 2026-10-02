@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.dhivalabs.kilonova</id>
+  <name>Kilonova</name>
+  <summary>Monero wallet for full nodes and light wallet servers</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="com.dhivalabs">
+    <name>Dhiva Labs</name>
+  </developer>
+  <description>
+    <p>
+      Kilonova is an open-source Monero wallet. It scans the blockchain on your
+      device from a Monero node you choose, or syncs through a light wallet
+      server such as your own monero-lws.
+    </p>
+    <ul>
+      <li>Several wallets, on mainnet, stagenet and testnet</li>
+      <li>Every output a light wallet server reports is checked with your own keys</li>
+      <li>Tor and SOCKS5 proxy for all traffic, onion nodes, pinned certificates</li>
+      <li>Address book, transaction notes and payment proofs</li>
+      <li>No accounts, no analytics, no server run by Dhiva Labs</li>
+    </ul>
+    <p>Kilonova has not been audited yet. Do not keep more in it than you can afford to lose.</p>
+  </description>
+  <launchable type="desktop-id">com.dhivalabs.kilonova.desktop</launchable>
+  <url type="homepage">https://github.com/Dhiva-Labs/kilonova</url>
+  <url type="bugtracker">https://github.com/Dhiva-Labs/kilonova/issues</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-02"/>
+  </releases>
+</component>

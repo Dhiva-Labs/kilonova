@@ -1,0 +1,17 @@
+Kilonova is an open-source Monero wallet by Dhiva Labs.
+
+<b>Not audited yet.</b> Do not keep more in it than you can afford to lose.
+
+<ul>
+<li>Several wallets on mainnet, stagenet and testnet</li>
+<li>Full sync from a Monero node you choose, or a light wallet server such as your own monero-lws</li>
+<li>Every output a light wallet server reports is checked with your own keys</li>
+<li>Send to several recipients, review before publishing, confirm with password or fingerprint</li>
+<li>QR codes for receiving and sending, amount requests</li>
+<li>Address book, notes and payment proofs</li>
+<li>Tor or SOCKS5 proxy for all traffic, onion nodes, pinned certificates</li>
+<li>Optional prices, payment notifications and background sync, all off by default</li>
+</ul>
+
+No accounts, no analytics, and no server run by Dhiva Labs. Screenshots of
+seed and send screens are blocked.

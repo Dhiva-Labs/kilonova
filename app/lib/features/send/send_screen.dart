@@ -490,10 +490,11 @@ class _ConfirmViewState extends State<_ConfirmView> {
       padding: const EdgeInsets.all(KnSpace.lg),
       children: [
         Text(l.sendConfirmTitle, style: text.titleMedium),
-        if (network.isTestNetwork()) ...[
-          const SizedBox(height: KnSpace.xs),
-          Text(l.sendTestNetworkNote, style: text.bodySmall),
-        ],
+        const SizedBox(height: KnSpace.xs),
+        Text(
+          network.isTestNetwork() ? l.sendTestNetworkNote : l.aboutUnaudited,
+          style: text.bodySmall,
+        ),
         const SizedBox(height: KnSpace.md),
         const Divider(),
         for (final p in s.payments) ...[

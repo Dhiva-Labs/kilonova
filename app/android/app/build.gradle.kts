@@ -23,12 +23,35 @@ android {
         versionName = flutter.versionName
     }
 
+    // Release builds are signed with the key named by these environment
+    // variables (the release workflow takes them from repository secrets).
+    // Without them, local release builds fall back to the debug key and
+    // must not be published.
+    val releaseKeystore = System.getenv("KN_KEYSTORE_PATH")
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("KN_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KN_KEY_ALIAS")
+                keyPassword = System.getenv("KN_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Release signing is set up with packaging in milestone M6; until
-            // then local release builds use the debug key.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(
+                if (releaseKeystore != null) "release" else "debug",
+            )
         }
+    }
+
+    // Reproducible builds: no build-time metadata that differs between
+    // machines.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 }
 

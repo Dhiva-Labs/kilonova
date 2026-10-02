@@ -1,0 +1,1 @@
+Open-source Monero wallet: your own node or a light wallet server

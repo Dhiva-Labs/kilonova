@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Kilonova
+GenericName=Monero wallet
+Comment=Send and receive Monero, syncing from your own node or a light wallet server
+Exec=kilonova
+Icon=com.dhivalabs.kilonova
+Terminal=false
+Categories=Office;Finance;
+Keywords=monero;xmr;wallet;crypto;
+StartupWMClass=com.dhivalabs.kilonova
