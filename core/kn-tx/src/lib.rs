@@ -8,6 +8,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod cold;
+
 use kn_keys::{Network, WalletKeys};
 use kn_sync::{Http, LwsServer, OwnedOutput, SyncState};
 use monero_daemon_rpc::MoneroDaemon;
@@ -42,7 +44,7 @@ pub const MAX_FEE_PER_WEIGHT: u64 = 50_000_000;
 
 /// Fee rounding (quantization) masks larger than this are refused; Monero's
 /// is 10,000.
-const MAX_FEE_MASK: u64 = 10_000;
+pub(crate) const MAX_FEE_MASK: u64 = 10_000;
 
 /// Where decoys, fee rates and broadcasting come from: the wallet's node in
 /// full mode, its light wallet server in LWS mode.
@@ -179,8 +181,86 @@ pub async fn prepare(
     if keys.is_view_only() {
         return Err(TxError::ViewOnly);
     }
-    let fee_rate = fee_rate(backend, keys, network, priority).await?;
     let available = spendable(state, tip);
+    let built = build(backend, keys, network, &available, tip, request, priority).await?;
+    finish(keys, built.signable, &built.used, built.amount)
+}
+
+/// A transaction built but not signed, for a cold wallet to sign.
+pub struct Unsigned {
+    /// monero-oxide's `SignableTransaction`, serialized.
+    pub signable: Vec<u8>,
+    /// Paid to others, atomic units.
+    pub amount: u64,
+    pub fee: u64,
+    /// Returned to this wallet.
+    pub change: u64,
+    /// Recipients and what each receives, as requested.
+    pub destinations: Vec<(String, u64)>,
+    /// One-time keys of the outputs it spends.
+    pub inputs: Vec<[u8; 32]>,
+}
+
+/// Builds a transaction for `request` without signing it, so a view-only
+/// wallet can hand it to the cold wallet that holds the spend key. Only
+/// outputs whose key images the cold wallet has supplied are spent, so the
+/// watching wallet never builds on coins it cannot tell are already spent.
+///
+/// # Errors
+///
+/// See [`TxError`].
+pub async fn prepare_unsigned(
+    backend: Backend<'_>,
+    keys: &WalletKeys,
+    network: Network,
+    state: &SyncState,
+    tip: u64,
+    request: &Request,
+    priority: Priority,
+) -> Result<Unsigned, TxError> {
+    let available = spendable(state, tip);
+    let built = build(backend, keys, network, &available, tip, request, priority).await?;
+    let input_total = built
+        .used
+        .iter()
+        .fold(0u64, |sum, o| sum.saturating_add(o.amount()));
+    let fee = built.signable.transaction.necessary_fee();
+    Ok(Unsigned {
+        amount: built.amount,
+        fee,
+        change: input_total.saturating_sub(built.amount.saturating_add(fee)),
+        destinations: built
+            .signable
+            .payments
+            .iter()
+            .map(|(address, amount)| (address.to_string(), *amount))
+            .collect(),
+        inputs: built
+            .used
+            .iter()
+            .map(|o| o.output.key().compress().to_bytes())
+            .collect(),
+        signable: built.signable.transaction.serialize(),
+    })
+}
+
+/// A transaction ready to sign and the outputs it spends.
+struct Built<'a> {
+    signable: Signable,
+    used: Vec<&'a OwnedOutput>,
+    amount: u64,
+}
+
+async fn build<'a>(
+    backend: Backend<'_>,
+    keys: &WalletKeys,
+    network: Network,
+    available: &'a [&'a OwnedOutput],
+    tip: u64,
+    request: &Request,
+    priority: Priority,
+) -> Result<Built<'a>, TxError> {
+    let fee_rate = fee_rate(backend, keys, network, priority).await?;
     let total_available = available
         .iter()
         .fold(0u64, |sum, o| sum.saturating_add(o.amount()));
@@ -194,7 +274,7 @@ pub async fn prepare(
         keys,
         fee_rate,
         block_number,
-        available: &available,
+        available,
         total_available,
     };
     match request {
@@ -204,19 +284,22 @@ pub async fn prepare(
 }
 
 /// What building a transaction needs, shared by paying and sweeping.
-struct Context<'a> {
+struct Context<'a, 'o> {
     backend: Backend<'a>,
     keys: &'a WalletKeys,
     fee_rate: FeeRate,
     block_number: usize,
     /// Spendable outputs, largest first.
-    available: &'a [&'a OwnedOutput],
+    available: &'o [&'o OwnedOutput],
     total_available: u64,
 }
 
 /// Pays `payments`: enough of the largest outputs for the amount, then one
 /// more at a time until the fee is covered too.
-async fn pay(ctx: &Context<'_>, payments: Vec<(MoneroAddress, u64)>) -> Result<Prepared, TxError> {
+async fn pay<'o>(
+    ctx: &Context<'_, 'o>,
+    payments: Vec<(MoneroAddress, u64)>,
+) -> Result<Built<'o>, TxError> {
     let wanted = payments
         .iter()
         .try_fold(0u64, |sum, (_, amount)| sum.checked_add(*amount))
@@ -240,7 +323,13 @@ async fn pay(ctx: &Context<'_>, payments: Vec<(MoneroAddress, u64)>) -> Result<P
             return Err(TxError::TooManyInputs);
         }
         match signable(ctx.keys, inputs.clone(), payments.clone(), ctx.fee_rate) {
-            Ok(tx) => return finish(ctx.keys, tx, &ctx.available[..used], wanted),
+            Ok(signable) => {
+                return Ok(Built {
+                    signable,
+                    used: ctx.available[..used].to_vec(),
+                    amount: wanted,
+                });
+            }
             Err(SendError::NotEnoughFunds { .. }) if used < ctx.available.len() => {
                 inputs.push(with_decoys(ctx, ctx.available[used]).await?);
                 used += 1;
@@ -264,7 +353,7 @@ async fn pay(ctx: &Context<'_>, payments: Vec<(MoneroAddress, u64)>) -> Result<P
 /// first; the refusal reports the fee, and the payment becomes the rest.
 /// The fee can shrink slightly with the smaller amount, so it settles
 /// within a few passes.
-async fn sweep(ctx: &Context<'_>, address: &MoneroAddress) -> Result<Prepared, TxError> {
+async fn sweep<'o>(ctx: &Context<'_, 'o>, address: &MoneroAddress) -> Result<Built<'o>, TxError> {
     if ctx.available.is_empty() {
         return Err(TxError::InsufficientFunds {
             available: 0,
@@ -286,7 +375,13 @@ async fn sweep(ctx: &Context<'_>, address: &MoneroAddress) -> Result<Prepared, T
             vec![(*address, amount)],
             ctx.fee_rate,
         ) {
-            Ok(tx) => return finish(ctx.keys, tx, ctx.available, amount),
+            Ok(signable) => {
+                return Ok(Built {
+                    signable,
+                    used: ctx.available.to_vec(),
+                    amount,
+                });
+            }
             Err(SendError::NotEnoughFunds {
                 inputs,
                 necessary_fee: Some(fee),
@@ -318,25 +413,49 @@ pub async fn publish(
     state: &mut SyncState,
     tip: u64,
 ) -> Result<(), TxError> {
-    match backend {
-        Backend::Node(daemon) => daemon
-            .publish_transaction(&prepared.transaction)
-            .await
-            .map_err(|e| match e {
-                monero_interface::PublishTransactionError::TransactionRejected(why) => {
-                    TxError::Rejected(why)
-                }
-                other @ monero_interface::PublishTransactionError::InterfaceError(_) => {
-                    TxError::Node(other.to_string())
-                }
-            })?,
-        Backend::Lws(server) => server
-            .submit(&prepared.transaction.serialize())
-            .await
-            .map_err(|e| TxError::Rejected(e.to_string()))?,
-    }
+    broadcast(backend, &prepared.transaction).await?;
     state.mark_pending(&prepared.spends, prepared.hash, tip);
     Ok(())
+}
+
+/// Publishes a transaction a cold wallet signed, after checking it spends
+/// only this wallet's unspent outputs. Its inputs count as spent at once.
+///
+/// # Errors
+///
+/// [`TxError::Build`] if it spends anything else, otherwise as [`publish`].
+pub async fn publish_signed(
+    backend: Backend<'_>,
+    signed: &cold::Signed,
+    state: &mut SyncState,
+    tip: u64,
+) -> Result<(), TxError> {
+    cold::check_signed(state, signed)?;
+    broadcast(backend, &signed.transaction).await?;
+    state.mark_pending(&signed.spends(), signed.hash, tip);
+    Ok(())
+}
+
+async fn broadcast(backend: Backend<'_>, transaction: &Transaction) -> Result<(), TxError> {
+    match backend {
+        Backend::Node(daemon) => {
+            daemon
+                .publish_transaction(transaction)
+                .await
+                .map_err(|e| match e {
+                    monero_interface::PublishTransactionError::TransactionRejected(why) => {
+                        TxError::Rejected(why)
+                    }
+                    other @ monero_interface::PublishTransactionError::InterfaceError(_) => {
+                        TxError::Node(other.to_string())
+                    }
+                })
+        }
+        Backend::Lws(server) => server
+            .submit(&transaction.serialize())
+            .await
+            .map_err(|e| TxError::Rejected(e.to_string())),
+    }
 }
 
 async fn fee_rate(
@@ -455,7 +574,10 @@ fn needed_inputs(available: &[&OwnedOutput], wanted: u64) -> usize {
     available.len() + 1
 }
 
-async fn with_decoys(ctx: &Context<'_>, output: &OwnedOutput) -> Result<OutputWithDecoys, TxError> {
+async fn with_decoys(
+    ctx: &Context<'_, '_>,
+    output: &OwnedOutput,
+) -> Result<OutputWithDecoys, TxError> {
     match ctx.backend {
         Backend::Node(daemon) => OutputWithDecoys::new(
             &mut OsRng,
@@ -586,7 +708,7 @@ fn signable(
 
 /// The transaction key string for `transaction`, if the candidates produce
 /// exactly the public keys in its extra field.
-fn confirmed_tx_key(
+pub(crate) fn confirmed_tx_key(
     transaction: &Transaction,
     payments: &[(MoneroAddress, u64)],
     candidates: &[Zeroizing<Scalar>],

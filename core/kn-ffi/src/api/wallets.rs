@@ -117,6 +117,8 @@ pub struct WalletSummary {
     pub mode: SyncMode,
     pub view_only: bool,
     pub created_at: u64,
+    /// An offline wallet that only signs for a watching wallet.
+    pub cold: bool,
 }
 
 impl From<&kn_store::WalletEntry> for WalletSummary {
@@ -128,6 +130,7 @@ impl From<&kn_store::WalletEntry> for WalletSummary {
             mode: e.mode.into(),
             view_only: e.view_only,
             created_at: e.created_at,
+            cold: e.cold,
         }
     }
 }

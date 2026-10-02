@@ -464,11 +464,16 @@ fn apply_replies(
     let mut by_key: HashMap<[u8; 32], usize> = HashMap::new();
     let mut rejected_outputs = 0u32;
     for out in &unspent.outputs {
-        let Some(owned) = owned_output(keys, out, coinbase.get(out.tx_hash.as_str()).copied())
+        let Some(mut owned) = owned_output(keys, out, coinbase.get(out.tx_hash.as_str()).copied())
         else {
             rejected_outputs = rejected_outputs.saturating_add(1);
             continue;
         };
+        // A view-only wallet cannot derive key images; use what its cold
+        // wallet supplied.
+        if owned.key_image.is_none() {
+            owned.key_image = state.known_key_image(&owned.output.key().compress().to_bytes());
+        }
         // One spendable output per one-time key (see the burning bug note in
         // scan.rs): a duplicate keeps the larger and counts as rejected.
         let key = owned.output.key().compress().to_bytes();

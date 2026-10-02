@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/book.dart';
+import 'api/cold.dart';
 import 'api/core.dart';
 import 'api/network.dart';
 import 'api/nodes.dart';
@@ -30,6 +31,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_ColdRequestPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_ColdSendPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_FrameReaderPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_OpenWalletPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet;
 
@@ -39,6 +52,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  ColdRequest
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    dynamic raw,
+  );
+
+  @protected
+  ColdSend
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    dynamic raw,
+  );
+
+  @protected
+  FrameReader
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    dynamic raw,
+  );
 
   @protected
   OpenWallet
@@ -53,6 +84,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ColdRequest
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    dynamic raw,
+  );
+
+  @protected
+  ColdSend
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    dynamic raw,
+  );
+
+  @protected
+  FrameReader
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    dynamic raw,
+  );
+
+  @protected
   OpenWallet
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
     dynamic raw,
@@ -61,6 +110,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   PreparedSend
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    dynamic raw,
+  );
+
+  @protected
+  ColdRequest
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    dynamic raw,
+  );
+
+  @protected
+  ColdSend
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    dynamic raw,
+  );
+
+  @protected
+  FrameReader
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
     dynamic raw,
   );
 
@@ -110,6 +177,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CertificateDetails dco_decode_certificate_details(dynamic raw);
 
   @protected
+  ColdFailure dco_decode_cold_failure(dynamic raw);
+
+  @protected
+  ColdImport dco_decode_cold_import(dynamic raw);
+
+  @protected
+  ColdKind dco_decode_cold_kind(dynamic raw);
+
+  @protected
+  ColdMessage dco_decode_cold_message(dynamic raw);
+
+  @protected
+  ColdRequestSummary dco_decode_cold_request_summary(dynamic raw);
+
+  @protected
   ContactRow dco_decode_contact_row(dynamic raw);
 
   @protected
@@ -147,6 +229,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Payment> dco_decode_list_payment(dynamic raw);
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -203,6 +288,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ProofFailure dco_decode_proof_failure(dynamic raw);
 
   @protected
+  ScanProgress dco_decode_scan_progress(dynamic raw);
+
+  @protected
   SeedFormat dco_decode_seed_format(dynamic raw);
 
   @protected
@@ -254,6 +342,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  ColdRequest
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ColdSend
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FrameReader
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   OpenWallet
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
     SseDeserializer deserializer,
@@ -266,6 +372,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ColdRequest
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ColdSend
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FrameReader
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   OpenWallet
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
     SseDeserializer deserializer,
@@ -274,6 +398,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   PreparedSend
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ColdRequest
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ColdSend
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FrameReader
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
     SseDeserializer deserializer,
   );
 
@@ -327,6 +469,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ColdFailure sse_decode_cold_failure(SseDeserializer deserializer);
+
+  @protected
+  ColdImport sse_decode_cold_import(SseDeserializer deserializer);
+
+  @protected
+  ColdKind sse_decode_cold_kind(SseDeserializer deserializer);
+
+  @protected
+  ColdMessage sse_decode_cold_message(SseDeserializer deserializer);
+
+  @protected
+  ColdRequestSummary sse_decode_cold_request_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ContactRow sse_decode_contact_row(SseDeserializer deserializer);
 
   @protected
@@ -364,6 +523,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Payment> sse_decode_list_payment(SseDeserializer deserializer);
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -424,6 +586,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ProofFailure sse_decode_proof_failure(SseDeserializer deserializer);
 
   @protected
+  ScanProgress sse_decode_scan_progress(SseDeserializer deserializer);
+
+  @protected
   SeedFormat sse_decode_seed_format(SseDeserializer deserializer);
 
   @protected
@@ -479,6 +644,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    ColdRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    ColdSend self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    FrameReader self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
     OpenWallet self,
     SseSerializer serializer,
@@ -493,6 +679,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    ColdRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    ColdSend self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    FrameReader self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
     OpenWallet self,
     SseSerializer serializer,
@@ -502,6 +709,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedSend(
     PreparedSend self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    ColdRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    ColdSend self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    FrameReader self,
     SseSerializer serializer,
   );
 
@@ -565,6 +793,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_cold_failure(ColdFailure self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_cold_import(ColdImport self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_cold_kind(ColdKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_cold_message(ColdMessage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_cold_request_summary(
+    ColdRequestSummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_contact_row(ContactRow self, SseSerializer serializer);
 
   @protected
@@ -614,6 +860,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_payment(List<Payment> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -679,6 +928,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_proof_failure(ProofFailure self, SseSerializer serializer);
 
   @protected
+  void sse_encode_scan_progress(ScanProgress self, SseSerializer serializer);
+
+  @protected
   void sse_encode_seed_format(SeedFormat self, SseSerializer serializer);
 
   @protected
@@ -733,6 +985,54 @@ class RustLibWire implements BaseWire {
   RustLibWire.fromExternalLibrary(ExternalLibrary lib);
 
   void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+        ptr,
+      );
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+        ptr,
+      );
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+        ptr,
+      );
+
+  void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
     int ptr,
   ) => wasmModule
@@ -771,6 +1071,36 @@ external RustLibWasmModule get wasmModule;
 @JS()
 @anonymous
 extension type RustLibWasmModule._(JSObject _) implements JSObject {
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdRequest(
+    int ptr,
+  );
+
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerColdSend(
+    int ptr,
+  );
+
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFrameReader(
+    int ptr,
+  );
+
   external void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWallet(
     int ptr,

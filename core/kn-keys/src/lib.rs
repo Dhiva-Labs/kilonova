@@ -309,6 +309,32 @@ impl WalletKeys {
         Some((*secret * generator).compress().to_bytes())
     }
 
+    /// Like [`WalletKeys::key_image`], but only for an output this wallet can
+    /// spend: `(b + offset) * G` must equal the output key. A cold wallet uses
+    /// this on outputs a watching wallet sends it, so a request about someone
+    /// else's output is refused instead of answered.
+    ///
+    /// # Errors
+    ///
+    /// [`KeyError::ViewOnly`] without a spend key, [`KeyError::NotOurs`] if
+    /// the output is not this wallet's.
+    pub fn owned_key_image(
+        &self,
+        output_key: Point,
+        key_offset: Scalar,
+    ) -> Result<[u8; 32], KeyError> {
+        let spend = self.spend.as_ref().ok_or(KeyError::ViewOnly)?;
+        let secret = Zeroizing::new(**spend + key_offset.into());
+        let expected: curve25519_dalek::EdwardsPoint =
+            &*secret * curve25519_dalek::constants::ED25519_BASEPOINT_TABLE;
+        let actual: curve25519_dalek::EdwardsPoint = output_key.into();
+        if expected != actual {
+            return Err(KeyError::NotOurs);
+        }
+        let generator = Point::biased_hash(output_key.compress().to_bytes()).into();
+        Ok((*secret * generator).compress().to_bytes())
+    }
+
     /// Checks that a light wallet server's claimed output really belongs to
     /// this wallet, and derives what spending and spend detection need.
     ///

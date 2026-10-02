@@ -219,7 +219,7 @@ impl SyncHandle {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
-    fn snapshot(&self) -> SyncState {
+    pub(crate) fn snapshot(&self) -> SyncState {
         self.lock_state().clone()
     }
 }
@@ -252,6 +252,10 @@ impl OpenWallet {
     /// following new blocks until [`OpenWallet::stop_sync`] or
     /// [`OpenWallet::lock`]. Calling it again restarts sync.
     pub fn start_sync(&self, sink: StreamSink<SyncEvent>) {
+        // A cold wallet never goes online.
+        if self.inner.with(|w| Ok(w.entry.cold)).unwrap_or(true) {
+            return;
+        }
         let inner = self.inner.clone();
         let cancel = Arc::new(AtomicBool::new(false));
         {
