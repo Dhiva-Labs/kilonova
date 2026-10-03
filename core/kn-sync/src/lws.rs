@@ -24,7 +24,7 @@ use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
 use crate::SyncError;
-use crate::node::{NodeUrl, http_client, read_limited};
+use crate::node::{Circuit, NodeUrl, http_client, probe_proxy, read_limited};
 
 /// Largest answer accepted from a light wallet server. A busy wallet's
 /// history is a few megabytes; this leaves ample room.
@@ -57,17 +57,21 @@ pub struct LwsReport {
 }
 
 impl LwsServer {
+    /// A client for the server at `url`; every connection uses `circuit`'s
+    /// proxy credentials. Call [`crate::probe_proxy`] first when a proxy may
+    /// be set.
+    ///
     /// # Errors
     ///
     /// [`SyncError::InsecureLws`] for a plain-http address that is neither an
     /// onion service nor this device: the view key would cross the network
     /// unencrypted.
-    pub fn new(url: &NodeUrl) -> Result<Self, SyncError> {
+    pub fn new(url: &NodeUrl, circuit: &Circuit) -> Result<Self, SyncError> {
         if !url.is_private_channel() {
             return Err(SyncError::InsecureLws);
         }
         Ok(Self {
-            client: http_client(url)?,
+            client: http_client(url, circuit)?,
             base: url.as_str().into(),
         })
     }
@@ -103,13 +107,17 @@ pub struct LwsInfo {
 }
 
 /// Checks a light wallet server is reachable and, if it says which network
-/// it serves, that it is `network`.
+/// it serves, that it is `network`. Connects over `circuit`.
 ///
 /// # Errors
 ///
 /// [`SyncError::WrongNetwork`] for a server on another network, otherwise
 /// [`SyncError::Node`].
-pub async fn check_lws(url: &NodeUrl, network: Network) -> Result<LwsInfo, SyncError> {
+pub async fn check_lws(
+    url: &NodeUrl,
+    network: Network,
+    circuit: &Circuit,
+) -> Result<LwsInfo, SyncError> {
     #[derive(Deserialize)]
     struct Version {
         #[serde(default)]
@@ -119,7 +127,8 @@ pub async fn check_lws(url: &NodeUrl, network: Network) -> Result<LwsInfo, SyncE
         #[serde(default)]
         network_type: Option<String>,
     }
-    let server = LwsServer::new(url)?;
+    probe_proxy().await;
+    let server = LwsServer::new(url, circuit)?;
     let version: Version = server.post("get_version", &json!({})).await?;
     let reported = match version.network_type.as_deref() {
         Some("main" | "mainnet" | "fakechain") => Some(Network::Mainnet),

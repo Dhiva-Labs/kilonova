@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `caught_up_state`, `confirm_with_node`, `emit`, `fail`, `failed`, `flush`, `full_round`, `go`, `hex_string`, `is_current`, `load`, `lock_current`, `lock_last_save`, `lock_state`, `lws_round`, `new`, `node`, `paced`, `pause`, `read`, `record`, `replace`, `reset`, `retry_interval`, `save_bytes`, `second_opinion`, `snapshot`, `start_sync_with`, `starting_state`, `stop`, `stopped`, `update`, `wait`
+// These functions are ignored because they are not marked as `pub`: `caught_up_state`, `confirm_with_node`, `emit`, `fail`, `failed`, `flush`, `full_round`, `go`, `hex_string`, `is_current`, `is_for`, `load`, `lock_current`, `lock_last_save`, `lock_state`, `lws_round`, `new`, `node`, `paced`, `pause`, `read`, `record`, `replace`, `reset`, `retry_interval`, `save_bytes`, `second_opinion`, `snapshot`, `start_sync_with`, `starting_state`, `stop`, `stopped`, `update`, `wait`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Connections`, `NodeConnection`, `Run`, `Setup`, `SyncHandle`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 // These functions are ignored (category: IgnoreBecauseOwnerTyShouldIgnore): `default`

@@ -173,6 +173,7 @@ fn bench() {
             let (daemon, _) = kn_sync::connect(
                 &kn_sync::NodeUrl::parse(NODE).unwrap(),
                 kn_keys::Network::Mainnet,
+                &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
             )
             .await
             .unwrap();

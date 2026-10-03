@@ -72,6 +72,17 @@ view key; full sync avoids them.
 Mitigations: TLS to nodes and LWS servers, optional certificate pinning,
 optional proxy.
 
+**A node or server linking wallets by IP address.** Without a proxy, every
+wallet on a device shares one address. Through Tor, each wallet and each
+purpose (sync, broadcast, cross-check, second opinion, proof, price, node
+discovery and tests) connects with its own SOCKS5 username and password,
+which Tor's default stream isolation turns into separate circuits
+(`kn-sync/src/node.rs`, `Circuit`). The credentials hash the wallet id and
+purpose only, never key material. What remains: timing (wallet A's sync
+and wallet B's sync starting together), a proxy that does not isolate by
+credentials (non-Tor SOCKS proxies, or Tor with `IsolateSOCKSAuth` turned
+off), and everything a single circuit's node sees about that one wallet.
+
 **A node that lies about the chain.** Once per sync run, full-mode wallets
 compare a block ten below the tip with a bundled node they do not use (over
 the proxy); a disagreement is shown to the user. Private test chains are
@@ -99,6 +110,22 @@ the password.
 Mitigations: wallet files are encrypted with Argon2id and
 XChaCha20-Poly1305; Android cloud backup and device transfer are disabled for
 app data.
+
+**Someone with a backup file.** A backup (Settings, Backup) can end up on a
+USB stick or in cloud storage. It holds each chosen wallet's file and sync
+cache exactly as stored, never decrypted (so nothing the locked wallet file
+does not hold, even if the wallet was unlocked when the backup was made),
+the wallet list entries and the node, server and pinned certificate
+settings. The whole bundle is sealed with its own passphrase through the
+same Argon2id and XChaCha20-Poly1305 envelope (`kn-store/src/bundle.rs`),
+so names, networks and settings are hidden too, and the wallet files inside
+still need their own passwords. Someone who guesses a weak backup
+passphrase learns that metadata and gets copies of the locked wallet files,
+the same as copying them off the device. The app requires 12 characters for the passphrase and cannot
+recover it. Restoring never replaces a wallet already on the device: a
+clashing id or name is restored next to it under a new id or "(restored)"
+name, and bundle contents are length-checked and fuzzed
+(`core/fuzz`, `backup_bundles`).
 
 **Someone with the device, unlocked and the wallet open.** Can spend.
 Mitigations: on Android every unlocked wallet is locked when the app leaves

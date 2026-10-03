@@ -51,10 +51,14 @@ async fn wallet_rpc(method: &str, params: Value) -> Value {
 }
 
 async fn daemon() -> monero_daemon_rpc::MoneroDaemon<kn_sync::Http> {
-    connect(&NodeUrl::parse(NODE).unwrap(), Network::Mainnet)
-        .await
-        .unwrap()
-        .0
+    connect(
+        &NodeUrl::parse(NODE).unwrap(),
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap()
+    .0
 }
 
 async fn mine(address: &str, blocks: usize) {

@@ -14,7 +14,7 @@ use std::sync::Mutex;
 use flutter_rust_bridge::frb;
 use kn_keys::WalletKeys;
 use kn_store::SyncMode as StoreSyncMode;
-use kn_sync::{LwsServer, NodeUrl, SyncState, connect};
+use kn_sync::{Circuit, LwsServer, NodeUrl, Purpose, SyncState, connect, probe_proxy};
 use kn_tx::{Backend, Prepared, Priority, Request, Selection, TxError};
 use zeroize::Zeroizing;
 
@@ -149,24 +149,29 @@ impl PreparedSend {
     }
 }
 
-/// Where decoys and fees came from, and so where the transaction goes.
+/// Where decoys and fees came from, and so where the transaction goes,
+/// over the wallet's own broadcast circuit.
 #[derive(Clone)]
 pub(crate) enum Route {
-    Node(NodeUrl),
-    Lws(NodeUrl),
+    Node(NodeUrl, Circuit),
+    Lws(NodeUrl, Circuit),
 }
 
 impl Route {
-    /// The node or light wallet server a wallet in `mode` sends through.
+    /// The node or light wallet server wallet `wallet` (an id) in `mode`
+    /// sends through.
     pub(crate) fn for_wallet(
+        wallet: &str,
         mode: StoreSyncMode,
         network: kn_keys::Network,
         consent: Option<&str>,
     ) -> Result<Self, SendError> {
+        let circuit = Circuit::new(wallet, Purpose::Broadcast);
         Ok(match mode {
-            StoreSyncMode::Full => {
-                Self::Node(current_node(network.into()).map_err(|_| SendError::Storage)?)
-            }
+            StoreSyncMode::Full => Self::Node(
+                current_node(network.into()).map_err(|_| SendError::Storage)?,
+                circuit,
+            ),
             StoreSyncMode::Lws => {
                 let url = lws_server(network.into())
                     .map_err(|_| SendError::Storage)?
@@ -174,14 +179,17 @@ impl Route {
                 if consent != Some(url.as_str()) {
                     return Err(SendError::LwsConsentNeeded);
                 }
-                Self::Lws(NodeUrl::parse(&url).map_err(|_| SendError::LwsServerNotSet)?)
+                Self::Lws(
+                    NodeUrl::parse(&url).map_err(|_| SendError::LwsServerNotSet)?,
+                    circuit,
+                )
             }
         })
     }
 
     pub(crate) fn url(&self) -> &NodeUrl {
         match self {
-            Self::Node(url) | Self::Lws(url) => url,
+            Self::Node(url, _) | Self::Lws(url, _) => url,
         }
     }
 
@@ -197,8 +205,8 @@ impl Route {
         selection: &Selection,
     ) -> Result<Prepared, SendError> {
         Ok(match self {
-            Self::Node(url) => {
-                let (daemon, _) = connect(url, network)
+            Self::Node(url, circuit) => {
+                let (daemon, _) = connect(url, network, circuit)
                     .await
                     .map_err(|_| SendError::Unreachable)?;
                 let backend = Backend::Node(&daemon);
@@ -207,8 +215,9 @@ impl Route {
                 )
                 .await?
             }
-            Self::Lws(url) => {
-                let server = LwsServer::new(url).map_err(|_| SendError::Unreachable)?;
+            Self::Lws(url, circuit) => {
+                probe_proxy().await;
+                let server = LwsServer::new(url, circuit).map_err(|_| SendError::Unreachable)?;
                 let backend = Backend::Lws(&server);
                 kn_tx::prepare_selected(
                     backend, keys, network, state, tip, request, priority, selection,
@@ -230,8 +239,8 @@ impl Route {
         selection: &Selection,
     ) -> Result<kn_tx::Unsigned, SendError> {
         Ok(match self {
-            Self::Node(url) => {
-                let (daemon, _) = connect(url, network)
+            Self::Node(url, circuit) => {
+                let (daemon, _) = connect(url, network, circuit)
                     .await
                     .map_err(|_| SendError::Unreachable)?;
                 let backend = Backend::Node(&daemon);
@@ -240,8 +249,9 @@ impl Route {
                 )
                 .await?
             }
-            Self::Lws(url) => {
-                let server = LwsServer::new(url).map_err(|_| SendError::Unreachable)?;
+            Self::Lws(url, circuit) => {
+                probe_proxy().await;
+                let server = LwsServer::new(url, circuit).map_err(|_| SendError::Unreachable)?;
                 let backend = Backend::Lws(&server);
                 kn_tx::prepare_unsigned_selected(
                     backend, keys, network, state, tip, request, priority, selection,
@@ -259,14 +269,15 @@ impl Route {
         tip: u64,
     ) -> Result<(), SendError> {
         match self {
-            Self::Node(url) => {
-                let (daemon, _) = connect(url, network)
+            Self::Node(url, circuit) => {
+                let (daemon, _) = connect(url, network, circuit)
                     .await
                     .map_err(|_| SendError::Unreachable)?;
                 kn_tx::publish_signed(Backend::Node(&daemon), signed, state, tip).await?;
             }
-            Self::Lws(url) => {
-                let server = LwsServer::new(url).map_err(|_| SendError::Unreachable)?;
+            Self::Lws(url, circuit) => {
+                probe_proxy().await;
+                let server = LwsServer::new(url, circuit).map_err(|_| SendError::Unreachable)?;
                 kn_tx::publish_signed(Backend::Lws(&server), signed, state, tip).await?;
             }
         }
@@ -281,14 +292,15 @@ impl Route {
         tip: u64,
     ) -> Result<(), SendError> {
         match self {
-            Self::Node(url) => {
-                let (daemon, _) = connect(url, network)
+            Self::Node(url, circuit) => {
+                let (daemon, _) = connect(url, network, circuit)
                     .await
                     .map_err(|_| SendError::Unreachable)?;
                 kn_tx::publish(Backend::Node(&daemon), prepared, state, tip).await?;
             }
-            Self::Lws(url) => {
-                let server = LwsServer::new(url).map_err(|_| SendError::Unreachable)?;
+            Self::Lws(url, circuit) => {
+                probe_proxy().await;
+                let server = LwsServer::new(url, circuit).map_err(|_| SendError::Unreachable)?;
                 kn_tx::publish(Backend::Lws(&server), prepared, state, tip).await?;
             }
         }
@@ -352,8 +364,9 @@ impl OpenWallet {
         priority: FeePriority,
         only: Option<Vec<[u8; 32]>>,
     ) -> Result<PreparedSend, SendError> {
-        let (keys, network, mode, consent, frozen) = self.inner.with(|w| {
+        let (id, keys, network, mode, consent, frozen) = self.inner.with(|w| {
             Ok((
+                w.entry.id.clone(),
                 w.keys.clone(),
                 w.entry.network,
                 w.entry.mode,
@@ -373,7 +386,7 @@ impl OpenWallet {
             .sync
             .caught_up_state()
             .ok_or(SendError::NotSynced)?;
-        let route = Route::for_wallet(mode, network, consent.as_deref())?;
+        let route = Route::for_wallet(&id, mode, network, consent.as_deref())?;
         let request = match sweep_to {
             Some(address) => Request::SweepAll(address),
             None => Request::Pay(

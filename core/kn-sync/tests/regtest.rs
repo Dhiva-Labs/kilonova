@@ -50,9 +50,13 @@ async fn wallet_rpc(method: &str, params: Value) -> Value {
 }
 
 async fn mine(address: &str, blocks: usize) {
-    let (daemon, _) = connect(&NodeUrl::parse(NODE).unwrap(), Network::Mainnet)
-        .await
-        .unwrap();
+    let (daemon, _) = connect(
+        &NodeUrl::parse(NODE).unwrap(),
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap();
     let address = MoneroAddress::from_str(MoneroNetwork::Mainnet, address).unwrap();
     daemon.generate_blocks(&address, blocks).await.unwrap();
 }
@@ -67,9 +71,13 @@ async fn chain_height() -> u64 {
 }
 
 async fn sync_from(keys: &WalletKeys, state: &mut SyncState) {
-    let (daemon, _) = connect(&NodeUrl::parse(NODE).unwrap(), Network::Mainnet)
-        .await
-        .unwrap();
+    let (daemon, _) = connect(
+        &NodeUrl::parse(NODE).unwrap(),
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap();
     sync(
         &daemon,
         keys,
@@ -226,14 +234,25 @@ async fn scans_spends_and_survives_a_reorg() {
 #[ignore = "needs the regtest devnet; see the file header"]
 async fn a_node_agrees_with_itself_and_regtest_is_marked_as_a_test_chain() {
     let node = NodeUrl::parse(NODE).unwrap();
-    let (daemon, status) = connect(&node, Network::Mainnet).await.unwrap();
+    let (daemon, status) = connect(
+        &node,
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap();
     // The app skips the comparison on test chains, which no public node
     // shares.
     assert!(status.test_chain);
     mine(&other_address(), 12).await;
-    let opinion = kn_sync::second_opinion(&daemon, &node, Network::Mainnet)
-        .await
-        .unwrap();
+    let opinion = kn_sync::second_opinion(
+        &daemon,
+        &node,
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap();
     assert!(opinion.agrees);
     assert_eq!(opinion.ours, opinion.theirs);
 }

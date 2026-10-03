@@ -14,6 +14,7 @@ import '../../src/rust/api/requests.dart';
 import '../../src/rust/api/sync.dart';
 import '../../src/rust/api/wallets.dart';
 import '../cold/cold_transport.dart';
+import '../settings/backup_files.dart';
 
 /// The wallet list and the wallets currently unlocked, shared by every
 /// screen. Unlocked wallets are locked when the app goes to the background.
@@ -22,6 +23,7 @@ class WalletRegistry extends ChangeNotifier {
     this.biometric = const BiometricUnlock(),
     this.notifier = const Notifier(),
     this.cold = const ColdTransport(),
+    this.backupFiles = const BackupFiles(),
     PriceFeed? price,
   }) : price = price ?? PriceFeed();
 
@@ -30,6 +32,9 @@ class WalletRegistry extends ChangeNotifier {
 
   /// How scans and file saves move cold wallet messages; a fake in tests.
   final ColdTransport cold;
+
+  /// Where backups are saved and read from; a fake in tests.
+  final BackupFiles backupFiles;
 
   /// Notifications and background sync, both off until turned on.
   prefs.Preferences preferences = const prefs.Preferences(
@@ -65,6 +70,9 @@ class WalletRegistry extends ChangeNotifier {
   final Map<String, OpenWallet> _open = {};
   final Map<String, ValueNotifier<SyncEvent?>> _sync = {};
   final Map<String, StreamSubscription<SyncEvent>> _syncSubscriptions = {};
+
+  /// Every wallet, on every network, in creation order.
+  List<WalletSummary> get all => _all;
 
   List<WalletSummary> on(Network network) =>
       _all.where((w) => w.network == network).toList(growable: false);

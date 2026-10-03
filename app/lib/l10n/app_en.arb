@@ -765,5 +765,114 @@
   "addressCopyLabel": "Address",
   "transactionKeyLabel": "Transaction key",
   "revealedRestoreHeightLabel": "Restore height",
-  "revealedRestoreHeightHelp": "Enter this when restoring, so the new wallet scans from this block instead of the start."
+  "revealedRestoreHeightHelp": "Enter this when restoring, so the new wallet scans from this block instead of the start.",
+  "proxyCircuitHelp": "Through Tor, each wallet gets its own circuit, and so does each kind of request (sync, sending, checks, prices), so nodes cannot link your wallets by address.",
+  "settingsDataSection": "Your data",
+  "backupTitle": "Backup",
+  "backupSubtitle": "Save your wallets to one encrypted file",
+  "backupHelp": "A backup holds your wallet files, sync progress, labels, address book, notes, payment requests and node settings, still locked with each wallet's own password. It is encrypted again with a backup passphrase that is separate from your wallet passwords and cannot be recovered if you forget it.",
+  "backupWalletsLabel": "Wallets to include",
+  "backupPassphraseLabel": "Backup passphrase",
+  "backupPassphraseHelp": "At least {min} characters. Write it down: without it the backup cannot be opened.",
+  "@backupPassphraseHelp": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "backupPassphraseConfirmLabel": "Repeat the passphrase",
+  "backupPassphraseTooShort": "Use at least {min} characters.",
+  "@backupPassphraseTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "backupPassphraseMismatch": "The passphrases do not match.",
+  "backupNoWalletsChosen": "Choose at least one wallet.",
+  "backupSaveAction": "Save backup",
+  "backupSaving": "Encrypting and saving the backup",
+  "backupSaved": "Saved {name}, {size}.",
+  "@backupSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeBytes": "{count} bytes",
+  "@backupSizeBytes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backupSizeKb": "{size} KB",
+  "@backupSizeKb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeMb": "{size} MB",
+  "@backupSizeMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "backupStorageError": "The file could not be written or read. Try another location.",
+  "backupWrongPassphrase": "Wrong passphrase, or the backup is damaged.",
+  "backupNotABackup": "This is not a Kilonova backup, or it is damaged.",
+  "backupNewerVersion": "This backup was made by a newer version of Kilonova. Update the app to open it.",
+  "restoreBackupTitle": "Restore from backup",
+  "restoreBackupSubtitle": "Add wallets from a backup file",
+  "restoreBackupHelp": "Choose a backup file and enter its passphrase. Restored wallets keep their own passwords, and wallets already on this device are never replaced.",
+  "restoreBackupChooseAction": "Choose file",
+  "restoreBackupFile": "File: {name}",
+  "@restoreBackupFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreBackupNoFile": "No file chosen yet.",
+  "restoreBackupOpenAction": "Open backup",
+  "restoreBackupPreview": "{count, plural, =1{This backup holds 1 wallet.} other{This backup holds {count} wallets.}}",
+  "@restoreBackupPreview": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreBackupImportAction": "Restore these wallets",
+  "restoreBackupDone": "{count, plural, =1{Restored 1 wallet. Unlock it with its own password.} other{Restored {count} wallets. Unlock each with its own password.}}",
+  "@restoreBackupDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreBackupRenamed": "You already had {name}, so the restored copy is called {newName}.",
+  "@restoreBackupRenamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "newName": {
+        "type": "String"
+      }
+    }
+  }
 }

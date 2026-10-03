@@ -119,7 +119,12 @@ void main() {
       settings.evaluate().isNotEmpty ? settings : find.byTooltip('Settings'),
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Privacy policy'));
+    // The settings list builds rows as they scroll in.
+    await tester.scrollUntilVisible(
+      find.text('Privacy policy'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Privacy policy'));
     await tester.pumpAndSettle();

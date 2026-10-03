@@ -11,7 +11,7 @@
 use std::sync::LazyLock;
 
 use kn_sync::{
-    NodeUrl, ProxyUrl, SyncError, bundled_nodes, check_lws, check_proxy, connect,
+    Circuit, NodeUrl, ProxyUrl, Purpose, SyncError, bundled_nodes, check_lws, check_proxy, connect,
     server_certificate, set_pins, set_proxy,
 };
 use rand_core::{OsRng, RngCore};
@@ -212,7 +212,11 @@ pub fn select_node(network: Network, url: String) -> Result<(), NodeError> {
 pub fn check_node(network: Network, url: String) -> Result<NodeHealth, NodeError> {
     let url = NodeUrl::parse(&url)?;
     let (_, status) = RUNTIME
-        .block_on(connect(&url, network.into()))
+        .block_on(connect(
+            &url,
+            network.into(),
+            &Circuit::app(Purpose::Discovery),
+        ))
         .map_err(|e| explain(&url, e))?;
     Ok(NodeHealth {
         height: status.height,
@@ -287,7 +291,11 @@ pub struct LwsHealth {
 pub fn check_lws_server(network: Network, url: String) -> Result<LwsHealth, NodeError> {
     let url = NodeUrl::parse_https_default(&url)?;
     let info = RUNTIME
-        .block_on(check_lws(&url, network.into()))
+        .block_on(check_lws(
+            &url,
+            network.into(),
+            &Circuit::app(Purpose::Discovery),
+        ))
         .map_err(|e| explain(&url, e))?;
     Ok(LwsHealth {
         height: info.height,
@@ -385,7 +393,7 @@ fn parse_fingerprint(text: &str) -> Option<[u8; 32]> {
     bytes.try_into().ok()
 }
 
-fn apply_saved_pins(settings: &crate::node_settings::Settings) {
+pub(crate) fn apply_saved_pins(settings: &crate::node_settings::Settings) {
     set_pins(
         settings
             .pins
@@ -484,6 +492,8 @@ pub fn set_network_proxy(url: Option<String>) -> Result<Option<String>, NodeErro
     settings.proxy = parsed.as_ref().map(|p| p.as_str().to_owned());
     save(&settings)?;
     set_proxy(parsed);
+    // Learn early whether the proxy takes per-wallet credentials.
+    RUNTIME.spawn(kn_sync::probe_proxy());
     Ok(settings.proxy)
 }
 
@@ -509,6 +519,7 @@ pub(crate) fn apply_saved_network_settings() {
             .as_deref()
             .and_then(|p| ProxyUrl::parse(p).ok()),
     );
+    RUNTIME.spawn(kn_sync::probe_proxy());
     apply_saved_pins(&settings);
 }
 

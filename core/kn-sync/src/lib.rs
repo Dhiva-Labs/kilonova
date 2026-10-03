@@ -25,8 +25,8 @@ pub use discover::{FoundNode, discover, discover_at, local_ipv4};
 pub use lws::fuzzing;
 pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, lws_sync};
 pub use node::{
-    Http, NodeStatus, NodeUrl, ProxyUrl, ServerPairing, bundled_nodes, check_proxy, connect, proxy,
-    set_proxy,
+    Circuit, Http, NodeStatus, NodeUrl, ProxyUrl, Purpose, ServerPairing, bundled_nodes,
+    check_proxy, connect, probe_proxy, proxy, set_proxy,
 };
 /// The node client sync and sending use.
 pub type MoneroDaemonHttp = monero_daemon_rpc::MoneroDaemon<Http>;
