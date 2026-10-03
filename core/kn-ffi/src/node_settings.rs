@@ -21,7 +21,7 @@ pub(crate) struct PerNetwork {
     pub(crate) lws: Option<String>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub(crate) struct Settings {
     #[serde(flatten)]
     pub(crate) networks: BTreeMap<String, PerNetwork>,
@@ -40,12 +40,37 @@ pub(crate) struct Settings {
     #[serde(default)]
     pub(crate) background_sync: bool,
     /// LWS-mode wallets confirm each payment the server reports with the
-    /// network's node.
-    #[serde(default)]
+    /// network's node, hidden among cover lookups. On by default; stored
+    /// under a new name so the old key, which was saved as off by default
+    /// before cover lookups existed, does not keep it off.
+    #[serde(rename = "lws_cross_check", default = "on")]
     pub(crate) confirm_lws_payments: bool,
+    /// The pre-cover setting, read so it is not taken for a network name
+    /// and otherwise ignored.
+    #[serde(rename = "confirm_lws_payments", default, skip_serializing)]
+    pub(crate) _old_confirm_lws_payments: Option<serde::de::IgnoredAny>,
     /// Pinned certificate fingerprints by https address.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) pins: BTreeMap<String, String>,
+}
+
+fn on() -> bool {
+    true
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            networks: BTreeMap::new(),
+            proxy: None,
+            price_currency: None,
+            notify_incoming: false,
+            background_sync: false,
+            confirm_lws_payments: on(),
+            _old_confirm_lws_payments: None,
+            pins: BTreeMap::new(),
+        }
+    }
 }
 
 pub(crate) fn key(network: Network) -> &'static str {
@@ -74,4 +99,30 @@ pub(crate) fn save(settings: &Settings) -> Result<(), NodeError> {
         .map_err(|_| NodeError::NotInitialized)?
         .write_settings(SETTINGS, &bytes)
         .map_err(|_| NodeError::Storage)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn confirming_lws_payments_is_on_even_for_settings_saved_with_it_off() {
+        let old = br#"{"mainnet": {"selected": "http://n:1", "custom": []},
+                       "confirm_lws_payments": false}"#;
+        let settings: Settings = serde_json::from_slice(old).unwrap();
+        assert!(settings.confirm_lws_payments);
+        assert_eq!(
+            settings.networks["mainnet"].selected.as_deref(),
+            Some("http://n:1")
+        );
+        assert!(Settings::default().confirm_lws_payments);
+
+        let off = Settings {
+            confirm_lws_payments: false,
+            ..Settings::default()
+        };
+        let saved = serde_json::to_vec(&off).unwrap();
+        let again: Settings = serde_json::from_slice(&saved).unwrap();
+        assert!(!again.confirm_lws_payments, "a choice made now is kept");
+    }
 }

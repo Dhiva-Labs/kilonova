@@ -698,7 +698,7 @@
   "syncNodeDisagrees": "Your node's chain differs from another node's. It may be showing you a false chain.",
   "syncChooseNode": "Choose a node",
   "confirmLwsPaymentsTitle": "Confirm the server's payments with a node",
-  "confirmLwsPaymentsSubtitle": "Each payment the server reports is checked against your node. The node then learns which transactions you look up, so use this with Tor or your own node.",
+  "confirmLwsPaymentsSubtitle": "Each payment the server reports is checked against your node. Every lookup also asks for 7 other recent transactions, so the node cannot tell which one is yours. Works best with Tor or your own node.",
   "checkPaymentAction": "Check a payment",
   "checkPaymentExplain": "Someone paid you and sent a transaction ID and key? Check what this address received.",
   "checkPaymentTxIdField": "Transaction ID",

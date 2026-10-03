@@ -92,8 +92,20 @@ withholds transactions.
 **A light wallet server that invents payments.** With "confirm the server's
 payments" on, each reported transaction is fetched from the network's node
 and compared output by output (one-time key and amount or commitment);
-payments the node contradicts are dropped and stay dropped. Off by default,
-because the node then learns which transactions the wallet looks up.
+payments the node contradicts are dropped and stay dropped. On by default.
+
+**A node learning which transactions the wallet looks up.** The
+cross-check and payment proofs ask a node for specific transactions. Each
+request carries 8 hashes (`kn-sync/src/cover.rs`): the real one at a
+uniformly random position and 7 real transactions drawn from random blocks
+of a 20-block window that contains the real one's height at a random
+offset (the latest 20 blocks when the height is unknown). The batch size
+never changes, cover answers are discarded unread, and only an answer
+that hashes to the wanted transaction is used
+(`kn-sync/tests/cover_lookups.rs`). What remains: timing (a lookup right
+after a payment arrives), a node that also knows the wallet's history from
+elsewhere, and transactions in sparse stretches of chain, where cover is
+drawn per block and so favours transactions from emptier blocks.
 
 **A watching wallet (or whoever controls it) talking to a cold wallet.** The
 cold wallet holds the spend key and never goes online. It reads payments,

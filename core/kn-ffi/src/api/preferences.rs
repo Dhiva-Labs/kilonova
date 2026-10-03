@@ -1,5 +1,6 @@
 //! App-wide choices that are not about networks: notifications and
-//! background sync. Both are off until the owner turns them on.
+//! background sync (off until the owner turns them on), and confirming a
+//! light wallet server's payments (on).
 
 use super::nodes::NodeError;
 use crate::node_settings::{load, save};
@@ -13,8 +14,8 @@ pub struct Preferences {
     /// locking them when the app leaves the screen.
     pub background_sync: bool,
     /// LWS-mode wallets confirm each payment the server reports with the
-    /// network's node (through the proxy). The node learns which
-    /// transactions the wallet looks up, so it is off by default.
+    /// network's node (through the proxy). Each lookup is hidden among
+    /// cover lookups, so it is on by default.
     pub confirm_lws_payments: bool,
 }
 

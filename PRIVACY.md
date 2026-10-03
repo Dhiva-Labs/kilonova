@@ -62,7 +62,8 @@ same chain as everyone else. That node sees your IP address (or your
 proxy's) and that a Monero wallet checked a block; nothing about any wallet.
 
 If you check a payment proof (a transaction id, its key and an address
-someone gave you), the node is asked for that transaction.
+someone gave you), the node is asked for that transaction, hidden among
+cover lookups (see below).
 
 ### Light wallet server (LWS mode)
 
@@ -84,10 +85,19 @@ Before a wallet's view key is sent anywhere, the app shows you which server
 will receive it and asks you to agree. Your answer is remembered for that
 wallet and that server only: choosing a different server asks again.
 
-If you turn on **Confirm the server's payments with a node** (off by
-default), the app also asks your network's node for each transaction the
-server reports, to make sure it exists as reported. That node then learns
-which transactions you looked up, so use it with Tor or your own node.
+With **Confirm the server's payments with a node** (on by default; you can
+turn it off on the light wallet server screen), the app also asks your
+network's node for each transaction the server reports, to make sure it
+exists as reported.
+
+Whenever the app asks a node for a specific transaction (these checks and
+payment proofs), it uses cover lookups: every request names 8 transactions,
+yours at a random place among 7 others picked from blocks near yours (or
+from the latest blocks, for a payment proof). Every request has the same
+size, and the answers for the other 7 are thrown away unread. The node
+sees your IP address (or your proxy's) and a batch of ordinary recent
+transactions, and cannot tell which one you cared about. It can still see
+when you look things up, so Tor or your own node remain the best choice.
 
 ### Your own server (optional)
 
@@ -181,6 +191,7 @@ Security issues: see SECURITY.md in the repository.
 
 Newest first.
 
+- 2026-10-03: cover lookups; confirming a light wallet server's payments is now on by default.
 - 2026-10-03: backups you make; each wallet and kind of request gets its own Tor circuit.
 - 2026-10-03: offline wallets, the node check against a public node, confirming server payments, payment proofs, self-hosting and finding nodes on your network.
 - 2026-10-02: payment notifications and background sync, both off by default.

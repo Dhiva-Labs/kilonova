@@ -22,17 +22,18 @@ void main() {
       () => tester.widget<Switch>(find.byType(Switch)).onChanged != null,
       what: 'the preference to load',
     );
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    // On by default: lookups are hidden among cover lookups.
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
 
     await tester.tap(find.byType(Switch));
     await pumpUntil(
       tester,
-      () => tester.widget<Switch>(find.byType(Switch)).value,
+      () => !tester.widget<Switch>(find.byType(Switch)).value,
       what: 'the switch to flip',
     );
 
     final saved = await tester.runAsync(preferences);
-    expect(saved!.confirmLwsPayments, isTrue);
+    expect(saved!.confirmLwsPayments, isFalse);
     // The other preference fields are untouched.
     expect(saved.notifyIncoming, isFalse);
   });

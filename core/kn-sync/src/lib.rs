@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 mod blocks;
+mod cover;
 mod crosscheck;
 mod discover;
 mod lws;
@@ -19,6 +20,7 @@ mod scan;
 mod state;
 mod tls;
 
+pub use cover::{COVER_WINDOW, CoverLookups, LOOKUP_BATCH, LookedUp};
 pub use crosscheck::{CROSS_CHECK_LIMIT, CrossCheck, cross_check};
 pub use discover::{FoundNode, discover, discover_at, local_ipv4};
 #[cfg(feature = "fuzzing")]

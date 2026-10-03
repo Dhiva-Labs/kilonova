@@ -33,8 +33,8 @@ class Preferences {
   final bool backgroundSync;
 
   /// LWS-mode wallets confirm each payment the server reports with the
-  /// network's node (through the proxy). The node learns which
-  /// transactions the wallet looks up, so it is off by default.
+  /// network's node (through the proxy). Each lookup is hidden among
+  /// cover lookups, so it is on by default.
   final bool confirmLwsPayments;
 
   const Preferences({

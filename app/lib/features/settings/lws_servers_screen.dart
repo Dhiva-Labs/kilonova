@@ -161,7 +161,7 @@ class _LwsServersScreenState extends State<LwsServersScreen> {
                   title: Text(l.confirmLwsPaymentsTitle),
                   subtitle: Text(l.confirmLwsPaymentsSubtitle),
                   trailing: Switch(
-                    value: _prefs?.confirmLwsPayments ?? false,
+                    value: _prefs?.confirmLwsPayments ?? true,
                     onChanged: _prefs == null ? null : _setConfirmLwsPayments,
                   ),
                 ),
