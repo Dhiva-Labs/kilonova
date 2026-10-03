@@ -1,0 +1,1 @@
+Encrypted backups of your wallets, payment notifications from your own server, opt-in checks for payments while the app is closed, a separate Tor circuit for each wallet, and sending through a different node. Not audited: keep only small amounts in it.
