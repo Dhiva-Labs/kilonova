@@ -395,8 +395,9 @@ impl OpenWallet {
         sweep_to: Option<String>,
         priority: FeePriority,
     ) -> Result<ColdSend, SendError> {
-        let (keys, network, mode, consent) = self.inner.with(|w| {
+        let (id, keys, network, mode, consent) = self.inner.with(|w| {
             Ok((
+                w.entry.id.clone(),
                 w.keys.clone(),
                 w.entry.network,
                 w.entry.mode,
@@ -411,7 +412,7 @@ impl OpenWallet {
             .sync
             .caught_up_state()
             .ok_or(SendError::NotSynced)?;
-        let route = Route::for_wallet(mode, network, consent.as_deref())?;
+        let route = Route::for_wallet(&id, mode, network, consent.as_deref())?;
         let request = match sweep_to {
             Some(address) => Request::SweepAll(address),
             None => Request::Pay(
@@ -475,9 +476,9 @@ impl OpenWallet {
         destinations: Vec<Payment>,
     ) -> Result<ColdImport, ColdFailure> {
         let (keys, network) = self.watching()?;
-        let (mode, consent) = self
+        let (id, mode, consent) = self
             .inner
-            .with(|w| Ok((w.entry.mode, w.data.lws_consent.clone())))?;
+            .with(|w| Ok((w.entry.id.clone(), w.entry.mode, w.data.lws_consent.clone())))?;
         let answer = cold::read_answer(&keys, network, &Envelope::from_bytes(&message)?)?;
 
         self.inner.sync.pause();
@@ -491,7 +492,7 @@ impl OpenWallet {
         if let Some(signed) = &answer.signed {
             // The rescan above may not have run yet; the spent check needs
             // key images on the coins, which learning already set.
-            let route = Route::for_wallet(mode, network, consent.as_deref())
+            let route = Route::for_wallet(&id, mode, network, consent.as_deref())
                 .map_err(|_| ColdFailure::Send)?;
             let tip = state.next_height;
             let result = RUNTIME.block_on(route.publish_signed(network, signed, &mut state, tip));

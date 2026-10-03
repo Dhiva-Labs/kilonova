@@ -50,9 +50,13 @@ async fn wallet_rpc(method: &str, params: Value) -> Value {
 }
 
 async fn mine(address: &str, blocks: usize) {
-    let (daemon, _) = connect(&NodeUrl::parse(NODE).unwrap(), Network::Mainnet)
-        .await
-        .unwrap();
+    let (daemon, _) = connect(
+        &NodeUrl::parse(NODE).unwrap(),
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap();
     let address = MoneroAddress::from_str(MoneroNetwork::Mainnet, address).unwrap();
     daemon.generate_blocks(&address, blocks).await.unwrap();
 }
@@ -68,7 +72,11 @@ async fn tip() -> u64 {
 }
 
 fn server() -> LwsServer {
-    LwsServer::new(&NodeUrl::parse(LWS).unwrap()).unwrap()
+    LwsServer::new(
+        &NodeUrl::parse(LWS).unwrap(),
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .unwrap()
 }
 
 async fn lws_until_caught_up(keys: &WalletKeys, state: &mut SyncState) {

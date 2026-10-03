@@ -13,8 +13,8 @@ use flutter_rust_bridge::frb;
 use kn_keys::WalletKeys;
 use kn_store::{SyncMode as StoreSyncMode, UnlockedWallet};
 use kn_sync::{
-    Direction, LwsServer, MoneroDaemonHttp, NodeUrl, SyncCache, SyncError, SyncState,
-    approximate_height, connect, lws_sync, sync_with,
+    Circuit, Direction, LwsServer, MoneroDaemonHttp, NodeUrl, Purpose, SyncCache, SyncError,
+    SyncState, approximate_height, connect, lws_sync, probe_proxy, sync_with,
 };
 use tokio::sync::Notify;
 
@@ -487,24 +487,37 @@ struct Run<'a> {
 }
 
 /// Connections a run keeps between rounds, so following the tip does not
-/// connect (and, over https or Tor, handshake) again every time.
+/// connect (and, over https or Tor, handshake) again every time. Each is
+/// kept per address and circuit (wallet and purpose).
 #[frb(ignore)]
 #[derive(Default)]
 struct Connections {
+    /// Full-mode sync.
     node: Option<NodeConnection>,
-    lws: Option<(NodeUrl, LwsServer)>,
+    /// Confirming a light wallet server's payments with a node.
+    check: Option<NodeConnection>,
+    lws: Option<(NodeUrl, Circuit, LwsServer)>,
 }
 
 #[frb(ignore)]
 struct NodeConnection {
     url: NodeUrl,
+    circuit: Circuit,
     daemon: MoneroDaemonHttp,
     cache: SyncCache,
+}
+
+impl NodeConnection {
+    fn is_for(&self, url: &NodeUrl, circuit: &Circuit) -> bool {
+        self.url == *url && self.circuit == *circuit
+    }
 }
 
 /// What a run needs from the wallet, copied out so the wallet lock is not
 /// held while talking to the network.
 struct Setup {
+    /// The wallet's id, which picks its proxy circuits.
+    wallet: String,
     network: kn_keys::Network,
     mode: StoreSyncMode,
     keys: WalletKeys,
@@ -548,6 +561,7 @@ impl Run<'_> {
     async fn go(&self) {
         let Ok(setup) = self.inner.with(|w| {
             Ok(Setup {
+                wallet: w.entry.id.clone(),
                 network: w.entry.network,
                 mode: w.entry.mode,
                 keys: w.keys.clone(),
@@ -617,9 +631,7 @@ impl Run<'_> {
         });
         let mut state = self.inner.sync.snapshot();
         let result = async {
-            let (daemon, cache) = self
-                .node(&node, setup.network, &mut connections.node)
-                .await?;
+            let (daemon, cache) = self.node(setup, &node, &mut connections.node).await?;
             sync_with(
                 daemon,
                 cache,
@@ -665,18 +677,20 @@ impl Run<'_> {
     /// A new connection is compared with an independent node once per run.
     async fn node<'c>(
         &self,
+        setup: &Setup,
         node: &NodeUrl,
-        network: kn_keys::Network,
         kept: &'c mut Option<NodeConnection>,
     ) -> Result<(&'c MoneroDaemonHttp, &'c mut SyncCache), SyncError> {
-        if kept.as_ref().is_none_or(|k| k.url != *node) {
+        let circuit = Circuit::new(&setup.wallet, Purpose::Sync);
+        if kept.as_ref().is_none_or(|k| !k.is_for(node, &circuit)) {
             *kept = None;
-            let (daemon, status) = connect(node, network).await?;
+            let (daemon, status) = connect(node, setup.network, &circuit).await?;
             if !status.test_chain && !self.opinion_done.swap(true, Ordering::Relaxed) {
-                self.second_opinion(&daemon, node, network).await;
+                self.second_opinion(&daemon, node, setup).await;
             }
             *kept = Some(NodeConnection {
                 url: node.clone(),
+                circuit,
                 daemon,
                 cache: SyncCache::default(),
             });
@@ -691,8 +705,9 @@ impl Run<'_> {
         &self,
         daemon: &kn_sync::MoneroDaemonHttp,
         node: &NodeUrl,
-        network: kn_keys::Network,
+        setup: &Setup,
     ) {
+        let network = setup.network;
         let Some(reference) = kn_sync::bundled_nodes(network)
             .into_iter()
             .find(|n| n != node)
@@ -701,7 +716,12 @@ impl Run<'_> {
         };
         let opinion = tokio::time::timeout(
             Duration::from_secs(30),
-            kn_sync::second_opinion(daemon, &reference, network),
+            kn_sync::second_opinion(
+                daemon,
+                &reference,
+                network,
+                &Circuit::new(&setup.wallet, Purpose::Opinion),
+            ),
         )
         .await;
         if let Ok(Ok(opinion)) = opinion
@@ -716,7 +736,7 @@ impl Run<'_> {
     /// node that cannot be reached confirms nothing and contradicts nothing.
     async fn confirm_with_node(
         &self,
-        network: kn_keys::Network,
+        setup: &Setup,
         state: &mut SyncState,
         kept: &mut Option<NodeConnection>,
     ) -> u32 {
@@ -724,15 +744,17 @@ impl Run<'_> {
         if !enabled {
             return 0;
         }
-        let Ok(node) = current_node(network.into()) else {
+        let Ok(node) = current_node(setup.network.into()) else {
             return 0;
         };
+        let circuit = Circuit::new(&setup.wallet, Purpose::CrossCheck);
         let before = state.outputs.len();
         let checked = async {
-            if kept.as_ref().is_none_or(|k| k.url != node) {
-                let (daemon, _) = connect(&node, network).await?;
+            if kept.as_ref().is_none_or(|k| !k.is_for(&node, &circuit)) {
+                let (daemon, _) = connect(&node, setup.network, &circuit).await?;
                 *kept = Some(NodeConnection {
                     url: node.clone(),
+                    circuit: circuit.clone(),
                     daemon,
                     cache: SyncCache::default(),
                 });
@@ -775,15 +797,21 @@ impl Run<'_> {
             ..SyncEvent::new(SyncPhase::Connecting)
         });
         let mut state = self.inner.sync.snapshot();
+        let circuit = Circuit::new(&setup.wallet, Purpose::Sync);
         let result = async {
             if connections
                 .lws
                 .as_ref()
-                .is_none_or(|(kept, _)| *kept != url)
+                .is_none_or(|(kept, kept_circuit, _)| *kept != url || *kept_circuit != circuit)
             {
-                connections.lws = Some((url.clone(), LwsServer::new(&url)?));
+                probe_proxy().await;
+                connections.lws = Some((
+                    url.clone(),
+                    circuit.clone(),
+                    LwsServer::new(&url, &circuit)?,
+                ));
             }
-            let (_, server) = connections.lws.as_ref().expect("connected above");
+            let (_, _, server) = connections.lws.as_ref().expect("connected above");
             lws_sync(
                 server,
                 &setup.keys,
@@ -799,7 +827,7 @@ impl Run<'_> {
         let result = match result {
             Ok(mut report) => {
                 report.rejected_outputs = report.rejected_outputs.saturating_add(
-                    self.confirm_with_node(setup.network, &mut state, &mut connections.node)
+                    self.confirm_with_node(setup, &mut state, &mut connections.check)
                         .await,
                 );
                 Ok(report)

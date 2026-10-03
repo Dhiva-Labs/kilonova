@@ -765,5 +765,6 @@
   "addressCopyLabel": "Address",
   "transactionKeyLabel": "Transaction key",
   "revealedRestoreHeightLabel": "Restore height",
-  "revealedRestoreHeightHelp": "Enter this when restoring, so the new wallet scans from this block instead of the start."
+  "revealedRestoreHeightHelp": "Enter this when restoring, so the new wallet scans from this block instead of the start.",
+  "proxyCircuitHelp": "Through Tor, each wallet gets its own circuit, and so does each kind of request (sync, sending, checks, prices), so nodes cannot link your wallets by address."
 }

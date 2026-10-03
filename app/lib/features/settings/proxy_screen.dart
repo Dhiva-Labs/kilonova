@@ -93,6 +93,8 @@ class _ProxyScreenState extends State<ProxyScreen> {
               Text(l.proxyHelp, style: text.bodyMedium),
               const SizedBox(height: KnSpace.sm),
               Text(l.proxyTorHelp, style: text.bodySmall),
+              const SizedBox(height: KnSpace.sm),
+              Text(l.proxyCircuitHelp, style: text.bodySmall),
               const SizedBox(height: KnSpace.lg),
               Text(
                 saved == null ? l.proxyOff : l.proxyOn(saved),

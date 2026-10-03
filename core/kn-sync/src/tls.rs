@@ -16,7 +16,7 @@ use rustls::{
 };
 
 use crate::SyncError;
-use crate::node::{NodeUrl, proxy};
+use crate::node::{Circuit, NodeUrl, Purpose};
 
 /// SHA-256 of a DER certificate.
 pub type Fingerprint = [u8; 32];
@@ -222,13 +222,8 @@ pub async fn server_certificate(url: &NodeUrl) -> Result<CertificateInfo, SyncEr
             public,
         }))
         .with_no_client_auth();
-    let builder = match proxy() {
-        Some(p) => reqwest::Client::builder()
-            .proxy(reqwest::Proxy::all(p.as_str()).map_err(|_| SyncError::BadProxyUrl)?),
-        None if url.is_onion() => return Err(SyncError::NeedsProxy),
-        None => reqwest::Client::builder().no_proxy(),
-    };
-    let client = builder
+    crate::node::probe_proxy().await;
+    let client = crate::node::client_builder(url, &Circuit::app(Purpose::Discovery))?
         .tls_backend_preconfigured(config)
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(30))

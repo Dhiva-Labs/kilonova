@@ -115,7 +115,14 @@ or font/CDN providers. Fonts and icons are bundled with the app.
 - Run your own Monero node, or your own monero-lws server.
 - Turn on Settings, Proxy and Tor. Every connection then goes through Tor (or
   your SOCKS5 proxy), host names are looked up through it, and onion nodes
-  can be used.
+  can be used. Each wallet, and each kind of request of a wallet (sync,
+  sending, checks against a second node, payment proofs, prices, testing
+  nodes), uses its own SOCKS username and password. Tor puts connections
+  with different credentials on different circuits, so a node cannot tell
+  from the exit address that two of your wallets, or one wallet's sync and
+  its payment, come from the same phone. The credentials are a hash of the
+  wallet's internal id and the kind of request, nothing secret; a proxy
+  that is not Tor and does not ask for a password is sent none.
 - Leave fiat prices off.
 
 ## Permissions
