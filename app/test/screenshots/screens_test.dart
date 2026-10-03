@@ -354,9 +354,13 @@ void main() {
         ('Proxy and Tor', '15-proxy'),
         ('Prices', '16-prices'),
         ('Notifications and background', '17-background'),
+        ('Backup', '17a-backup'),
+        ('Restore from backup', '17b-restore-backup'),
         ('About Kilonova', '18-about'),
         ('Privacy policy', '19-privacy'),
       ]) {
+        // The list is lazy; later rows may be below the fold.
+        await tester.scrollUntilVisible(find.text(title), 200);
         await tester.tap(find.text(title));
         await tester.pumpAndSettle();
         await _shot(tester, name);
@@ -364,6 +368,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
+      await tester.scrollUntilVisible(find.text('Light wallet servers'), -200);
       await tester.tap(find.text('Light wallet servers'));
       await tester.pumpAndSettle();
       await _shot(tester, '14-lws');

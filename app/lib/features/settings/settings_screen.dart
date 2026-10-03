@@ -7,6 +7,7 @@ import '../../widgets/kn_card.dart';
 import '../wallets/wallet_registry.dart';
 import 'about_screen.dart';
 import 'background_screen.dart';
+import 'backup_screen.dart';
 import 'lws_servers_screen.dart';
 import 'nodes_screen.dart';
 import 'pair_server_screen.dart';
@@ -101,6 +102,29 @@ class SettingsScreen extends StatelessWidget {
                       title: l.backgroundTitle,
                       subtitle: l.backgroundSubtitle,
                       onTap: () => open(BackgroundScreen(registry: registry)),
+                    ),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: KnSpace.lg),
+              Eyebrow(l.settingsDataSection),
+              const SizedBox(height: KnSpace.sm),
+              KnCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: withDividers([
+                    row(
+                      icon: Icons.save_outlined,
+                      title: l.backupTitle,
+                      subtitle: l.backupSubtitle,
+                      onTap: () => open(BackupScreen(registry: registry)),
+                    ),
+                    row(
+                      icon: Icons.restore_outlined,
+                      title: l.restoreBackupTitle,
+                      subtitle: l.restoreBackupSubtitle,
+                      onTap: () =>
+                          open(RestoreBackupScreen(registry: registry)),
                     ),
                   ]),
                 ),

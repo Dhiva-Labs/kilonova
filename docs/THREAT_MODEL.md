@@ -111,6 +111,22 @@ Mitigations: wallet files are encrypted with Argon2id and
 XChaCha20-Poly1305; Android cloud backup and device transfer are disabled for
 app data.
 
+**Someone with a backup file.** A backup (Settings, Backup) can end up on a
+USB stick or in cloud storage. It holds each chosen wallet's file and sync
+cache exactly as stored, never decrypted (so nothing the locked wallet file
+does not hold, even if the wallet was unlocked when the backup was made),
+the wallet list entries and the node, server and pinned certificate
+settings. The whole bundle is sealed with its own passphrase through the
+same Argon2id and XChaCha20-Poly1305 envelope (`kn-store/src/bundle.rs`),
+so names, networks and settings are hidden too, and the wallet files inside
+still need their own passwords. Someone who guesses a weak backup
+passphrase learns that metadata and gets copies of the locked wallet files,
+the same as copying them off the device. The app requires 12 characters for the passphrase and cannot
+recover it. Restoring never replaces a wallet already on the device: a
+clashing id or name is restored next to it under a new id or "(restored)"
+name, and bundle contents are length-checked and fuzzed
+(`core/fuzz`, `backup_bundles`).
+
 **Someone with the device, unlocked and the wallet open.** Can spend.
 Mitigations: on Android every unlocked wallet is locked when the app leaves
 the foreground; showing the seed, changing the password and deleting a

@@ -24,6 +24,21 @@ terms, what the app does with your information.
 We cannot see any of this, recover it, or reset your password. If you lose
 your seed and your password, nobody can restore your wallet.
 
+### Backups you make
+
+Settings, Backup saves the wallets you choose to one file, in a place you
+pick. The file holds each wallet's file and sync progress exactly as they
+are stored (still locked with that wallet's password, so the seed and keys
+inside stay encrypted with it), the wallet's name, network and sync mode,
+and the node, light wallet server and pinned certificates it used. Labels,
+the address book, notes and payment requests are inside the wallet file and
+come along with it. The whole file is encrypted again with a backup
+passphrase you choose (Argon2id and XChaCha20-Poly1305), separate from your
+wallet passwords. Without that passphrase nobody can read the file, not
+even which wallets are in it, and nobody can recover the passphrase for
+you. The app never sends a backup anywhere; Android's own cloud backup stays
+off for app data, so where the file goes is up to you.
+
 ## Who the app connects to
 
 ### Monero node (Full mode)
@@ -166,6 +181,7 @@ Security issues: see SECURITY.md in the repository.
 
 Newest first.
 
+- 2026-10-03: backups you make; each wallet and kind of request gets its own Tor circuit.
 - 2026-10-03: offline wallets, the node check against a public node, confirming server payments, payment proofs, self-hosting and finding nodes on your network.
 - 2026-10-02: payment notifications and background sync, both off by default.
 - 2026-10-02: name the price service and say how often it is asked.
