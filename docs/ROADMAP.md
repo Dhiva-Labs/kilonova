@@ -13,6 +13,8 @@ this repository.
 Ordered by value for effort. Sizes: S (days), M (one to two weeks),
 L (several weeks).
 
+All eight are built and on main (#21, #22), for the release after 0.1.0.
+
 ## 1. Phone as the cold wallet (L)
 
 Two Kilonova installs, one seed: the phone holds the spend key and never

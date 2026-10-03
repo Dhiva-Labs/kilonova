@@ -2,6 +2,17 @@
 
 Release notes for each version are in [docs/release-notes](docs/release-notes).
 
+## Unreleased
+
+Every feature in [docs/ROADMAP.md](docs/ROADMAP.md): a phone as an offline
+cold wallet that signs over QR codes, pairing with a self-hosted node and
+light wallet server, checking a light wallet server's payments against a
+node, payment requests that watch for their payment, coin control with a
+linked-address warning, a second node's opinion on the chain, finding nodes
+on the local network, and checking a payment proof. Also copy buttons for
+addresses, keys and the seed, a Show keys screen, and paste buttons on long
+fields.
+
 ## 0.1.0 (2026-10-03)
 
 First release: full and light-wallet-server sync, sending and receiving,
