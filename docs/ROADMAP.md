@@ -13,7 +13,7 @@ this repository.
 Ordered by value for effort. Sizes: S (days), M (one to two weeks),
 L (several weeks).
 
-All eight are built and on main (#21, #22), for the release after 0.1.0.
+All eight shipped in 0.2.0. The next plan is in [ROADMAP-NEXT.md](ROADMAP-NEXT.md).
 
 ## 1. Phone as the cold wallet (L)
 
