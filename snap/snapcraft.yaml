@@ -1,0 +1,80 @@
+# Snap Store packaging for Kilonova.
+#
+# The snap repackages the Linux build that the Release workflow made and
+# checksummed for this version, so the store and GitHub ship the same
+# binary. Bump `version` and the tarball URL and checksum together (the
+# checksum is in that release's SHA256SUMS). See docs/RELEASING.md.
+name: kilonova
+title: Kilonova
+base: core24
+version: '0.2.0'
+summary: Monero wallet that checks what your node and server tell it
+description: |
+  Kilonova is an open-source Monero wallet. Sync from a node you choose, or
+  from your own light wallet server, whose reports Kilonova checks with your
+  keys instead of trusting them.
+
+  - Several wallets on mainnet, stagenet and testnet; create, or restore
+    from a seed, a spend key, or as view-only.
+  - Send and receive with QR codes, payment requests that watch for their
+    payment, coin control, and payment proofs.
+  - Use a phone as an offline cold wallet that signs over QR codes.
+  - Tor or any SOCKS5 proxy for all traffic, pinned certificates for your
+    own node, and a second node's opinion on the chain.
+
+  Kilonova has not been audited. Do not keep more in it than you can afford
+  to lose. Wallet files stay in this snap's data folder and are encrypted
+  with your password.
+
+  A Dhiva Labs project. Privacy policy:
+  https://github.com/Dhiva-Labs/kilonova/blob/main/PRIVACY.md
+
+grade: stable
+confinement: strict
+license: MIT
+icon: packaging/linux/icons/256x256/com.dhivalabs.kilonova.png
+website: https://github.com/Dhiva-Labs/kilonova
+source-code: https://github.com/Dhiva-Labs/kilonova
+issues: https://github.com/Dhiva-Labs/kilonova/issues
+contact: reachout@dhivalabs.com
+
+platforms:
+  amd64:
+
+apps:
+  kilonova:
+    command: kilonova
+    # GTK, GLib, Wayland and X11 come from the gnome content snap, with the
+    # desktop-launch wrapper and font and theme handling.
+    extensions:
+      - gnome
+    common-id: com.dhivalabs.kilonova
+    desktop: usr/share/applications/com.dhivalabs.kilonova.desktop
+    plugs:
+      # Nodes, light wallet servers, a local Tor proxy and LAN discovery,
+      # all outgoing; Kilonova listens on nothing.
+      - network
+      # Choosing a QR code image to scan; the file chooser goes through the
+      # desktop portal, so no wider file access is needed.
+      - desktop
+
+parts:
+  kilonova:
+    plugin: dump
+    source: https://github.com/Dhiva-Labs/kilonova/releases/download/v0.2.0/kilonova-0.2.0-linux-x64.tar.gz
+    source-checksum: sha256/e84072c2044192cac7659123a9395906f64279ad593a33d6bb61617bf51d7357
+
+  desktop-entry:
+    plugin: dump
+    source: packaging/linux
+    organize:
+      com.dhivalabs.kilonova.desktop: usr/share/applications/com.dhivalabs.kilonova.desktop
+      icons/256x256/com.dhivalabs.kilonova.png: usr/share/icons/hicolor/256x256/apps/com.dhivalabs.kilonova.png
+    stage:
+      - usr/share/applications/com.dhivalabs.kilonova.desktop
+      - usr/share/icons/hicolor/256x256/apps/com.dhivalabs.kilonova.png
+    # A desktop file inside a snap must name its icon by path.
+    override-prime: |
+      craftctl default
+      sed -i 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/256x256/apps/com.dhivalabs.kilonova.png|' \
+        usr/share/applications/com.dhivalabs.kilonova.desktop

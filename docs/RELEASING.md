@@ -36,10 +36,30 @@ keytool -genkeypair -v -keystore release.jks -alias kilonova \
 Publish the certificate's SHA-256 fingerprint in the release notes so users
 can check it (`apksigner verify --print-certs <apk>`).
 
+## Snap Store
+
+`snap/snapcraft.yaml` repackages the release's Linux tarball, so the snap
+and GitHub ship the same binary. After the GitHub release is published:
+
+1. In `snap/snapcraft.yaml`, set `version`, the tarball URL and its
+   `source-checksum` (from the release's `SHA256SUMS`).
+2. Build and upload:
+
+   ```sh
+   snapcraft pack --use-lxd
+   snapcraft upload --release=stable kilonova_X.Y.Z_amd64.snap
+   ```
+
+New cryptocurrency wallet snaps go through manual review at the store
+before they appear, so the first upload waited for a reviewer. While a
+revision waits in review, later uploads of the same snap cannot be
+released; check `snapcraft revisions kilonova` and `snapcraft status
+kilonova` before assuming an upload shipped.
+
 ## Not automated yet
 
 - Windows code signing (installers currently trigger SmartScreen).
-- Snap, Flatpak and PPA uploads; the AppStream file in `packaging/linux` is
+- Snap uploads (manual, above), Flatpak and PPA; the AppStream file in `packaging/linux` is
   ready for Flatpak.
 - F-Droid: the metadata in `fastlane/` is ready; submitting needs a merge
   request to fdroiddata.
