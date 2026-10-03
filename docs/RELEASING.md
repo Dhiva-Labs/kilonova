@@ -58,9 +58,9 @@ kilonova` before assuming an upload shipped.
 
 ## Reproducibility verification
 
-The Linux tarball and the Android APK are built to be reproducible: anyone
-who checks out the tag should get byte-identical output. What makes this
-work, all inside `.github/workflows/release.yml`:
+The goal is that anyone who checks out a tag gets byte-identical Linux and
+Android builds. That is not fully true yet; the list further down says which
+files still differ. What is in place, inside `.github/workflows/release.yml`:
 
 - `SOURCE_DATE_EPOCH` is taken from the tagged commit's own timestamp
   (`git log -1 --format=%ct`), not "now", and used for the tarball's `tar
@@ -104,17 +104,13 @@ between two builds from different paths before this work, and nothing
 else needed to change for it). The rest of the Linux bundle, built by
 Flutter's own tooling, is not yet reproducible:
 
-- `kilonova` (the GTK runner binary) and the bundled Flutter plugins'
-  `.so` files are compiled from Flutter-generated C++ by CMake/clang,
-  which embeds the absolute build path the same way rustc does, but
-  through `__FILE__`/debug info rather than `file!()`. The fix is the C
-  compiler's equivalent of `--remap-path-prefix`:
-  `-ffile-prefix-map=$PWD=/build` added to `CMAKE_C_FLAGS`/
-  `CMAKE_CXX_FLAGS` in `app/linux/CMakeLists.txt` (and the matching
-  per-plugin CMake files cargokit/Flutter generate under
-  `app/linux/flutter/ephemeral/`, if those turn out to matter once the
-  top-level flags are in place). This is an `app/` file, outside what
-  this change touches; the person working on `app/` should make it.
+- `kilonova` (the GTK runner binary) and `libfile_selector_linux_plugin.so`.
+  `app/linux/CMakeLists.txt` maps the app checkout and the pub cache with
+  `-ffile-prefix-map`, which made `libflutter_zxing.so` identical across two
+  builds from different paths (checked with `tools/repro-check.sh` on
+  2026-10-03), but these two still differ. The next step is to run
+  `diffoscope` on them, likely a GNU build ID or a path from the
+  `flutter/ephemeral` directory that the maps do not cover.
 - `libapp.so` is the Dart AOT snapshot of `app/lib`. Whether its bytes are
   path-independent depends on the Dart compiler's own snapshot format and
   is not something a build-script flag fixes; needs investigation on the
