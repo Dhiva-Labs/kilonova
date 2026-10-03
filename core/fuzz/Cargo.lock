@@ -786,7 +786,7 @@ dependencies = [
 
 [[package]]
 name = "kn-keys"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "curve25519-dalek",
  "monero-seed",
@@ -799,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "kn-store"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "argon2",
  "chacha20poly1305",
@@ -813,11 +813,13 @@ dependencies = [
 
 [[package]]
 name = "kn-sync"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
+ "curve25519-dalek",
  "hex",
  "kn-keys",
  "monero-daemon-rpc",
+ "monero-epee",
  "monero-interface",
  "monero-wallet",
  "reqwest",

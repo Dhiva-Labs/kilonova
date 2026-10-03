@@ -36,3 +36,10 @@ path = "fuzz_targets/wallet_files.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "backup_bundles"
+path = "fuzz_targets/backup_bundles.rs"
+test = false
+doc = false
+bench = false

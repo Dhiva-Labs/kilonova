@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/backup.dart';
 import 'api/book.dart';
 import 'api/coins.dart';
 import 'api/cold.dart';
@@ -158,6 +159,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AddressRow dco_decode_address_row(dynamic raw);
 
   @protected
+  BackupEntry dco_decode_backup_entry(dynamic raw);
+
+  @protected
+  BackupError dco_decode_backup_error(dynamic raw);
+
+  @protected
+  BackupSummary dco_decode_backup_summary(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
@@ -215,10 +225,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_i_32(dynamic raw);
 
   @protected
+  ImportedWallet dco_decode_imported_wallet(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
   List<AddressRow> dco_decode_list_address_row(dynamic raw);
+
+  @protected
+  List<BackupEntry> dco_decode_list_backup_entry(dynamic raw);
 
   @protected
   List<CoinRow> dco_decode_list_coin_row(dynamic raw);
@@ -228,6 +244,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<HistoryItem> dco_decode_list_history_item(dynamic raw);
+
+  @protected
+  List<ImportedWallet> dco_decode_list_imported_wallet(dynamic raw);
 
   @protected
   List<LocalNode> dco_decode_list_local_node(dynamic raw);
@@ -475,6 +494,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AddressRow sse_decode_address_row(SseDeserializer deserializer);
 
   @protected
+  BackupEntry sse_decode_backup_entry(SseDeserializer deserializer);
+
+  @protected
+  BackupError sse_decode_backup_error(SseDeserializer deserializer);
+
+  @protected
+  BackupSummary sse_decode_backup_summary(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
@@ -536,10 +564,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
+  ImportedWallet sse_decode_imported_wallet(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
   List<AddressRow> sse_decode_list_address_row(SseDeserializer deserializer);
+
+  @protected
+  List<BackupEntry> sse_decode_list_backup_entry(SseDeserializer deserializer);
 
   @protected
   List<CoinRow> sse_decode_list_coin_row(SseDeserializer deserializer);
@@ -549,6 +583,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<HistoryItem> sse_decode_list_history_item(SseDeserializer deserializer);
+
+  @protected
+  List<ImportedWallet> sse_decode_list_imported_wallet(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<LocalNode> sse_decode_list_local_node(SseDeserializer deserializer);
@@ -819,6 +858,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_address_row(AddressRow self, SseSerializer serializer);
 
   @protected
+  void sse_encode_backup_entry(BackupEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_backup_error(BackupError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_backup_summary(BackupSummary self, SseSerializer serializer);
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
@@ -888,11 +936,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_imported_wallet(
+    ImportedWallet self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_address_row(
     List<AddressRow> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_backup_entry(
+    List<BackupEntry> self,
     SseSerializer serializer,
   );
 
@@ -908,6 +968,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_history_item(
     List<HistoryItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_imported_wallet(
+    List<ImportedWallet> self,
     SseSerializer serializer,
   );
 

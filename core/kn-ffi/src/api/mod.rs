@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod book;
 pub mod coins;
 pub mod cold;

@@ -1,7 +1,7 @@
 # Fuzzing
 
 Targets for what Kilonova reads from outside: light wallet server answers,
-addresses users type or paste, and wallet files on disk. They need nightly
+addresses users type or paste, wallet files on disk and backup bundles. They need nightly
 Rust and [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz):
 
 ```sh
@@ -11,6 +11,7 @@ cd core/fuzz
 cargo +nightly fuzz run lws_replies -- -max_total_time=300
 cargo +nightly fuzz run addresses -- -max_total_time=300
 cargo +nightly fuzz run wallet_files -- -max_total_time=300
+cargo +nightly fuzz run backup_bundles -- -max_total_time=300
 ```
 
 `corpus/` holds seed inputs. A crash leaves its input in `artifacts/`; add

@@ -393,7 +393,7 @@ fn parse_fingerprint(text: &str) -> Option<[u8; 32]> {
     bytes.try_into().ok()
 }
 
-fn apply_saved_pins(settings: &crate::node_settings::Settings) {
+pub(crate) fn apply_saved_pins(settings: &crate::node_settings::Settings) {
     set_pins(
         settings
             .pins
