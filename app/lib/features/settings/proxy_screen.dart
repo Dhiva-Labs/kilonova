@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/nodes.dart';
+import '../../src/rust/api/preferences.dart' as prefs_api;
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/kn_button.dart';
+import '../../widgets/kn_card.dart';
 import '../../widgets/kn_field.dart';
+import '../wallets/wallet_registry.dart';
 import 'nodes_screen.dart' show nodeErrorMessage;
 
 /// Tor's SOCKS port as Orbot and the Tor daemon open it.
@@ -13,7 +16,10 @@ const _torDefault = '127.0.0.1:9050';
 
 /// Send all traffic through a SOCKS5 proxy such as Tor.
 class ProxyScreen extends StatefulWidget {
-  const ProxyScreen({super.key});
+  const ProxyScreen({super.key, this.registry});
+
+  /// Updated after saving `broadcastElsewhere`, when the caller has one.
+  final WalletRegistry? registry;
 
   @override
   State<ProxyScreen> createState() => _ProxyScreenState();
@@ -24,10 +30,12 @@ class _ProxyScreenState extends State<ProxyScreen> {
   String? _saved;
   String? _error;
   bool _busy = false;
+  prefs_api.Preferences? _prefs;
 
   @override
   void initState() {
     super.initState();
+    _loadPrefs();
     networkProxy().then((saved) {
       if (!mounted) return;
       setState(() {
@@ -35,6 +43,26 @@ class _ProxyScreenState extends State<ProxyScreen> {
         _url.text = saved ?? '';
       });
     });
+  }
+
+  Future<void> _loadPrefs() async {
+    final loaded =
+        widget.registry?.preferences ?? await prefs_api.preferences();
+    if (mounted) setState(() => _prefs = loaded);
+  }
+
+  Future<void> _setBroadcastElsewhere(bool on) async {
+    final current = _prefs;
+    if (current == null) return;
+    final next = prefs_api.Preferences(
+      notifyIncoming: current.notifyIncoming,
+      backgroundSync: current.backgroundSync,
+      confirmLwsPayments: current.confirmLwsPayments,
+      broadcastElsewhere: on,
+    );
+    await prefs_api.setPreferences(preferences: next);
+    widget.registry?.preferences = next;
+    if (mounted) setState(() => _prefs = next);
   }
 
   @override
@@ -138,6 +166,18 @@ class _ProxyScreenState extends State<ProxyScreen> {
                 const SizedBox(height: KnSpace.sm),
                 Text(l.proxyChecking, style: text.bodySmall),
               ],
+              const SizedBox(height: KnSpace.lg),
+              KnCard(
+                child: KnRow(
+                  padding: EdgeInsets.zero,
+                  title: Text(l.broadcastElsewhereTitle),
+                  subtitle: Text(l.broadcastElsewhereSubtitle),
+                  trailing: Switch(
+                    value: _prefs?.broadcastElsewhere ?? true,
+                    onChanged: _prefs == null ? null : _setBroadcastElsewhere,
+                  ),
+                ),
+              ),
             ],
           ),
         ),

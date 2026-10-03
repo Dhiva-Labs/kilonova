@@ -33,21 +33,28 @@ class Preferences {
   final bool backgroundSync;
 
   /// LWS-mode wallets confirm each payment the server reports with the
-  /// network's node (through the proxy). The node learns which
-  /// transactions the wallet looks up, so it is off by default.
+  /// network's node (through the proxy). Each lookup is hidden among
+  /// cover lookups, so it is on by default.
   final bool confirmLwsPayments;
+
+  /// With a proxy set, publish transactions through a random bundled
+  /// node other than the wallet's own, so the node that sees the wallet
+  /// sync does not see it send. No effect without a proxy.
+  final bool broadcastElsewhere;
 
   const Preferences({
     required this.notifyIncoming,
     required this.backgroundSync,
     required this.confirmLwsPayments,
+    required this.broadcastElsewhere,
   });
 
   @override
   int get hashCode =>
       notifyIncoming.hashCode ^
       backgroundSync.hashCode ^
-      confirmLwsPayments.hashCode;
+      confirmLwsPayments.hashCode ^
+      broadcastElsewhere.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -56,5 +63,6 @@ class Preferences {
           runtimeType == other.runtimeType &&
           notifyIncoming == other.notifyIncoming &&
           backgroundSync == other.backgroundSync &&
-          confirmLwsPayments == other.confirmLwsPayments;
+          confirmLwsPayments == other.confirmLwsPayments &&
+          broadcastElsewhere == other.broadcastElsewhere;
 }

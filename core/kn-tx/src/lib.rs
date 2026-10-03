@@ -10,8 +10,10 @@
 
 pub mod cold;
 
+use std::time::Duration;
+
 use kn_keys::{Network, WalletKeys};
-use kn_sync::{Http, LwsServer, OwnedOutput, SyncState};
+use kn_sync::{Circuit, Http, LwsServer, NodeUrl, OwnedOutput, SyncState, connect};
 use monero_daemon_rpc::MoneroDaemon;
 use monero_interface::{FeePriority, ProvidesFeeRates as _, PublishTransaction as _};
 use monero_wallet::OutputWithDecoys;
@@ -52,6 +54,49 @@ pub(crate) const MAX_FEE_MASK: u64 = 10_000;
 pub enum Backend<'a> {
     Node(&'a MoneroDaemon<Http>),
     Lws(&'a LwsServer),
+}
+
+/// A backend the caller connected to, owned, for [`publish_through`].
+pub enum Connected {
+    Node(MoneroDaemon<Http>),
+    Lws(LwsServer),
+}
+
+impl Connected {
+    #[must_use]
+    pub fn backend(&self) -> Backend<'_> {
+        match self {
+            Self::Node(daemon) => Backend::Node(daemon),
+            Self::Lws(server) => Backend::Lws(server),
+        }
+    }
+}
+
+/// A node other than the backend to broadcast through first, so the node
+/// (or server) the wallet syncs from does not also see it send. Reached
+/// over `circuit`, normally the wallet's broadcast circuit through the
+/// proxy.
+#[derive(Clone, Copy)]
+pub struct Elsewhere<'a> {
+    pub node: &'a NodeUrl,
+    pub network: Network,
+    pub circuit: &'a Circuit,
+}
+
+/// How long the other node gets to take a transaction before it goes
+/// through the backend instead.
+pub const ELSEWHERE_TIMEOUT: Duration = Duration::from_secs(45);
+
+/// Which way a published transaction went.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Sent {
+    /// Through the backend: no other node was asked to take it.
+    Backend,
+    /// Through the other node only.
+    Elsewhere,
+    /// The other node failed or did not answer in time, so it went through
+    /// the backend after all. The app tells the owner.
+    FellBack,
 }
 
 /// The fee priority levels wallets and nodes agree on.
@@ -520,6 +565,28 @@ pub async fn publish(
     Ok(())
 }
 
+/// Like [`publish`], but through `elsewhere` when given, so the wallet's
+/// own node or server never hears of the transaction from the wallet. If
+/// that node fails or does not answer within [`ELSEWHERE_TIMEOUT`], the
+/// backend from `connect_backend` gets it after all. The backend is only
+/// connected to when it is used.
+///
+/// # Errors
+///
+/// As [`publish`], for the backend's attempt; a failure of the other node
+/// alone is not an error.
+pub async fn publish_through(
+    elsewhere: Option<Elsewhere<'_>>,
+    connect_backend: impl AsyncFnOnce() -> Result<Connected, TxError>,
+    prepared: &Prepared,
+    state: &mut SyncState,
+    tip: u64,
+) -> Result<Sent, TxError> {
+    let sent = broadcast_through(elsewhere, connect_backend, &prepared.transaction).await?;
+    state.mark_pending(&prepared.spends, prepared.hash, tip);
+    Ok(sent)
+}
+
 /// Publishes a transaction a cold wallet signed, after checking it spends
 /// only this wallet's unspent outputs. Its inputs count as spent at once.
 ///
@@ -536,6 +603,51 @@ pub async fn publish_signed(
     broadcast(backend, &signed.transaction).await?;
     state.mark_pending(&signed.spends(), signed.hash, tip);
     Ok(())
+}
+
+/// [`publish_signed`] with [`publish_through`]'s choice of node.
+///
+/// # Errors
+///
+/// As [`publish_signed`].
+pub async fn publish_signed_through(
+    elsewhere: Option<Elsewhere<'_>>,
+    connect_backend: impl AsyncFnOnce() -> Result<Connected, TxError>,
+    signed: &cold::Signed,
+    state: &mut SyncState,
+    tip: u64,
+) -> Result<Sent, TxError> {
+    cold::check_signed(state, signed)?;
+    let sent = broadcast_through(elsewhere, connect_backend, &signed.transaction).await?;
+    state.mark_pending(&signed.spends(), signed.hash, tip);
+    Ok(sent)
+}
+
+/// Broadcasts through `elsewhere` if given, falling back to the backend.
+async fn broadcast_through(
+    elsewhere: Option<Elsewhere<'_>>,
+    connect_backend: impl AsyncFnOnce() -> Result<Connected, TxError>,
+    transaction: &Transaction,
+) -> Result<Sent, TxError> {
+    let mut sent = Sent::Backend;
+    if let Some(other) = elsewhere {
+        let attempt = async {
+            let (daemon, _) = connect(other.node, other.network, other.circuit)
+                .await
+                .map_err(|e| TxError::Node(e.to_string()))?;
+            broadcast(Backend::Node(&daemon), transaction).await
+        };
+        // Any failure, a refusal included, goes to the backend: a node that
+        // refuses a valid transaction must not stop it, and an invalid one
+        // is refused there too.
+        if let Ok(Ok(())) = tokio::time::timeout(ELSEWHERE_TIMEOUT, attempt).await {
+            return Ok(Sent::Elsewhere);
+        }
+        sent = Sent::FellBack;
+    }
+    let backend = connect_backend().await?;
+    broadcast(backend.backend(), transaction).await?;
+    Ok(sent)
 }
 
 async fn broadcast(backend: Backend<'_>, transaction: &Transaction) -> Result<(), TxError> {
@@ -890,4 +1002,144 @@ fn finish(
         linked_addresses: 1,
         transaction,
     })
+}
+
+#[cfg(test)]
+mod broadcast_tests {
+    use std::sync::{Arc, Mutex};
+
+    use kn_sync::Purpose;
+    use monero_wallet::transaction::TransactionPrefix;
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+
+    use super::*;
+
+    fn transaction() -> Transaction {
+        Transaction::V2 {
+            prefix: TransactionPrefix {
+                additional_timelock: Timelock::None,
+                inputs: vec![Input::Gen(1)],
+                outputs: vec![],
+                extra: vec![],
+            },
+            proofs: None,
+        }
+    }
+
+    /// A light wallet server that accepts every transaction and keeps the
+    /// request bodies.
+    async fn accepting_server() -> (NodeUrl, Arc<Mutex<Vec<String>>>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = NodeUrl::parse(&format!("http://{}", listener.local_addr().unwrap())).unwrap();
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let shared = Arc::clone(&seen);
+        tokio::spawn(async move {
+            loop {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut request = Vec::new();
+                let mut buf = [0u8; 4096];
+                loop {
+                    let n = socket.read(&mut buf).await.unwrap();
+                    request.extend_from_slice(&buf[..n]);
+                    let text = String::from_utf8_lossy(&request);
+                    if let Some(end) = text.find("\r\n\r\n") {
+                        let length: usize = text[..end]
+                            .lines()
+                            .find_map(|l| {
+                                l.to_ascii_lowercase()
+                                    .strip_prefix("content-length:")
+                                    .map(|v| v.trim().parse().unwrap())
+                            })
+                            .unwrap_or(0);
+                        if n == 0 || request.len() >= end + 4 + length {
+                            break;
+                        }
+                    }
+                }
+                shared
+                    .lock()
+                    .unwrap()
+                    .push(String::from_utf8_lossy(&request).into_owned());
+                let body = r#"{"status":"OK"}"#;
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                socket.write_all(response.as_bytes()).await.unwrap();
+            }
+        });
+        (url, seen)
+    }
+
+    /// An address nothing listens on.
+    async fn closed_port() -> NodeUrl {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        drop(listener);
+        NodeUrl::parse(&format!("http://{address}")).unwrap()
+    }
+
+    #[tokio::test]
+    async fn an_unreachable_broadcast_node_falls_back_to_the_backend() {
+        let (server_url, seen) = accepting_server().await;
+        let unreachable = closed_port().await;
+        let circuit = Circuit::new("wallet", Purpose::Broadcast);
+        let elsewhere = Elsewhere {
+            node: &unreachable,
+            network: Network::Mainnet,
+            circuit: &circuit,
+        };
+        let sent = broadcast_through(
+            Some(elsewhere),
+            async || {
+                Ok(Connected::Lws(
+                    LwsServer::new(&server_url, &circuit)
+                        .map_err(|e| TxError::Node(e.to_string()))?,
+                ))
+            },
+            &transaction(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(sent, Sent::FellBack);
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert!(seen[0].contains("submit_raw_tx"));
+        assert!(seen[0].contains(&hex::encode(transaction().serialize())));
+    }
+
+    #[tokio::test]
+    async fn without_another_node_the_backend_takes_it() {
+        let unreachable = closed_port().await;
+        let circuit = Circuit::new("wallet", Purpose::Broadcast);
+        // No other node: the backend takes it.
+        let (server_url, seen) = accepting_server().await;
+        let sent = broadcast_through(
+            None,
+            async || {
+                Ok(Connected::Lws(
+                    LwsServer::new(&server_url, &circuit)
+                        .map_err(|e| TxError::Node(e.to_string()))?,
+                ))
+            },
+            &transaction(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(sent, Sent::Backend);
+        assert_eq!(seen.lock().unwrap().len(), 1);
+        // Both fail: the backend's error is the one reported.
+        let error = broadcast_through(
+            Some(Elsewhere {
+                node: &unreachable,
+                network: Network::Mainnet,
+                circuit: &circuit,
+            }),
+            async || Err(TxError::Node("backend down".into())),
+            &transaction(),
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(error, TxError::Node(m) if m == "backend down"));
+    }
 }

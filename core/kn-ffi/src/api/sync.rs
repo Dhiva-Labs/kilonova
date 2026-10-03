@@ -708,10 +708,7 @@ impl Run<'_> {
         setup: &Setup,
     ) {
         let network = setup.network;
-        let Some(reference) = kn_sync::bundled_nodes(network)
-            .into_iter()
-            .find(|n| n != node)
-        else {
+        let Some(reference) = kn_sync::other_node(kn_sync::bundled_nodes(network), node) else {
             return;
         };
         let opinion = tokio::time::timeout(

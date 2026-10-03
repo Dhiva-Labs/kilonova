@@ -51,7 +51,9 @@ class WalletRegistry extends ChangeNotifier {
   /// Where backups are saved and read from; a fake in tests.
   final BackupFiles backupFiles;
 
-  /// Notifications and background sync, both off until turned on.
+  /// Notifications and background sync, both off until turned on;
+  /// confirming a light wallet server's payments and broadcasting through
+  /// another node, on.
   prefs.Preferences get preferences => _preferences;
   set preferences(prefs.Preferences value) {
     final changed = value.notifyIncoming != _preferences.notifyIncoming;
@@ -62,7 +64,8 @@ class WalletRegistry extends ChangeNotifier {
   prefs.Preferences _preferences = const prefs.Preferences(
     notifyIncoming: false,
     backgroundSync: false,
-    confirmLwsPayments: false,
+    confirmLwsPayments: true,
+    broadcastElsewhere: true,
   );
 
   /// False while the app is not on screen (or its window is hidden). Sync

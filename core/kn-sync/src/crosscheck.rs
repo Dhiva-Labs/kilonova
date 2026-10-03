@@ -4,13 +4,14 @@
 //! output's key and commitment come from the server too. Fetching the
 //! transaction from an independent node and comparing closes that gap.
 //!
-//! The node learns which transactions the wallet looks up, so this is off
-//! unless the owner turns it on, and meant to run over Tor.
+//! Each lookup goes out in a batch of real transactions from around the
+//! same height (`cover.rs`), so the node cannot tell which one the wallet
+//! asked about. On by default; best over Tor.
 
 use monero_daemon_rpc::MoneroDaemon;
 
+use crate::cover::CoverLookups;
 use crate::node::Http;
-use crate::proof::fetch;
 use crate::state::{OwnedOutput, SyncState};
 use crate::{ProofError, SyncError};
 
@@ -53,13 +54,15 @@ pub async fn cross_check(
             .unwrap_or(u32::MAX),
         ..CrossCheck::default()
     };
+    let mut lookups = CoverLookups::new();
     for tx in pending.into_iter().take(CROSS_CHECK_LIMIT) {
         let ours: Vec<&OwnedOutput> = state
             .outputs
             .iter()
             .filter(|o| o.output.transaction() == tx)
             .collect();
-        let agrees = match fetch(daemon, tx).await {
+        let height = ours.first().map(|o| o.height);
+        let agrees = match lookups.fetch(daemon, tx, height).await {
             Ok(fetched) => ours.iter().all(|o| matches(&fetched.transaction, o)),
             Err(ProofError::UnknownTransaction) => false,
             Err(e) => return Err(SyncError::Node(e.to_string())),

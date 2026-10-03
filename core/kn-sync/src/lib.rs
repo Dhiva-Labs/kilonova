@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 mod blocks;
+mod cover;
 mod crosscheck;
 mod discover;
 mod lws;
@@ -15,19 +16,22 @@ mod opinion;
 mod price;
 mod proof;
 pub mod push;
+mod random;
 mod restore_height;
 mod scan;
 mod state;
 mod tls;
 
+pub use cover::{COVER_WINDOW, CoverLookups, LOOKUP_BATCH, LookedUp};
 pub use crosscheck::{CROSS_CHECK_LIMIT, CrossCheck, cross_check};
 pub use discover::{FoundNode, discover, discover_at, local_ipv4};
 #[cfg(feature = "fuzzing")]
 pub use lws::fuzzing;
 pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, lws_sync};
 pub use node::{
-    Circuit, Http, NodeStatus, NodeUrl, ProxyUrl, Purpose, ServerPairing, bundled_nodes,
-    check_proxy, connect, probe_proxy, proxy, set_proxy,
+    Circuit, Http, NodeStatus, NodeUrl, ProxyUrl, Purpose, ServerPairing, broadcast_nodes,
+    bundled_nodes, check_proxy, connect, other_node, probe_proxy, proxy,
+    set_broadcast_nodes_for_tests, set_proxy,
 };
 /// The node client sync and sending use.
 pub type MoneroDaemonHttp = monero_daemon_rpc::MoneroDaemon<Http>;

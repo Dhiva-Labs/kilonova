@@ -118,6 +118,7 @@ void main() {
             notifyIncoming: true,
             backgroundSync: false,
             confirmLwsPayments: false,
+            broadcastElsewhere: true,
           ),
         );
         Future<OpenWallet> make(String name, Network network) async {

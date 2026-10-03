@@ -102,17 +102,22 @@ services:
       - ./data/testnet/lws:/data
 
   # A private chain where tests mine blocks on demand. Unrestricted RPC so
-  # tests can call generateblocks and pop_blocks.
+  # tests can call generateblocks and pop_blocks. Its only peer is
+  # monerod-regtest-b (exclusive nodes on both sides, so neither looks for
+  # the public network).
   monerod-regtest:
     <<: *monerod
     profiles: [regtest]
     restart: "no"
     command:
       - --regtest
-      - --offline
       - --fixed-difficulty=1
       - --data-dir=/data
       - --no-igd
+      - --disable-dns-checkpoints
+      - --p2p-bind-ip=0.0.0.0
+      - --p2p-bind-port=18080
+      - --add-exclusive-node=monerod-regtest-b:18080
       - --rpc-bind-ip=0.0.0.0
       - --rpc-bind-port=18081
       - --confirm-external-bind
@@ -122,6 +127,30 @@ services:
       - --zmq-pub=tcp://0.0.0.0:18083
     ports:
       - "127.0.0.1:18181:18081"
+    tmpfs:
+      - /data:uid=${KN_UID:-1000},gid=${KN_GID:-1000}
+
+  # A second node on the same chain, for broadcasting through a node other
+  # than the wallet's own (kn-tx/tests/regtest_broadcast.rs). Tests cut and
+  # restore the link between the two with the in_peers/out_peers RPCs.
+  monerod-regtest-b:
+    <<: *monerod
+    profiles: [regtest]
+    restart: "no"
+    command:
+      - --regtest
+      - --fixed-difficulty=1
+      - --data-dir=/data
+      - --no-igd
+      - --disable-dns-checkpoints
+      - --p2p-bind-ip=0.0.0.0
+      - --p2p-bind-port=18080
+      - --add-exclusive-node=monerod-regtest:18080
+      - --rpc-bind-ip=0.0.0.0
+      - --rpc-bind-port=18081
+      - --confirm-external-bind
+    ports:
+      - "127.0.0.1:18191:18081"
     tmpfs:
       - /data:uid=${KN_UID:-1000},gid=${KN_GID:-1000}
 

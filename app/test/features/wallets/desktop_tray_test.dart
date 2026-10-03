@@ -29,6 +29,7 @@ Future<void> _keepSyncing(bool on) => setPreferences(
     notifyIncoming: on,
     backgroundSync: on,
     confirmLwsPayments: false,
+    broadcastElsewhere: true,
   ),
 );
 

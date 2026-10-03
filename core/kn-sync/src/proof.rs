@@ -4,6 +4,9 @@
 //! here from a node, so a recipient can verify a payment without the
 //! sender's wallet.
 
+use crate::SyncError;
+use crate::cover::CoverLookups;
+use crate::node::Http;
 use curve25519_dalek::{EdwardsPoint, Scalar as DalekScalar, constants::ED25519_BASEPOINT_TABLE};
 use kn_keys::Network;
 use monero_daemon_rpc::MoneroDaemon;
@@ -14,11 +17,6 @@ use monero_wallet::io::VarInt;
 use monero_wallet::primitives::keccak256;
 use monero_wallet::ringct::EncryptedAmount;
 use monero_wallet::transaction::Transaction;
-use serde::Deserialize;
-use serde_json::json;
-
-use crate::SyncError;
-use crate::node::Http;
 
 /// What a payment proof shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -73,7 +71,7 @@ pub async fn check_tx_key(
     let address = MoneroAddress::from_str(MoneroNetwork::from(network), address.trim())
         .map_err(|_| ProofError::BadAddress)?;
     let keys = parse_keys(tx_key_hex)?;
-    let fetched = fetch(daemon, tx_hash).await?;
+    let fetched = CoverLookups::new().fetch(daemon, tx_hash, None).await?;
     let tip = daemon
         .latest_block_number()
         .await
@@ -107,57 +105,6 @@ fn parse_keys(hex_text: &str) -> Result<Vec<DalekScalar>, ProofError> {
                 .ok_or(ProofError::BadKey)
         })
         .collect()
-}
-
-pub(crate) struct Fetched {
-    pub(crate) transaction: Transaction,
-    pub(crate) height: Option<u64>,
-    pub(crate) in_pool: bool,
-}
-
-pub(crate) async fn fetch(
-    daemon: &MoneroDaemon<Http>,
-    tx_hash: [u8; 32],
-) -> Result<Fetched, ProofError> {
-    #[derive(Deserialize)]
-    struct Entry {
-        as_hex: String,
-        #[serde(default)]
-        block_height: Option<u64>,
-        #[serde(default)]
-        in_pool: bool,
-    }
-    #[derive(Deserialize)]
-    struct Reply {
-        #[serde(default)]
-        txs: Vec<Entry>,
-    }
-    let params = json!({"txs_hashes": [hex::encode(tx_hash)], "decode_as_json": false});
-    let reply = daemon
-        .rpc_call("get_transactions", Some(params.to_string()), 4 << 20)
-        .await
-        .map_err(|e| ProofError::Node(e.to_string()))?;
-    let reply: Reply =
-        serde_json::from_str(&reply).map_err(|e| ProofError::Node(format!("transactions: {e}")))?;
-    let entry = reply
-        .txs
-        .into_iter()
-        .next()
-        .ok_or(ProofError::UnknownTransaction)?;
-    let raw = hex::decode(&entry.as_hex).map_err(|_| ProofError::UnknownTransaction)?;
-    let transaction =
-        Transaction::read(&mut raw.as_slice()).map_err(|_| ProofError::UnknownTransaction)?;
-    // The node must hand over the transaction that was asked for.
-    if transaction.hash() != tx_hash {
-        return Err(ProofError::Node(
-            "the node returned a different transaction".into(),
-        ));
-    }
-    Ok(Fetched {
-        transaction,
-        height: entry.block_height.filter(|_| !entry.in_pool),
-        in_pool: entry.in_pool,
-    })
 }
 
 /// Sums what `address` received, trying for output `i` the additional key
