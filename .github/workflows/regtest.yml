@@ -45,7 +45,9 @@ jobs:
               -d '{"jsonrpc":"2.0","id":"0","method":"get_info"}' >/dev/null &&
             curl -sf -X POST http://127.0.0.1:18183/json_rpc \
               -d '{"jsonrpc":"2.0","id":"0","method":"get_version"}' >/dev/null &&
-            curl -sf -X POST http://127.0.0.1:18443/get_version -d '{}' >/dev/null && exit 0
+            curl -sf -X POST http://127.0.0.1:18443/get_version -d '{}' >/dev/null &&
+            curl -sf -X POST http://127.0.0.1:18191/json_rpc \
+              -d '{"jsonrpc":"2.0","id":"0","method":"get_info"}' >/dev/null && exit 0
             sleep 2
           done
           docker compose --profile regtest logs
@@ -74,6 +76,9 @@ jobs:
       - name: A light wallet server inventing payments is caught by the node
         working-directory: core
         run: cargo test -p kn-sync --test lws_dishonest_server -- --ignored --test-threads 1
+      - name: Broadcasting through a node other than the sync node
+        working-directory: core
+        run: cargo test -p kn-tx --test regtest_broadcast -- --ignored --test-threads 1
       - name: Logs
         if: failure()
         working-directory: tools/devnet
