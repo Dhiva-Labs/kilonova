@@ -33,7 +33,7 @@ everything up to that point.
    update both on every release).
 4. Open a PR against `flathub/flathub` from that branch. Flathub's bot runs
    a build and basic checks; a human reviewer looks at the manifest
-   (permissions especially — ours asks for network, Wayland/X11, IPC and
+   (permissions especially: ours asks for network, Wayland/X11, IPC and
    DRI only, no filesystem access, which reviewers generally wave through
    quickly) and the metainfo file's completeness.
 5. Once accepted, Flathub creates `flathub/com.dhivalabs.kilonova` as its
