@@ -3,21 +3,31 @@ import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/network.dart';
 import '../../src/rust/api/nodes.dart';
+import '../../src/rust/api/preferences.dart' as prefs_api;
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/kn_button.dart';
+import '../../widgets/kn_card.dart';
 import '../../widgets/kn_field.dart';
 import '../../widgets/kn_segments.dart';
 import '../../widgets/network_label.dart';
+import '../wallets/wallet_registry.dart';
 import 'certificate_dialog.dart';
 import 'nodes_screen.dart' show nodeErrorMessage;
 
 /// Choose the light wallet server for each network. There is no default.
 class LwsServersScreen extends StatefulWidget {
-  const LwsServersScreen({super.key, this.initialNetwork = Network.mainnet});
+  const LwsServersScreen({
+    super.key,
+    this.initialNetwork = Network.mainnet,
+    this.registry,
+  });
 
   final Network initialNetwork;
+
+  /// Updated after saving `confirmLwsPayments`, when the caller has one.
+  final WalletRegistry? registry;
 
   @override
   State<LwsServersScreen> createState() => _LwsServersScreenState();
@@ -29,11 +39,31 @@ class _LwsServersScreenState extends State<LwsServersScreen> {
   String? _saved;
   String? _error;
   String? _health;
+  prefs_api.Preferences? _prefs;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final loaded = widget.registry?.preferences ?? await prefs_api.preferences();
+    if (mounted) setState(() => _prefs = loaded);
+  }
+
+  Future<void> _setConfirmLwsPayments(bool on) async {
+    final current = _prefs;
+    if (current == null) return;
+    final next = prefs_api.Preferences(
+      notifyIncoming: current.notifyIncoming,
+      backgroundSync: current.backgroundSync,
+      confirmLwsPayments: on,
+    );
+    await prefs_api.setPreferences(preferences: next);
+    widget.registry?.preferences = next;
+    if (mounted) setState(() => _prefs = next);
   }
 
   @override
@@ -120,6 +150,18 @@ class _LwsServersScreenState extends State<LwsServersScreen> {
                 controller: _url,
                 label: l.lwsServerLabel,
                 onSubmitted: (_) => _save(),
+              ),
+              const SizedBox(height: KnSpace.md),
+              KnCard(
+                child: KnRow(
+                  padding: EdgeInsets.zero,
+                  title: Text(l.confirmLwsPaymentsTitle),
+                  subtitle: Text(l.confirmLwsPaymentsSubtitle),
+                  trailing: Switch(
+                    value: _prefs?.confirmLwsPayments ?? false,
+                    onChanged: _prefs == null ? null : _setConfirmLwsPayments,
+                  ),
+                ),
               ),
               const SizedBox(height: KnSpace.md),
               Wrap(

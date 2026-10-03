@@ -632,5 +632,117 @@
   "coldFailureInconsistent": "The amounts in that transaction do not add up.",
   "coldFailureNotWatching": "Only a watching wallet does this.",
   "coldFailureIsCold": "This offline wallet never connects.",
-  "coldFailureAlreadyUsed": "That request was already answered."
+  "coldFailureAlreadyUsed": "That request was already answered.",
+  "nodeErrorProxyOn": "Looking on the local network would go around your proxy, so it is off while a proxy is set.",
+  "requestAction": "Request a payment",
+  "requestDialogTitle": "Request a payment",
+  "requestAmountField": "Amount",
+  "requestForField": "What it is for",
+  "requestExpiryNone": "No expiry",
+  "requestExpiry1Day": "1 day",
+  "requestExpiry7Days": "7 days",
+  "requestCreateAction": "Create request",
+  "requestsTitle": "Requests",
+  "requestDefaultLabel": "Request",
+  "requestStatusWaiting": "Waiting",
+  "requestStatusArriving": "Arriving, waiting for a block",
+  "requestStatusPartial": "Partly paid: {received} of {amount} XMR",
+  "@requestStatusPartial": {
+    "placeholders": {
+      "received": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "requestStatusPaid": "Paid",
+  "requestStatusExpired": "Expired",
+  "requestCopyLinkAction": "Copy link",
+  "requestDeleteAction": "Delete request",
+  "notifyRequestPaidTitle": "Request paid: {label}",
+  "@notifyRequestPaidTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "coinsTitle": "Coins",
+  "coinsEmpty": "This wallet has no coins yet.",
+  "coinsLockedTag": "locked",
+  "coinsFrozenTag": "frozen",
+  "coinsFreezeTooltip": "Freeze",
+  "coinsUnfreezeTooltip": "Unfreeze",
+  "coinsSelectedSummary": "{count} coins, {amount} XMR",
+  "@coinsSelectedSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "coinsSendFromAction": "Send from these",
+  "sendLinkedAddressesWarning": "These coins arrived on {count} of your addresses. Sending them together lets whoever paid those addresses see they belong to one wallet.",
+  "@sendLinkedAddressesWarning": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncNodeDisagrees": "Your node's chain differs from another node's. It may be showing you a false chain.",
+  "syncChooseNode": "Choose a node",
+  "confirmLwsPaymentsTitle": "Confirm the server's payments with a node",
+  "confirmLwsPaymentsSubtitle": "Each payment the server reports is checked against your node. The node then learns which transactions you look up, so use this with Tor or your own node.",
+  "checkPaymentAction": "Check a payment",
+  "checkPaymentExplain": "Someone paid you and sent a transaction ID and key? Check what this address received.",
+  "checkPaymentTxIdField": "Transaction ID",
+  "checkPaymentTxKeyField": "Transaction key",
+  "checkPaymentAddressField": "Address",
+  "checkPaymentCheckAction": "Check",
+  "checkPaymentReceivedSuffix": "received by this address",
+  "checkPaymentInBlocks": "{count, plural, =1{In 1 block} other{In {count} blocks}}",
+  "@checkPaymentInBlocks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "checkPaymentWaitingPool": "Waiting in the pool",
+  "checkPaymentNothing": "Nothing was paid to this address",
+  "proofErrorBadTransactionId": "Not a valid transaction id.",
+  "proofErrorBadKey": "Not a valid transaction key.",
+  "proofErrorUnknownTransaction": "That transaction was not found.",
+  "proofErrorKeyMismatch": "That key does not match the transaction.",
+  "proofErrorUnreachable": "Could not reach the node.",
+  "nodesFindLocalAction": "Find nodes on this network",
+  "nodesFindLocalBusy": "Looking on this network",
+  "nodesFindLocalNone": "No nodes answered on this network.",
+  "nodesFindLocalBlock": "At block {height}",
+  "@nodesFindLocalBlock": {
+    "placeholders": {
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "nodesFindLocalSyncing": "Still syncing",
+  "nodesUseThisAction": "Use this node",
+  "pairServerRow": "Pair with your server",
+  "pairServerSubtitle": "Use your own node and light wallet server from one code",
+  "pairServerExplain": "Run the self-hosting kit on your own computer, then scan the code it prints.",
+  "pairServerScanAction": "Scan the code",
+  "pairServerPasteField": "Or paste the code",
+  "pairServerPairAction": "Pair",
+  "pairServerNetworkLabel": "Network",
+  "pairServerNodeLabel": "Node",
+  "pairServerServerLabel": "Server",
+  "pairServerNeedsTorTitle": "These are onion addresses. Turn on Tor under Proxy and Tor to reach them.",
+  "pairServerProxyAction": "Proxy and Tor"
 }

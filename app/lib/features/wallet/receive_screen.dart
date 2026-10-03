@@ -12,6 +12,7 @@ import '../../widgets/kn_card.dart';
 import '../../widgets/kn_field.dart';
 import '../../widgets/kn_sheet.dart';
 import '../send/monero_uri.dart';
+import 'request_screen.dart';
 import 'wallet_dialogs.dart';
 
 /// Opens the receive screen: a dialog on desktop, a full screen on phone.
@@ -149,9 +150,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     final addressLine = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Text(row.address, style: monoStyle(context, size: 13)),
-        ),
+        Expanded(child: Text(row.address, style: monoStyle(context, size: 13))),
         const SizedBox(width: KnSpace.sm),
         KnIconButton(
           icon: const Icon(Icons.copy_outlined),
@@ -176,7 +175,11 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
           )
         : Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [qrBlock, const SizedBox(height: KnSpace.md), addressLine],
+            children: [
+              qrBlock,
+              const SizedBox(height: KnSpace.md),
+              addressLine,
+            ],
           );
 
     final content = Column(
@@ -201,6 +204,11 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
             l.receiveCopyRequestAction,
             onPressed: () => _copy(request),
           ),
+        ),
+        const SizedBox(height: KnSpace.sm),
+        KnButton.secondary(
+          l.requestAction,
+          onPressed: () => openRequestDialog(context, widget.wallet),
         ),
         const SizedBox(height: KnSpace.lg),
         Eyebrow(l.addressesTitle),

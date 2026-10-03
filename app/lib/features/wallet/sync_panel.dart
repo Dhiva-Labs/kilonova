@@ -11,7 +11,9 @@ import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
 import '../../widgets/sync_orbit.dart';
 import '../settings/lws_servers_screen.dart';
+import '../settings/nodes_screen.dart';
 import '../settings/price_feed.dart';
+import '../wallets/wallet_registry.dart';
 import 'lws_consent_dialog.dart';
 
 /// The balance: total, fiat, spendable (when it differs) and pool incoming.
@@ -81,6 +83,7 @@ class SyncLine extends StatelessWidget {
     required this.wallet,
     required this.event,
     required this.onRetry,
+    this.registry,
   });
 
   final OpenWallet wallet;
@@ -88,6 +91,11 @@ class SyncLine extends StatelessWidget {
 
   /// Starts sync again, after an error or a settings change.
   final VoidCallback onRetry;
+
+  /// Needed to pass to [LwsServersScreen] so it can save
+  /// `confirmLwsPayments` through the shared preferences; null in contexts
+  /// that do not carry one.
+  final WalletRegistry? registry;
 
   Future<void> _review(BuildContext context) async {
     final server = await wallet.lwsConsentNeeded();
@@ -101,12 +109,22 @@ class SyncLine extends StatelessWidget {
   Future<void> _setServer(BuildContext context) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            LwsServersScreen(initialNetwork: wallet.summary().network),
+        builder: (_) => LwsServersScreen(
+          initialNetwork: wallet.summary().network,
+          registry: registry,
+        ),
       ),
     );
     onRetry();
   }
+
+  Future<void> _chooseNode(BuildContext context) => Navigator.of(context)
+      .push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              NodesScreen(initialNetwork: wallet.summary().network),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -202,6 +220,12 @@ class SyncLine extends StatelessWidget {
             l.syncLwsImportPending,
             style: Theme.of(context).textTheme.bodySmall,
           ),
+        ],
+        if (e != null && e.nodeDisagrees) ...[
+          const SizedBox(height: KnSpace.sm),
+          ErrorLine(l.syncNodeDisagrees),
+          const SizedBox(height: KnSpace.xs),
+          KnButton.text(l.syncChooseNode, onPressed: () => _chooseNode(context)),
         ],
       ],
     );

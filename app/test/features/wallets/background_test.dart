@@ -43,6 +43,7 @@ void main() {
       preferences: const Preferences(
         notifyIncoming: true,
         backgroundSync: true,
+        confirmLwsPayments: false,
       ),
     );
     await registry.reload();
@@ -73,6 +74,7 @@ void main() {
       preferences: const Preferences(
         notifyIncoming: false,
         backgroundSync: false,
+        confirmLwsPayments: false,
       ),
     );
   });

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
+import '../../src/rust/api/requests.dart';
 import '../../src/rust/api/sync.dart';
 import '../../src/rust/api/wallets.dart';
+import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/amount.dart';
 import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
 import '../../widgets/kn_icons.dart';
@@ -13,6 +16,7 @@ import '../send/send_screen.dart';
 import '../wallets/wallet_registry.dart';
 import 'history_list.dart';
 import 'receive_screen.dart';
+import 'request_screen.dart';
 import 'sync_panel.dart';
 import 'tx_details_screen.dart';
 import 'wallet_dialogs.dart';
@@ -205,7 +209,44 @@ class _WalletViewState extends State<WalletView> {
               wallet: widget.wallet,
               event: event,
               onRetry: () => widget.registry.startSync(summary.id),
+              registry: widget.registry,
             ),
+            if (widget.wallet.requests().isNotEmpty) ...[
+              const SizedBox(height: KnSpace.xl),
+              Eyebrow(l.requestsTitle),
+              const SizedBox(height: KnSpace.sm),
+              KnCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: withDividers([
+                    for (final r in widget.wallet.requests())
+                      KnRow(
+                        title: Text(
+                          r.label.isEmpty ? l.requestDefaultLabel : r.label,
+                        ),
+                        subtitle: Text(
+                          requestStatusText(context, r),
+                          style: r.status == RequestStatus.paid
+                              ? TextStyle(color: context.kn.received)
+                              : null,
+                        ),
+                        trailing: AmountText(r.amount),
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => RequestScreen(
+                                wallet: widget.wallet,
+                                request: r,
+                              ),
+                            ),
+                          );
+                          if (mounted) setState(() {});
+                        },
+                      ),
+                  ]),
+                ),
+              ),
+            ],
             const SizedBox(height: KnSpace.xl),
             Eyebrow(l.historyTitle),
             const SizedBox(height: KnSpace.sm),

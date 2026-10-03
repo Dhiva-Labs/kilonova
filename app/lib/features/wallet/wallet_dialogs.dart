@@ -11,6 +11,8 @@ import '../../widgets/seed_grid.dart';
 import '../../widgets/wallet_error_text.dart';
 import '../book/address_book_screen.dart';
 import '../wallets/wallet_registry.dart';
+import 'check_payment_screen.dart';
+import 'coins_screen.dart';
 
 /// Asks for one line of text. Returns `null` if cancelled.
 Future<String?> askForText(
@@ -75,6 +77,8 @@ class _TextDialogState extends State<_TextDialog> {
 
 enum _WalletAction {
   addressBook,
+  coins,
+  checkPayment,
   showSeed,
   rename,
   changePassword,
@@ -137,6 +141,18 @@ class _WalletMenuState extends State<WalletMenu> {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => AddressBookScreen(wallet: wallet),
+          ),
+        );
+      case _WalletAction.coins:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => CoinsScreen(wallet: wallet, registry: registry),
+          ),
+        );
+      case _WalletAction.checkPayment:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => CheckPaymentScreen(wallet: wallet),
           ),
         );
       case _WalletAction.showSeed:
@@ -259,6 +275,11 @@ class _WalletMenuState extends State<WalletMenu> {
         PopupMenuItem(
           value: _WalletAction.addressBook,
           child: Text(l.bookTitle),
+        ),
+        PopupMenuItem(value: _WalletAction.coins, child: Text(l.coinsTitle)),
+        PopupMenuItem(
+          value: _WalletAction.checkPayment,
+          child: Text(l.checkPaymentAction),
         ),
         PopupMenuItem(
           value: _WalletAction.showSeed,

@@ -66,6 +66,7 @@ class _BackgroundScreenState extends State<BackgroundScreen> {
                           Preferences(
                             notifyIncoming: on,
                             backgroundSync: _prefs.backgroundSync,
+                            confirmLwsPayments: _prefs.confirmLwsPayments,
                           ),
                         ),
                       ),
@@ -80,6 +81,7 @@ class _BackgroundScreenState extends State<BackgroundScreen> {
                             Preferences(
                               notifyIncoming: _prefs.notifyIncoming,
                               backgroundSync: on,
+                              confirmLwsPayments: _prefs.confirmLwsPayments,
                             ),
                           ),
                         ),
