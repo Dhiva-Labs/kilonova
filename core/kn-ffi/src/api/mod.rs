@@ -1,10 +1,13 @@
 pub mod book;
+pub mod coins;
 pub mod cold;
 pub mod core;
 pub mod network;
 pub mod nodes;
 pub mod preferences;
 pub mod price;
+pub mod proof;
+pub mod requests;
 pub mod send;
 pub mod sync;
 pub mod wallets;

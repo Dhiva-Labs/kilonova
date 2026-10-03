@@ -17,7 +17,7 @@
 mod crypto;
 
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs,
     io::Write as _,
     path::{Path, PathBuf},
@@ -133,6 +133,21 @@ pub struct SentRecord {
     pub tx_key: Option<Zeroizing<String>>,
 }
 
+/// A request for a payment to a subaddress made just for it, so any payment
+/// to that subaddress answers the request.
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct PaymentRequest {
+    pub id: String,
+    /// Subaddress index in account 0.
+    pub index: u32,
+    /// Atomic units asked for.
+    pub amount: u64,
+    pub label: String,
+    /// Seconds since the Unix epoch.
+    pub created_at: u64,
+    pub expires_at: Option<u64>,
+}
+
 /// Everything inside a wallet file.
 #[derive(Serialize, Deserialize)]
 pub struct WalletData {
@@ -167,6 +182,13 @@ pub struct WalletData {
     /// Transactions sent from this wallet, by transaction id (hex).
     #[serde(default)]
     pub sent: BTreeMap<String, SentRecord>,
+    /// Payment requests, newest last.
+    #[serde(default)]
+    pub requests: Vec<PaymentRequest>,
+    /// Coins the owner froze, by one-time output key (hex): never spent
+    /// until thawed.
+    #[serde(default)]
+    pub frozen: BTreeSet<String>,
 }
 
 impl WalletData {
@@ -186,6 +208,8 @@ impl WalletData {
             contacts: Vec::new(),
             notes: BTreeMap::new(),
             sent: BTreeMap::new(),
+            requests: Vec::new(),
+            frozen: BTreeSet::new(),
         }
     }
 }

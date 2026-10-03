@@ -31,10 +31,19 @@ const _maxRecipients = 15;
 /// transaction will do, then confirm with the wallet password. Pops with
 /// true once the transaction is published.
 class SendScreen extends StatefulWidget {
-  const SendScreen({super.key, required this.wallet, required this.registry});
+  const SendScreen({
+    super.key,
+    required this.wallet,
+    required this.registry,
+    this.coins,
+  });
 
   final OpenWallet wallet;
   final WalletRegistry registry;
+
+  /// Spend only these coins (one-time keys, as [OpenWallet.coins] lists
+  /// them). The view-only and cold flows never see this.
+  final List<String>? coins;
 
   @override
   State<SendScreen> createState() => _SendScreenState();
@@ -193,11 +202,19 @@ class _SendScreenState extends State<SendScreen> {
         );
         if (mounted) setState(() => _coldPrepared = prepared);
       } else {
-        final prepared = await widget.wallet.prepareSend(
-          payments: _sweep ? const [] : payments,
-          sweepTo: _sweep ? _recipients.first.address.text.trim() : null,
-          priority: _priority,
-        );
+        final coins = widget.coins;
+        final prepared = coins == null
+            ? await widget.wallet.prepareSend(
+                payments: _sweep ? const [] : payments,
+                sweepTo: _sweep ? _recipients.first.address.text.trim() : null,
+                priority: _priority,
+              )
+            : await widget.wallet.prepareSendFromCoins(
+                payments: _sweep ? const [] : payments,
+                sweepTo: _sweep ? _recipients.first.address.text.trim() : null,
+                priority: _priority,
+                coins: coins,
+              );
         if (mounted) setState(() => _prepared = prepared);
       }
     } on SendError catch (e) {
@@ -588,6 +605,15 @@ class _ConfirmViewState extends State<_ConfirmView> {
           network.isTestNetwork() ? l.sendTestNetworkNote : l.aboutUnaudited,
           style: text.bodySmall,
         ),
+        if (s.linkedAddresses > 1) ...[
+          const SizedBox(height: KnSpace.lg),
+          KnCard(
+            child: Text(
+              l.sendLinkedAddressesWarning(s.linkedAddresses),
+              style: text.bodySmall,
+            ),
+          ),
+        ],
         const SizedBox(height: KnSpace.lg),
         KnCard(
           child: Column(
@@ -788,6 +814,15 @@ class _ColdConfirmViewState extends State<_ColdConfirmView> {
           l.sendConfirmTitle,
           style: isPhone ? text.titleLarge : text.headlineSmall,
         ),
+        if (s.linkedAddresses > 1) ...[
+          const SizedBox(height: KnSpace.lg),
+          KnCard(
+            child: Text(
+              l.sendLinkedAddressesWarning(s.linkedAddresses),
+              style: text.bodySmall,
+            ),
+          ),
+        ],
         const SizedBox(height: KnSpace.lg),
         KnCard(
           child: Column(

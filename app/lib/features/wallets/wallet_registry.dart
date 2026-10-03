@@ -10,6 +10,7 @@ import '../../src/rust/api/preferences.dart' as prefs;
 import '../../widgets/amount.dart';
 import '../settings/price_feed.dart';
 import '../../src/rust/api/network.dart';
+import '../../src/rust/api/requests.dart';
 import '../../src/rust/api/sync.dart';
 import '../../src/rust/api/wallets.dart';
 import '../cold/cold_transport.dart';
@@ -34,6 +35,7 @@ class WalletRegistry extends ChangeNotifier {
   prefs.Preferences preferences = const prefs.Preferences(
     notifyIncoming: false,
     backgroundSync: false,
+    confirmLwsPayments: false,
   );
 
   /// False while the app is not on screen (or its window is hidden).
@@ -42,6 +44,10 @@ class WalletRegistry extends ChangeNotifier {
   /// Incoming transactions each open wallet has already shown, so only new
   /// ones are announced.
   final Map<String, Set<String>> _seenIncoming = {};
+
+  /// Each open wallet's requests, by id, as they stood last time sync
+  /// reported, so a request turning paid can be announced once.
+  final Map<String, Map<String, RequestStatus>> _requestStatuses = {};
 
   /// The optional fiat price, refreshed as wallets sync.
   final PriceFeed price;
@@ -74,7 +80,41 @@ class WalletRegistry extends ChangeNotifier {
       notifier.value = event;
       if (event.phase == SyncPhase.synced) price.refreshIfStale();
       _announceIncoming(id);
+      _announceRequestsPaid(id);
     });
+  }
+
+  /// Notifies about requests that just turned paid, while the app is not
+  /// in front and notifications are on. A request already paid when the
+  /// wallet was unlocked is never announced.
+  void _announceRequestsPaid(String id) {
+    final wallet = _open[id];
+    if (wallet == null) return;
+    final requests = wallet.requests();
+    final previous = _requestStatuses[id];
+    if (previous == null) {
+      _requestStatuses[id] = {for (final r in requests) r.id: r.status};
+      return;
+    }
+    final newlyPaid = requests.where(
+      (r) =>
+          r.status == RequestStatus.paid &&
+          previous[r.id] != RequestStatus.paid,
+    );
+    for (final r in requests) {
+      previous[r.id] = r.status;
+    }
+    if (foreground || !preferences.notifyIncoming) return;
+    final l = lookupAppLocalizations(const Locale('en'));
+    for (final r in newlyPaid.take(3)) {
+      final label = r.label.isEmpty ? '${formatXmr(r.amount)} XMR' : r.label;
+      notifier.payment(
+        id: r.id.hashCode & 0x7fffffff,
+        title: l.notifyRequestPaidTitle(label),
+        body: l.notifyPaymentBody(formatXmr(r.amount)),
+        publicTitle: l.notifyPaymentPublic,
+      );
+    }
   }
 
   /// Notifies about incoming payments that arrived since the last look,
@@ -137,6 +177,7 @@ class WalletRegistry extends ChangeNotifier {
     _syncSubscriptions.remove(id)?.cancel();
     _sync.remove(id)?.dispose();
     _seenIncoming.remove(id);
+    _requestStatuses.remove(id);
   }
 
   Future<void> reload() async {

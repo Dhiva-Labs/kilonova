@@ -80,6 +80,9 @@ pub struct SyncEvent {
     /// LWS only: the server is still importing history from before the
     /// wallet was registered.
     pub import_pending: bool,
+    /// The node's chain differs from an independent node's: it may be
+    /// feeding this wallet a chain of its own.
+    pub node_disagrees: bool,
 }
 
 impl SyncEvent {
@@ -92,6 +95,7 @@ impl SyncEvent {
             failure: None,
             rejected_outputs: 0,
             import_pending: false,
+            node_disagrees: false,
         }
     }
 
@@ -140,7 +144,7 @@ pub struct HistoryItem {
 /// Sync state shared between the wallet and its background task.
 pub(crate) struct SyncHandle {
     state: Mutex<SyncState>,
-    tip: AtomicU64,
+    pub(crate) tip: AtomicU64,
     /// Cancel flag of the current run. Starting a run cancels the previous
     /// one.
     current: Mutex<Arc<AtomicBool>>,
@@ -267,6 +271,8 @@ impl OpenWallet {
                 cancel: &cancel,
                 generation,
                 failed: AtomicBool::new(false),
+                opinion_done: AtomicBool::new(false),
+                disagrees: AtomicBool::new(false),
             };
             run.go().await;
             // After a failure the failure stays on screen, since it says
@@ -360,6 +366,10 @@ struct Run<'a> {
     generation: u64,
     /// Set when the run ends because of a failure it reported.
     failed: AtomicBool,
+    /// Whether this run compared its node with an independent one yet.
+    opinion_done: AtomicBool,
+    /// The node disagreed with the independent one.
+    disagrees: AtomicBool,
 }
 
 /// What a run needs from the wallet, copied out so the wallet lock is not
@@ -383,7 +393,8 @@ impl Run<'_> {
         self.cancel.load(Ordering::Relaxed) || !self.is_current()
     }
 
-    fn emit(&self, event: SyncEvent) {
+    fn emit(&self, mut event: SyncEvent) {
+        event.node_disagrees = self.disagrees.load(Ordering::Relaxed);
         self.failed
             .store(event.phase == SyncPhase::Failed, Ordering::Relaxed);
         if self.is_current() {
@@ -453,7 +464,10 @@ impl Run<'_> {
         });
         let mut state = self.inner.sync.snapshot();
         let result = async {
-            let (daemon, _) = connect(&node, setup.network).await?;
+            let (daemon, status) = connect(&node, setup.network).await?;
+            if !status.test_chain && !self.opinion_done.swap(true, Ordering::Relaxed) {
+                self.second_opinion(&daemon, &node, setup.network).await;
+            }
             sync(
                 &daemon,
                 &setup.keys,
@@ -487,6 +501,57 @@ impl Run<'_> {
             }
             Err(e) => self.fail(&e),
         }
+    }
+
+    /// Compares the node with a bundled one it is not, once per run. An
+    /// answer that cannot be had is not a disagreement.
+    async fn second_opinion(
+        &self,
+        daemon: &kn_sync::MoneroDaemonHttp,
+        node: &NodeUrl,
+        network: kn_keys::Network,
+    ) {
+        let Some(reference) = kn_sync::bundled_nodes(network)
+            .into_iter()
+            .find(|n| n != node)
+        else {
+            return;
+        };
+        let opinion = tokio::time::timeout(
+            Duration::from_secs(30),
+            kn_sync::second_opinion(daemon, &reference, network),
+        )
+        .await;
+        if let Ok(Ok(opinion)) = opinion
+            && !opinion.agrees
+        {
+            self.disagrees.store(true, Ordering::Relaxed);
+        }
+    }
+
+    /// When the owner asked for it, confirms the server's payments with the
+    /// network's node. Returns how many outputs the node contradicted; a
+    /// node that cannot be reached confirms nothing and contradicts nothing.
+    async fn confirm_with_node(&self, network: kn_keys::Network, state: &mut SyncState) -> u32 {
+        let enabled = crate::node_settings::load().is_ok_and(|s| s.confirm_lws_payments);
+        if !enabled {
+            return 0;
+        }
+        let Ok(node) = current_node(network.into()) else {
+            return 0;
+        };
+        let before = state.outputs.len();
+        let checked = async {
+            let (daemon, _) = connect(&node, network).await?;
+            kn_sync::cross_check(&daemon, state).await
+        };
+        if tokio::time::timeout(Duration::from_mins(1), checked)
+            .await
+            .is_err()
+        {
+            return 0;
+        }
+        u32::try_from(before.saturating_sub(state.outputs.len())).unwrap_or(u32::MAX)
     }
 
     /// One request round to the light wallet server.
@@ -527,6 +592,15 @@ impl Run<'_> {
             .await
         }
         .await;
+        let result = match result {
+            Ok(mut report) => {
+                report.rejected_outputs = report
+                    .rejected_outputs
+                    .saturating_add(self.confirm_with_node(setup.network, &mut state).await);
+                Ok(report)
+            }
+            Err(e) => Err(e),
+        };
         match result {
             Ok(report) => {
                 self.record(&state, report.tip);

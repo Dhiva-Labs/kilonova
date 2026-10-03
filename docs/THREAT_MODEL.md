@@ -72,6 +72,29 @@ view key; full sync avoids them.
 Mitigations: TLS to nodes and LWS servers, optional certificate pinning,
 optional proxy.
 
+**A node that lies about the chain.** Once per sync run, full-mode wallets
+compare a block ten below the tip with a bundled node they do not use (over
+the proxy); a disagreement is shown to the user. Private test chains are
+skipped. This catches a node feeding a chain of its own, not one that only
+withholds transactions.
+
+**A light wallet server that invents payments.** With "confirm the server's
+payments" on, each reported transaction is fetched from the network's node
+and compared output by output (one-time key and amount or commitment);
+payments the node contradicts are dropped and stay dropped. Off by default,
+because the node then learns which transactions the wallet looks up.
+
+**A watching wallet (or whoever controls it) talking to a cold wallet.** The
+cold wallet holds the spend key and never goes online. It reads payments,
+change and fee from the transaction it signs, never from the request's
+description; refuses inputs it cannot spend, change that does not return to
+itself and fees above the cap; and only derives key images for outputs it
+owns (`kn-tx/src/cold.rs`). Messages are bound to one wallet and network. A
+compromised watching wallet can still ask the owner to sign a payment to
+anyone: the cold wallet's review screen, which shows what will actually be
+signed, is the defence. The pairing code carries the view key and asks for
+the password.
+
 **Someone with the device, locked.** Can copy wallet files.
 Mitigations: wallet files are encrypted with Argon2id and
 XChaCha20-Poly1305; Android cloud backup and device transfer are disabled for
@@ -82,8 +105,9 @@ Mitigations: on Android every unlocked wallet is locked when the app leaves
 the foreground; showing the seed, changing the password and deleting a
 wallet all ask for the password again; seed screens are kept out of screenshots
 and screen recording (`FLAG_SECURE` on Android, display affinity on Windows
-10 2004 and later; Linux has no equivalent). Re-authentication before sending
-is planned with M4.
+10 2004 and later; Linux has no equivalent). Sending, signing on a cold
+wallet and showing a transaction key ask for the password (or a fingerprint)
+again.
 
 **Malicious dependency or build pipeline.** Could ship code that leaks keys.
 Mitigations: few dependencies with exact pins for crypto crates, reviewed

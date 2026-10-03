@@ -195,3 +195,51 @@ async fn dishonest_outputs_and_spends_are_ignored() {
     assert_eq!(state.balance(1_000).total, 43);
     assert_eq!((report.scanned, report.tip), (200, 200));
 }
+
+/// With a node to ask, payments the server invented are dropped, and stay
+/// dropped on later syncs. Needs the regtest devnet's monerod.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs the regtest devnet's monerod at 127.0.0.1:18181"]
+async fn invented_payments_are_dropped_once_a_node_is_asked() {
+    let (keys, _) = WalletKeys::generate(SeedFormat::Classic);
+    let ours = keys.primary_address(Network::Mainnet);
+    let routes = vec![
+        ("login", json!({"new_address": false, "start_height": 0})),
+        (
+            "get_address_info",
+            json!({"scanned_block_height": 199, "blockchain_height": 199, "start_height": 0}),
+        ),
+        ("upsert_subaddrs", json!({})),
+        (
+            "get_unspent_outs",
+            json!({"per_byte_fee": "1", "fee_mask": "1", "amount": "0", "outputs": [
+                // Opens with our keys, but no such transaction exists.
+                output(1, pay(&ours, 0), (0, 0), 5),
+            ]}),
+        ),
+        ("get_address_txs", json!({"transactions": []})),
+    ];
+    let url = serve(routes).await;
+    let server = LwsServer::new(&NodeUrl::parse(&url).unwrap()).unwrap();
+    let mut state = SyncState::default();
+    lws_sync(&server, &keys, Network::Mainnet, &[1], 0, true, &mut state)
+        .await
+        .unwrap();
+    assert_eq!(state.outputs.len(), 1, "it passes the key check alone");
+
+    let (daemon, _) = kn_sync::connect(
+        &NodeUrl::parse("http://127.0.0.1:18181").unwrap(),
+        Network::Mainnet,
+    )
+    .await
+    .unwrap();
+    let check = kn_sync::cross_check(&daemon, &mut state).await.unwrap();
+    assert_eq!((check.confirmed, check.contradicted), (0, 1));
+    assert!(state.outputs.is_empty());
+
+    let report = lws_sync(&server, &keys, Network::Mainnet, &[1], 0, true, &mut state)
+        .await
+        .unwrap();
+    assert!(state.outputs.is_empty(), "stays dropped");
+    assert_eq!(report.rejected_outputs, 1);
+}

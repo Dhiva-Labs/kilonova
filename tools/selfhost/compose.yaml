@@ -1,0 +1,70 @@
+# Your own Monero node and light wallet server, reachable from anywhere as a
+# Tor onion service, with nothing to open on your router. See README.md.
+#
+#   docker compose up -d          # start (the node then syncs, for days)
+#   docker compose run --rm pair  # print the pairing code for Kilonova
+
+x-monerod: &monerod
+  image: ghcr.io/sethforprivacy/simple-monerod:v0.18.5.1@sha256:0329465ffc599048efd57712d91d3b4b7d66380bd7205d5d0992cd9faf668e38
+  restart: unless-stopped
+
+services:
+  monerod:
+    <<: *monerod
+    command:
+      - --prune-blockchain
+      - --data-dir=/data
+      - --no-igd
+      # Restricted RPC for wallets, inside the compose network only; Tor
+      # carries it outside.
+      - --rpc-restricted-bind-ip=0.0.0.0
+      - --rpc-restricted-bind-port=18089
+      - --confirm-external-bind
+      # For monero-lws.
+      - --zmq-rpc-bind-ip=0.0.0.0
+      - --zmq-rpc-bind-port=18082
+      - --confirm-zmq-rpc-external-bind
+      - --zmq-pub=tcp://0.0.0.0:18083
+    volumes:
+      - monerod-data:/data
+
+  lws:
+    image: ghcr.io/vtnerd/monero-lws:0.3@sha256:573c3ba3c3034e0b046bd5b42001b4097e2a96af0c4284ed80e052d300955903
+    restart: unless-stopped
+    depends_on: [monerod]
+    command:
+      - --network=main
+      - --db-path=/data
+      - --daemon=tcp://monerod:18082
+      - --sub=tcp://monerod:18083
+      - --rest-server=http://0.0.0.0:8443
+      - --confirm-external-bind
+      # Only your own wallets can reach this server (through the onion
+      # address you keep), so new wallets need no manual approval.
+      - --auto-accept-creation
+      - --auto-accept-import
+      - --max-subaddresses=1000
+    volumes:
+      - lws-data:/data
+
+  tor:
+    build: tor
+    restart: unless-stopped
+    depends_on: [monerod, lws]
+    volumes:
+      - tor-data:/var/lib/tor
+
+  # One-shot: prints the pairing code and QR once Tor has made the address.
+  pair:
+    build: tor
+    profiles: [pair]
+    entrypoint: ["/usr/local/bin/pair"]
+    environment:
+      KN_NETWORK: mainnet
+    volumes:
+      - tor-data:/var/lib/tor:ro
+
+volumes:
+  monerod-data:
+  lws-data:
+  tor-data:

@@ -9,6 +9,7 @@ import 'about_screen.dart';
 import 'background_screen.dart';
 import 'lws_servers_screen.dart';
 import 'nodes_screen.dart';
+import 'pair_server_screen.dart';
 import 'prices_screen.dart';
 import 'privacy_screen.dart';
 import 'proxy_screen.dart';
@@ -65,13 +66,19 @@ class SettingsScreen extends StatelessWidget {
                       icon: Icons.cloud_outlined,
                       title: l.lwsTitle,
                       subtitle: l.lwsSubtitle,
-                      onTap: () => open(const LwsServersScreen()),
+                      onTap: () => open(LwsServersScreen(registry: registry)),
                     ),
                     row(
                       icon: Icons.vpn_lock_outlined,
                       title: l.proxyTitle,
                       subtitle: l.proxySubtitle,
                       onTap: () => open(const ProxyScreen()),
+                    ),
+                    row(
+                      icon: Icons.dns_outlined,
+                      title: l.pairServerRow,
+                      subtitle: l.pairServerSubtitle,
+                      onTap: () => open(const PairServerScreen()),
                     ),
                   ]),
                 ),

@@ -240,7 +240,31 @@ async fn pays_monero_wallet_rpc_and_tracks_the_spend() {
         )
         .await;
         assert_eq!(check["received"].as_u64(), Some(amount), "{address}");
+        // Kilonova's own check, from the node, agrees.
+        let ours = kn_sync::check_tx_key(&d, Network::Mainnet, prepared.hash, &tx_key, address)
+            .await
+            .unwrap();
+        assert_eq!(ours.received, amount, "{address}");
+        assert!(ours.confirmations >= 1);
     }
+    // Someone else received nothing; a key that is not hex is refused.
+    let other = burn_address();
+    let nothing = kn_sync::check_tx_key(&d, Network::Mainnet, prepared.hash, &tx_key, &other)
+        .await
+        .unwrap();
+    assert_eq!((nothing.received, nothing.outputs), (0, 0));
+    assert_eq!(
+        kn_sync::check_tx_key(&d, Network::Mainnet, prepared.hash, "zz", &to_primary)
+            .await
+            .unwrap_err(),
+        kn_sync::ProofError::BadKey
+    );
+    assert_eq!(
+        kn_sync::check_tx_key(&d, Network::Mainnet, [7; 32], &tx_key, &to_primary)
+            .await
+            .unwrap_err(),
+        kn_sync::ProofError::UnknownTransaction
+    );
 
     // Sweep everything spendable (the change is locked for 10 blocks, so
     // unlock it first) to the reference wallet.

@@ -46,6 +46,8 @@ pub enum NodeError {
     UntrustedCertificate,
     /// A light wallet server on plain http elsewhere than this device.
     InsecureLws,
+    /// Looking on the local network would bypass the proxy the owner set.
+    ProxyOn,
 }
 
 impl From<SyncError> for NodeError {
@@ -392,6 +394,74 @@ fn apply_saved_pins(settings: &crate::node_settings::Settings) {
     );
 }
 
+/// What pairing with a self-hosted server set.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerPaired {
+    pub network: Network,
+    /// The node now selected for that network, if the code named one.
+    pub node: Option<String>,
+    /// The light wallet server now set, if the code named one.
+    pub lws: Option<String>,
+    /// The addresses are onion services and no Tor proxy is set yet.
+    pub needs_tor: bool,
+}
+
+/// Uses the node and light wallet server a self-hosted server's pairing
+/// code names (see `tools/selfhost`).
+///
+/// # Errors
+///
+/// [`NodeError::BadUrl`] for anything that is not a pairing code.
+pub fn pair_with_server(code: String) -> Result<ServerPaired, NodeError> {
+    let pairing = kn_sync::ServerPairing::parse(&code)?;
+    let network: Network = pairing.network.into();
+    if let Some(node) = &pairing.node {
+        add_node(network, node.as_str().to_owned())?;
+        select_node(network, node.as_str().to_owned())?;
+    }
+    if let Some(lws) = &pairing.lws {
+        set_lws_server(network, lws.as_str().to_owned())?;
+    }
+    let onion = pairing.node.as_ref().is_some_and(NodeUrl::is_onion)
+        || pairing.lws.as_ref().is_some_and(NodeUrl::is_onion);
+    Ok(ServerPaired {
+        network,
+        node: pairing.node.map(|n| n.as_str().to_owned()),
+        lws: pairing.lws.map(|n| n.as_str().to_owned()),
+        needs_tor: onion && load()?.proxy.is_none(),
+    })
+}
+
+/// A node found on the local network.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LocalNode {
+    pub url: String,
+    pub height: u64,
+    pub synced: bool,
+}
+
+/// Looks for nodes serving `network` on this machine and the local network
+/// (the standard RPC ports on the local /24). Takes a few seconds.
+///
+/// # Errors
+///
+/// [`NodeError::ProxyOn`] while a proxy is set: the scan cannot go through
+/// it, and would show the local network what the owner is looking for.
+pub fn find_local_nodes(network: Network) -> Result<Vec<LocalNode>, NodeError> {
+    if load()?.proxy.is_some() {
+        return Err(NodeError::ProxyOn);
+    }
+    let found = RUNTIME.block_on(kn_sync::discover(Some(network.into())));
+    Ok(found
+        .into_iter()
+        .map(|n| LocalNode {
+            url: n.url.as_str().to_owned(),
+            height: n.height,
+            synced: n.synced,
+        })
+        .collect())
+}
+
 /// The SOCKS5 proxy (for example Tor) all traffic goes through, if any.
 ///
 /// # Errors
@@ -525,5 +595,27 @@ mod tests {
         assert_eq!(network_proxy().unwrap(), None);
         // The other settings survive.
         assert_eq!(nodes(Network::Testnet).unwrap(), after);
+
+        // Pairing with a self-hosted server sets both, and asks for Tor.
+        let onion = "ciczdlujjvdfuvwndzmqpefmndzxelyh3cbip4eqwet6it3tmuwgh2ad.onion";
+        let paired = pair_with_server(format!(
+            "kilonova-server:?network=stagenet&node=http%3A%2F%2F{onion}%3A18089&lws=http%3A%2F%2F{onion}%3A8443"
+        ))
+        .unwrap();
+        assert!(paired.needs_tor);
+        assert_eq!(
+            lws_server(Network::Stagenet).unwrap(),
+            Some(format!("http://{onion}:8443"))
+        );
+        assert!(
+            nodes(Network::Stagenet)
+                .unwrap()
+                .iter()
+                .any(|n| n.selected && n.url == format!("http://{onion}:18089"))
+        );
+        assert_eq!(
+            pair_with_server("monero:4abc".into()),
+            Err(NodeError::BadUrl)
+        );
     }
 }

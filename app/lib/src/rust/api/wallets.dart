@@ -5,9 +5,11 @@
 
 import '../frb_generated.dart';
 import 'book.dart';
+import 'coins.dart';
 import 'cold.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'requests.dart';
 import 'send.dart';
 import 'sync.dart';
 
@@ -181,6 +183,13 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required String newPassword,
   });
 
+  /// Unspent coins, largest first.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked.
+  List<CoinRow> coins();
+
   /// Watching wallet: how many coins still need key images from the cold
   /// wallet before they can be spent.
   ///
@@ -225,12 +234,33 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// Fails if the wallet has been locked.
   List<ContactRow> contacts();
 
+  /// Creates a request for `amount` (atomic units) on a new subaddress
+  /// labelled `label`, optionally expiring after `expires_in_hours`.
+  ///
+  /// # Errors
+  ///
+  /// Fails for a zero amount ([`WalletError::Storage`] is not used for
+  /// that: [`WalletError::EmptyName`] stands for "nothing asked"), or if
+  /// the wallet cannot be saved.
+  Future<RequestRow> createRequest({
+    required BigInt amount,
+    required String label,
+    int? expiresInHours,
+  });
+
   /// Removes the recipient with `address`.
   ///
   /// # Errors
   ///
   /// Fails if the wallet has been locked or cannot be saved.
   Future<void> deleteContact({required String address});
+
+  /// Removes a request. Its subaddress stays, with its label.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked or cannot be saved.
+  Future<void> deleteRequest({required String id});
 
   /// Records that the owner agreed to share this wallet's private view
   /// key with `server`, and saves the wallet.
@@ -312,6 +342,20 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required FeePriority priority,
   });
 
+  /// [`OpenWallet::prepare_send`], spending only the coins with these
+  /// one-time keys (hex), as listed by [`OpenWallet::coins`].
+  ///
+  /// # Errors
+  ///
+  /// As [`OpenWallet::prepare_send`]; [`SendError::InsufficientFunds`] if
+  /// the chosen coins do not cover the amount and fee.
+  Future<PreparedSend> prepareSendFromCoins({
+    required List<Payment> payments,
+    String? sweepTo,
+    required FeePriority priority,
+    required List<String> coins,
+  });
+
   /// Cold wallet: reads and checks a scanned request. Nothing is signed
   /// until [`OpenWallet::answer_cold_request`].
   ///
@@ -320,6 +364,13 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// See [`ColdFailure`]: a transaction that is not this wallet's own and
   /// sane is refused here.
   Future<ColdRequest> readColdRequest({required List<int> message});
+
+  /// Requests, newest first, with what each has received.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked.
+  List<RequestRow> requests();
 
   /// Returns the seed words after re-checking the password. `None` for
   /// wallets restored from keys or view-only wallets, which have no seed.
@@ -360,6 +411,13 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required int index,
     required String label,
   });
+
+  /// Freezes or thaws the coin with one-time key `key` (hex).
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked or cannot be saved.
+  Future<void> setCoinFrozen({required String key, required bool frozen});
 
   /// Makes this an offline wallet that only signs for a watching wallet,
   /// or a normal wallet again. Stops sync and forgets what was scanned.

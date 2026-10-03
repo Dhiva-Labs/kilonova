@@ -1,0 +1,9 @@
+#!/bin/sh
+# Tor wants IP addresses for onion service targets; look up the compose
+# service names and write the final torrc.
+set -eu
+resolve() { getent hosts "$1" | awk '{print $1; exit}'; }
+node=$(resolve monerod)
+lws=$(resolve lws)
+sed -e "s/@MONEROD@/$node/" -e "s/@LWS@/$lws/" /etc/tor/torrc.in > /var/lib/tor/torrc
+exec tor -f /var/lib/tor/torrc

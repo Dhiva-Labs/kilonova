@@ -12,6 +12,10 @@ pub struct Preferences {
     /// Android: keep unlocked wallets syncing in the background instead of
     /// locking them when the app leaves the screen.
     pub background_sync: bool,
+    /// LWS-mode wallets confirm each payment the server reports with the
+    /// network's node (through the proxy). The node learns which
+    /// transactions the wallet looks up, so it is off by default.
+    pub confirm_lws_payments: bool,
 }
 
 /// # Errors
@@ -22,6 +26,7 @@ pub fn preferences() -> Result<Preferences, NodeError> {
     Ok(Preferences {
         notify_incoming: settings.notify_incoming,
         background_sync: settings.background_sync,
+        confirm_lws_payments: settings.confirm_lws_payments,
     })
 }
 
@@ -32,5 +37,6 @@ pub fn set_preferences(preferences: Preferences) -> Result<(), NodeError> {
     let mut settings = load()?;
     settings.notify_incoming = preferences.notify_incoming;
     settings.background_sync = preferences.background_sync;
+    settings.confirm_lws_payments = preferences.confirm_lws_payments;
     save(&settings)
 }

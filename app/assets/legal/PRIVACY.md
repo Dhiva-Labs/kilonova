@@ -41,6 +41,14 @@ The node can see:
 The node does **not** receive your keys and cannot tell which incoming
 transactions are yours. Running your own node gives you the most privacy.
 
+Once each time a wallet starts syncing, the app also asks one of the bundled
+public nodes for the hash of a recent block, to check your node is on the
+same chain as everyone else. That node sees your IP address (or your
+proxy's) and that a Monero wallet checked a block; nothing about any wallet.
+
+If you check a payment proof (a transaction id, its key and an address
+someone gave you), the node is asked for that transaction.
+
 ### Light wallet server (LWS mode)
 
 In LWS mode a monero-lws server scans the blockchain for you. To do that it
@@ -60,6 +68,34 @@ does not run a light wallet server and never picks one for you.
 Before a wallet's view key is sent anywhere, the app shows you which server
 will receive it and asks you to agree. Your answer is remembered for that
 wallet and that server only: choosing a different server asks again.
+
+If you turn on **Confirm the server's payments with a node** (off by
+default), the app also asks your network's node for each transaction the
+server reports, to make sure it exists as reported. That node then learns
+which transactions you looked up, so use it with Tor or your own node.
+
+### Your own server (optional)
+
+The self-hosting kit in `tools/selfhost` runs a node and a light wallet
+server on your own machine as a Tor onion service. Its pairing code holds the
+onion address; anyone who has it can use your server, so show it only to your
+own devices.
+
+### Offline (cold) wallets
+
+A wallet marked offline never connects to anything. It signs for a
+view-only "watching" wallet on another device through QR codes or files.
+The pairing code it shows carries the private view key, which is why it asks
+for the password and should only be shown to your own watching wallet. The
+codes it answers with carry key images (so the watching wallet can see your
+spends) and signed transactions; they hold no spend key.
+
+### Looking for nodes on your network (optional)
+
+If you tap "Find nodes on this network", the app tries the usual Monero
+ports on your own computer and on the other addresses of your local network.
+Nothing leaves your local network, and it is never done while a proxy is
+set.
 
 ### Price data (optional, off by default)
 
@@ -123,6 +159,7 @@ Security issues: see SECURITY.md in the repository.
 
 Newest first.
 
+- 2026-10-03: offline wallets, the node check against a public node, confirming server payments, payment proofs, self-hosting and finding nodes on your network.
 - 2026-10-02: payment notifications and background sync, both off by default.
 - 2026-10-02: name the price service and say how often it is asked.
 - 2026-10-02: QR scanning: what the camera is used for, and permissions the app never asks for.

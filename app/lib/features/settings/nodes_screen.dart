@@ -24,6 +24,7 @@ String nodeErrorMessage(BuildContext context, NodeError error) {
     NodeError.needsTor => l.nodeErrorNeedsTor,
     NodeError.untrustedCertificate => l.nodeErrorUntrustedCertificate,
     NodeError.insecureLws => l.nodeErrorInsecureLws,
+    NodeError.proxyOn => l.nodeErrorProxyOn,
   };
 }
 
@@ -31,19 +32,24 @@ enum _NodeAction { use, check, remove }
 
 /// Choose which node each network syncs from, and add your own.
 class NodesScreen extends StatefulWidget {
-  const NodesScreen({super.key});
+  const NodesScreen({super.key, this.initialNetwork = Network.mainnet});
+
+  final Network initialNetwork;
 
   @override
   State<NodesScreen> createState() => _NodesScreenState();
 }
 
 class _NodesScreenState extends State<NodesScreen> {
-  var _network = Network.mainnet;
+  late var _network = widget.initialNetwork;
   List<NodeChoice> _nodes = const [];
   final _add = TextEditingController();
   String? _addError;
   final Map<String, String> _health = {};
   final Map<String, String> _healthErrors = {};
+  bool _findingLocal = false;
+  List<LocalNode>? _localNodes;
+  String? _localError;
 
   @override
   void initState() {
@@ -100,6 +106,28 @@ class _NodesScreenState extends State<NodesScreen> {
     }
   }
 
+  Future<void> _findLocal() async {
+    setState(() {
+      _findingLocal = true;
+      _localNodes = null;
+      _localError = null;
+    });
+    try {
+      final found = await findLocalNodes(network: _network);
+      if (mounted) setState(() => _localNodes = found);
+    } on NodeError catch (e) {
+      if (mounted) setState(() => _localError = nodeErrorMessage(context, e));
+    } finally {
+      if (mounted) setState(() => _findingLocal = false);
+    }
+  }
+
+  Future<void> _useLocal(LocalNode node) async {
+    await addNode(network: _network, url: node.url);
+    await selectNode(network: _network, url: node.url);
+    await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -129,6 +157,8 @@ class _NodesScreenState extends State<NodesScreen> {
                     _network = n;
                     _health.clear();
                     _healthErrors.clear();
+                    _localNodes = null;
+                    _localError = null;
                   });
                   _load();
                 },
@@ -246,6 +276,49 @@ class _NodesScreenState extends State<NodesScreen> {
                   ]),
                 ),
               ),
+              const SizedBox(height: KnSpace.lg),
+              KnButton.text(
+                l.nodesFindLocalAction,
+                onPressed: _findingLocal ? null : _findLocal,
+              ),
+              if (_findingLocal) ...[
+                const SizedBox(height: KnSpace.xs),
+                Text(l.nodesFindLocalBusy, style: text.bodySmall),
+              ],
+              if (_localError != null) ...[
+                const SizedBox(height: KnSpace.sm),
+                ErrorLine(_localError!),
+              ],
+              if (_localNodes != null) ...[
+                const SizedBox(height: KnSpace.sm),
+                if (_localNodes!.isEmpty)
+                  Text(l.nodesFindLocalNone, style: text.bodySmall)
+                else
+                  KnCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: withDividers([
+                        for (final node in _localNodes!)
+                          KnRow(
+                            title: Text(
+                              node.url,
+                              style: monoStyle(context, size: 14),
+                            ),
+                            subtitle: Text(
+                              [
+                                l.nodesFindLocalBlock(node.height.toString()),
+                                if (!node.synced) l.nodesFindLocalSyncing,
+                              ].join(' · '),
+                            ),
+                            trailing: KnButton.text(
+                              l.nodesUseThisAction,
+                              onPressed: () => _useLocal(node),
+                            ),
+                          ),
+                      ]),
+                    ),
+                  ),
+              ],
             ],
           ),
         ),

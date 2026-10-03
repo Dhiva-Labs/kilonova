@@ -107,6 +107,9 @@ pub struct PoolPayment {
     pub amount: u64,
     /// Account/index pairs that receive it.
     pub subaddresses: Vec<(u32, u32)>,
+    /// What each of those receives, atomic units.
+    #[serde(default)]
+    pub by_subaddress: Vec<((u32, u32), u64)>,
 }
 
 /// Everything sync has learned about one wallet.
@@ -121,6 +124,10 @@ pub struct SyncState {
     /// Payments waiting in the transaction pool, as of the last sync.
     #[serde(default)]
     pub pool: Vec<PoolPayment>,
+    /// Light wallet server payments checked against a node, by transaction
+    /// id (hex): `true` if the node confirms them.
+    #[serde(default)]
+    cross_checked: BTreeMap<String, bool>,
     /// Key images a cold wallet supplied, by output key (both hex). A
     /// view-only wallet cannot derive them, and without them it cannot see
     /// its own spends.
@@ -144,6 +151,48 @@ impl SyncState {
             self.recent.pop_front();
         }
         self.next_height = height + 1;
+    }
+
+    /// What subaddress `(account, index)` received: in blocks, and waiting
+    /// in the pool.
+    #[must_use]
+    pub fn received_by(&self, account: u32, index: u32) -> (u64, u64) {
+        let at = |o: &&OwnedOutput| {
+            o.output
+                .subaddress()
+                .map_or((0, 0), |s| (s.account(), s.address()))
+                == (account, index)
+        };
+        let confirmed = self
+            .outputs
+            .iter()
+            .filter(at)
+            .fold(0u64, |sum, o| sum.saturating_add(o.amount()));
+        let pending = self
+            .pool
+            .iter()
+            .flat_map(|p| p.by_subaddress.iter())
+            .filter(|(at, _)| *at == (account, index))
+            .fold(0u64, |sum, (_, amount)| sum.saturating_add(*amount));
+        (confirmed, pending)
+    }
+
+    /// What a node said about a light wallet server's payment in `tx`, if it
+    /// was asked.
+    #[must_use]
+    pub fn cross_check_verdict(&self, tx: &[u8; 32]) -> Option<bool> {
+        self.cross_checked.get(&hex::encode(tx)).copied()
+    }
+
+    pub(crate) fn record_cross_check(&mut self, tx: [u8; 32], agrees: bool) {
+        self.cross_checked.insert(hex::encode(tx), agrees);
+    }
+
+    /// Removes outputs of transactions a node contradicted.
+    pub(crate) fn drop_contradicted(&mut self) {
+        let checked = &self.cross_checked;
+        self.outputs
+            .retain(|o| checked.get(&hex::encode(o.output.transaction())) != Some(&false));
     }
 
     /// The key image a cold wallet supplied for the output with this
