@@ -65,6 +65,15 @@ jobs:
       - name: Full-mode and LWS-mode wallets paying each other
         working-directory: core
         run: cargo test -p kn-tx --test regtest_full_lws -- --ignored --test-threads 1
+      - name: Offline signing with a cold wallet, received by monero-wallet-rpc
+        working-directory: core
+        run: cargo test -p kn-tx --test regtest_cold -- --ignored --test-threads 1
+      - name: Coin control and payment requests
+        working-directory: core
+        run: cargo test -p kn-tx --test regtest_coins -- --ignored --test-threads 1
+      - name: A light wallet server inventing payments is caught by the node
+        working-directory: core
+        run: cargo test -p kn-sync --test lws_dishonest_server -- --ignored --test-threads 1
       - name: Logs
         if: failure()
         working-directory: tools/devnet
