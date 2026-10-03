@@ -118,13 +118,11 @@ class SyncLine extends StatelessWidget {
     onRetry();
   }
 
-  Future<void> _chooseNode(BuildContext context) => Navigator.of(context)
-      .push(
-        MaterialPageRoute<void>(
-          builder: (_) =>
-              NodesScreen(initialNetwork: wallet.summary().network),
-        ),
-      );
+  Future<void> _chooseNode(BuildContext context) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => NodesScreen(initialNetwork: wallet.summary().network),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +223,10 @@ class SyncLine extends StatelessWidget {
           const SizedBox(height: KnSpace.sm),
           ErrorLine(l.syncNodeDisagrees),
           const SizedBox(height: KnSpace.xs),
-          KnButton.text(l.syncChooseNode, onPressed: () => _chooseNode(context)),
+          KnButton.text(
+            l.syncChooseNode,
+            onPressed: () => _chooseNode(context),
+          ),
         ],
       ],
     );
