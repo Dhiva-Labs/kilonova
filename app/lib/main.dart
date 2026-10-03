@@ -11,6 +11,13 @@ import 'src/rust/frb_generated.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
+  // Nothing in the app shows photos; the few images are the app icon, the
+  // QR codes and the privacy policy's rendered markdown. Flutter's default
+  // cache (1000 images, 100MB) is sized for a photo-heavy app, so it is
+  // capped well below that here.
+  PaintingBinding.instance.imageCache
+    ..maximumSize = 100
+    ..maximumSizeBytes = 20 << 20;
   LicenseRegistry.addLicense(() async* {
     final ofl = await rootBundle.loadString('assets/fonts/OFL.txt');
     yield LicenseEntryWithLineBreaks(const [

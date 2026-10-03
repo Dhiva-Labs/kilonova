@@ -63,6 +63,8 @@ void main() {
     'mined funds show up as balance and history',
     (tester) async {
       useDesktopWindow(tester);
+      // History is a lazy list: tall enough that all 12 rows are built.
+      tester.view.physicalSize = const Size(1280, 2200);
       await tester.runAsync(() async {
         await selectNode(network: Network.mainnet, url: _node);
         final seed = await generateSeed(format: SeedFormat.classic);
@@ -103,6 +105,8 @@ void main() {
     'an LWS-mode wallet syncs through monero-lws after consent',
     (tester) async {
       useDesktopWindow(tester);
+      // History is a lazy list: tall enough that all 12 rows are built.
+      tester.view.physicalSize = const Size(1280, 2200);
       late String address;
       await tester.runAsync(() async {
         await setLwsServer(network: Network.mainnet, url: _lws);

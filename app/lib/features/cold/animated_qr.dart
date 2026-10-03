@@ -52,25 +52,29 @@ class _AnimatedQrState extends State<AnimatedQr> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ColoredBox(
-          color: KnQr.paper,
-          child: Padding(
-            // A quiet zone of about four modules, as scanners expect.
-            padding: const EdgeInsets.all(KnSpace.lg),
-            child: QrImageView(
-              data: data,
-              size: 280,
-              padding: EdgeInsets.zero,
-              backgroundColor: KnQr.paper,
-              eyeStyle: const QrEyeStyle(
-                eyeShape: QrEyeShape.square,
-                color: KnQr.ink,
+        // The frame timer repaints this every 300ms while a multi-frame
+        // message is shown; isolate that from the rest of the tree.
+        RepaintBoundary(
+          child: ColoredBox(
+            color: KnQr.paper,
+            child: Padding(
+              // A quiet zone of about four modules, as scanners expect.
+              padding: const EdgeInsets.all(KnSpace.lg),
+              child: QrImageView(
+                data: data,
+                size: 280,
+                padding: EdgeInsets.zero,
+                backgroundColor: KnQr.paper,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: KnQr.ink,
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: KnQr.ink,
+                ),
+                semanticsLabel: data,
               ),
-              dataModuleStyle: const QrDataModuleStyle(
-                dataModuleShape: QrDataModuleShape.square,
-                color: KnQr.ink,
-              ),
-              semanticsLabel: data,
             ),
           ),
         ),
