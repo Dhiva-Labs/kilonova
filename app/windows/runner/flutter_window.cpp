@@ -59,6 +59,9 @@ bool FlutterWindow::OnCreate() {
         }
       });
 
+  tray_icon_ = std::make_unique<TrayIcon>(
+      GetHandle(), flutter_controller_->engine()->messenger());
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -72,6 +75,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  tray_icon_ = nullptr;
   secure_window_channel_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
@@ -92,6 +96,10 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     if (result) {
       return *result;
     }
+  }
+
+  if (tray_icon_ && tray_icon_->HandleMessage(message, wparam, lparam)) {
+    return 0;
   }
 
   switch (message) {

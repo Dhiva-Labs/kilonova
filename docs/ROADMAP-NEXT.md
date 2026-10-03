@@ -265,6 +265,14 @@ hidden window where there is no tray.
 **Done when.** A desktop integration test closes the window, mines a
 block on regtest that pays the wallet, and sees the notification.
 
+**Status.** Built on branch m8/push: "Keep syncing when the window is
+closed" in Settings, Background, with a tray icon of Kilonova's own (D-Bus
+StatusNotifierItem on Linux, `Shell_NotifyIcon` in the Windows runner) and
+no new system library; minimized with a notice where no tray host runs.
+Unit and widget tests cover the close decision, the lock rules and the
+tray menu. The integration test above is not done: it needs a display, a
+tray host and a notification daemon, which CI does not have.
+
 ## Differentiators
 
 Six things other wallets do not do, or do only on desktop, each small
@@ -386,6 +394,14 @@ item above.
 **Done when.** Devnet compose with the relay: a regtest payment produces
 a push within one block, and the push payload contains no amount,
 address or transaction id. Privacy policy section for the push path.
+
+**Status.** Built on branch m8/push: ntfy and a relay in the kit,
+`tools/selfhost/push-register`, the `push` field in pairing codes,
+UnifiedPush on Android and polling over the proxy on desktops.
+`tools/selfhost/test-push.sh` (or the ignored `kn-sync` test
+`selfhost_push`) shows a regtest payment pushed within one block, with no
+amount, address or transaction id in the push. Privacy policy and threat
+model updated.
 
 ### 5. Contacts that know who paid you (M)
 

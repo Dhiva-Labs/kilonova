@@ -22,7 +22,6 @@ dependencies:
     path: rust_builder
   path_provider: ^2.1.6
   qr_flutter: ^4.1.0
-  tray_manager: ^0.5.3
   unifiedpush_android: ^3.5.0
   unifiedpush_platform_interface: ^4.0.0
   window_manager: ^0.5.2
@@ -41,8 +40,6 @@ flutter:
     - assets/legal/PRIVACY.md
     - assets/fonts/OFL.txt
     - assets/icon/kilonova-256.png
-    # The tray icon on Windows.
-    - assets/icon/kilonova.ico
   fonts:
     - family: IBM Plex Sans
       fonts:

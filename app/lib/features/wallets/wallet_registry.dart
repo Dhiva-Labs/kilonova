@@ -52,7 +52,14 @@ class WalletRegistry extends ChangeNotifier {
   final BackupFiles backupFiles;
 
   /// Notifications and background sync, both off until turned on.
-  prefs.Preferences preferences = const prefs.Preferences(
+  prefs.Preferences get preferences => _preferences;
+  set preferences(prefs.Preferences value) {
+    final changed = value.notifyIncoming != _preferences.notifyIncoming;
+    _preferences = value;
+    if (changed) _reportAnnouncing();
+  }
+
+  prefs.Preferences _preferences = const prefs.Preferences(
     notifyIncoming: false,
     backgroundSync: false,
     confirmLwsPayments: false,
@@ -228,6 +235,12 @@ class WalletRegistry extends ChangeNotifier {
   /// Desktop: the window is back on screen.
   void windowOpened() => foreground = true;
 
+  /// Tells the push channel which wallets announce payments themselves.
+  void _reportAnnouncing() {
+    final ids = preferences.notifyIncoming ? _open.keys.toSet() : <String>{};
+    push.announcing(ids).catchError((Object _) {});
+  }
+
   /// Starts listening for payment pushes from the owner's server.
   Future<void> startPush() => push.start(pushArrived);
 
@@ -271,11 +284,13 @@ class WalletRegistry extends ChangeNotifier {
     _open[id] = wallet;
     startSync(id);
     await reload();
+    _reportAnnouncing();
   }
 
   void lock(String id) {
     _stopSync(id);
     _open.remove(id)?.lock();
+    _reportAnnouncing();
     notifyListeners();
   }
 
@@ -285,6 +300,7 @@ class WalletRegistry extends ChangeNotifier {
       _stopSync(id);
       _open.remove(id)!.lock();
     }
+    _reportAnnouncing();
     notifyListeners();
   }
 

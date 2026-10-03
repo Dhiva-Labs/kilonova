@@ -9,6 +9,12 @@ import org.unifiedpush.flutter.connector.UnifiedPushService
 
 private const val PUSH_PREFS = "kilonova_push"
 
+/// Wallets unlocked in this process that announce their own payments, with
+/// the amount, once a push makes them sync; set from Dart. Empty when the
+/// process starts, as every wallet is then locked.
+@Volatile
+var announcingWallets: Set<String> = emptySet()
+
 /// Receives payment pushes from the owner's own server through their
 /// UnifiedPush distributor. A push says only that something arrived for a
 /// wallet (the instance is the wallet id), so the notification says no
@@ -44,7 +50,7 @@ fun forgetPushWallet(context: Context, instance: String) {
 
 private fun notifyArrival(context: Context, instance: String) {
     // On screen, the app shows the payment itself once it syncs.
-    if (MainActivity.visible) return
+    if (MainActivity.visible || instance in announcingWallets) return
     val prefs = context.getSharedPreferences(PUSH_PREFS, Context.MODE_PRIVATE)
     val title = prefs.getString("$instance.title", null) ?: return
     val body = prefs.getString("$instance.body", null) ?: return

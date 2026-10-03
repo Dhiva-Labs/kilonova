@@ -63,6 +63,10 @@ class BackgroundSync(private val activity: FragmentActivity) : MethodChannel.Met
                 )
                 result.success(null)
             }
+            "pushAnnouncing" -> {
+                announcingWallets = call.argument<List<String>>("instances")?.toSet() ?: emptySet()
+                result.success(null)
+            }
             "pushWalletRemoved" -> {
                 forgetPushWallet(activity, call.argument<String>("instance") ?: "")
                 result.success(null)

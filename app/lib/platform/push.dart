@@ -62,6 +62,11 @@ abstract class PushChannel {
 
   Future<void> unsubscribe(String walletId);
 
+  /// The wallets that are unlocked and will announce their own payments
+  /// (with the amount) once a push makes them sync, so the push needs no
+  /// notification of its own.
+  Future<void> announcing(Set<String> walletIds) async {}
+
   void dispose();
 }
 
@@ -190,6 +195,12 @@ class AndroidPush extends PushChannel with _States {
     await _up.register(id, const [], null, null);
     return PushState.waiting;
   }
+
+  @override
+  Future<void> announcing(Set<String> walletIds) => _native.invokeMethod<void>(
+    'pushAnnouncing',
+    {'instances': walletIds.toList()},
+  );
 
   @override
   Future<void> unsubscribe(String walletId) async {

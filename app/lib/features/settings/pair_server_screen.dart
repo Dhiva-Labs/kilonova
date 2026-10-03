@@ -110,19 +110,19 @@ class _PairServerScreenState extends State<PairServerScreen> {
                         value: Text(result.network.label(context)),
                       ),
                       if (result.node != null)
-                        KeyValue(
+                        CopyValue(
                           label: l.pairServerNodeLabel,
-                          value: Text(result.node!),
+                          value: result.node!,
                         ),
                       if (result.lws != null)
-                        KeyValue(
+                        CopyValue(
                           label: l.pairServerServerLabel,
-                          value: Text(result.lws!),
+                          value: result.lws!,
                         ),
                       if (result.push != null)
-                        KeyValue(
+                        CopyValue(
                           label: l.pairServerPushLabel,
-                          value: Text(result.push!),
+                          value: result.push!,
                         ),
                     ]),
                   ),

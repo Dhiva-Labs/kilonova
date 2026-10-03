@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dbus/dbus.dart';
+import 'dart:ui' as ui;
+
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show Locale;
-import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../features/wallets/wallet_registry.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'tray.dart';
 
 /// What closing the window does on a desktop.
 enum CloseAction {
@@ -28,40 +30,25 @@ CloseAction closeAction({required bool keepSyncing, required bool hasTray}) {
   return hasTray ? CloseAction.hideToTray : CloseAction.minimize;
 }
 
-/// Whether the desktop shows tray icons. Windows always does; on Linux,
-/// only a running StatusNotifier host does (GNOME needs an extension).
-Future<bool> trayAvailable() async {
-  if (Platform.isWindows) return true;
-  if (!Platform.isLinux) return false;
-  final client = DBusClient.session();
-  try {
-    const name = 'org.kde.StatusNotifierWatcher';
-    if (!await client.nameHasOwner(name)) return false;
-    final watcher = DBusRemoteObject(
-      client,
-      name: name,
-      path: DBusObjectPath('/StatusNotifierWatcher'),
-    );
-    final value = await watcher.getProperty(
-      name,
-      'IsStatusNotifierHostRegistered',
-      signature: DBusSignature('b'),
-    );
-    return value.asBoolean();
-  } on Object {
-    return false;
-  } finally {
-    await client.close();
-  }
-}
-
 /// The desktop window and its tray icon: closing the window hides it to
 /// the tray while the owner keeps wallets syncing (Settings, Background),
 /// and quits otherwise.
-class DesktopShell with WindowListener, TrayListener {
-  DesktopShell(this.registry);
+class DesktopShell with WindowListener {
+  DesktopShell(this.registry, {Tray? tray})
+    : tray =
+          tray ??
+          Tray.forPlatform(
+            title: _l.appTitle,
+            openLabel: _l.trayOpen,
+            quitLabel: _l.trayQuit,
+          );
+
+  static final _l = lookupAppLocalizations(const Locale('en'));
 
   final WalletRegistry registry;
+
+  /// The tray icon; `null` where the platform has none.
+  final Tray? tray;
 
   /// Whether a tray icon can be shown; checked at start.
   bool hasTray = false;
@@ -73,7 +60,13 @@ class DesktopShell with WindowListener, TrayListener {
     await windowManager.ensureInitialized();
     await windowManager.setPreventClose(true);
     windowManager.addListener(this);
-    hasTray = await trayAvailable();
+    final tray = this.tray;
+    hasTray = tray != null && await tray.available();
+    if (tray != null) {
+      tray.onOpen = () => unawaited(_open());
+      tray.onQuit = () => unawaited(_quit());
+      if (tray is LinuxTray) tray.pixmaps = await _pixmaps();
+    }
     registry.hasTray = hasTray;
     registry.keepsSyncingHidden = true;
   }
@@ -108,38 +101,37 @@ class DesktopShell with WindowListener, TrayListener {
 
   Future<void> _showTrayIcon() async {
     if (_inTray) return;
-    final l = lookupAppLocalizations(const Locale('en'));
-    await trayManager.setIcon(_iconPath());
-    if (!Platform.isLinux) await trayManager.setToolTip(l.appTitle);
-    await trayManager.setContextMenu(
-      Menu(
-        items: [
-          MenuItem(key: 'open', label: l.trayOpen),
-          MenuItem.separator(),
-          MenuItem(key: 'quit', label: l.trayQuit),
-        ],
-      ),
-    );
-    trayManager.addListener(this);
+    await tray?.show();
     _inTray = true;
   }
 
   Future<void> _hideTrayIcon() async {
     if (!_inTray) return;
-    trayManager.removeListener(this);
-    await trayManager.destroy();
     _inTray = false;
+    await tray?.hide();
   }
 
-  /// The icon file, relative to the bundled assets; inside the snap, by
-  /// its absolute path, which the tray host outside can read.
-  static String _iconPath() {
-    if (Platform.isWindows) return 'assets/icon/kilonova.ico';
-    final snap = Platform.environment['SNAP'];
-    if (snap != null) {
-      return '$snap/usr/share/icons/hicolor/256x256/apps/com.dhivalabs.kilonova.png';
+  /// The app icon at the sizes tray hosts ask for most.
+  static Future<List<TrayPixmap>> _pixmaps() async {
+    final png = await rootBundle.load('assets/icon/kilonova-256.png');
+    final out = <TrayPixmap>[];
+    for (final size in const [22, 32, 64]) {
+      final codec = await ui.instantiateImageCodec(
+        png.buffer.asUint8List(),
+        targetWidth: size,
+        targetHeight: size,
+      );
+      final image = (await codec.getNextFrame()).image;
+      final rgba = await image.toByteData(
+        format: ui.ImageByteFormat.rawStraightRgba,
+      );
+      if (rgba != null) {
+        out.add(TrayPixmap.fromRgba(size, size, rgba.buffer.asUint8List()));
+      }
+      image.dispose();
+      codec.dispose();
     }
-    return 'assets/icon/kilonova-256.png';
+    return out;
   }
 
   Future<void> _open() async {
@@ -154,21 +146,5 @@ class DesktopShell with WindowListener, TrayListener {
     await _hideTrayIcon();
     await windowManager.setPreventClose(false);
     await windowManager.destroy();
-  }
-
-  @override
-  void onTrayIconMouseDown() => unawaited(_open());
-
-  @override
-  void onTrayIconRightMouseDown() => unawaited(trayManager.popUpContextMenu());
-
-  @override
-  void onTrayMenuItemClick(MenuItem menuItem) {
-    switch (menuItem.key) {
-      case 'open':
-        unawaited(_open());
-      case 'quit':
-        unawaited(_quit());
-    }
   }
 }
