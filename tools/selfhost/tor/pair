@@ -13,8 +13,14 @@ if [ ! -s "$host_file" ]; then
   exit 1
 fi
 onion=$(cat "$host_file")
+if [ "${1:-}" = "--hostname" ]; then
+  echo "$onion"
+  exit 0
+fi
 enc() { printf '%s' "$1" | sed 's/:/%3A/g; s#/#%2F#g'; }
-code="kilonova-server:?network=${KN_NETWORK:-mainnet}&node=$(enc "http://$onion:18089")&lws=$(enc "http://$onion:8443")"
+# push: ntfy for payment pushes (see push-register); older Kilonova
+# versions ignore it.
+code="kilonova-server:?network=${KN_NETWORK:-mainnet}&node=$(enc "http://$onion:18089")&lws=$(enc "http://$onion:8443")&push=$(enc "http://$onion")"
 echo "$code"
 echo
 qrencode -t ANSIUTF8 "$code"

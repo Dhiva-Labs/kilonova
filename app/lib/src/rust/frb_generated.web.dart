@@ -16,6 +16,7 @@ import 'api/nodes.dart';
 import 'api/preferences.dart';
 import 'api/price.dart';
 import 'api/proof.dart';
+import 'api/push.dart';
 import 'api/requests.dart';
 import 'api/send.dart';
 import 'api/sync.dart';
@@ -267,6 +268,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<PushSubscription> dco_decode_list_push_subscription(dynamic raw);
+
+  @protected
   List<RequestRow> dco_decode_list_request_row(dynamic raw);
 
   @protected
@@ -322,6 +326,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProofFailure dco_decode_proof_failure(dynamic raw);
+
+  @protected
+  PushError dco_decode_push_error(dynamic raw);
+
+  @protected
+  PushPoll dco_decode_push_poll(dynamic raw);
+
+  @protected
+  PushSubscription dco_decode_push_subscription(dynamic raw);
 
   @protected
   RequestRow dco_decode_request_row(dynamic raw);
@@ -608,6 +621,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  List<PushSubscription> sse_decode_list_push_subscription(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<RequestRow> sse_decode_list_request_row(SseDeserializer deserializer);
 
   @protected
@@ -667,6 +685,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProofFailure sse_decode_proof_failure(SseDeserializer deserializer);
+
+  @protected
+  PushError sse_decode_push_error(SseDeserializer deserializer);
+
+  @protected
+  PushPoll sse_decode_push_poll(SseDeserializer deserializer);
+
+  @protected
+  PushSubscription sse_decode_push_subscription(SseDeserializer deserializer);
 
   @protected
   RequestRow sse_decode_request_row(SseDeserializer deserializer);
@@ -1005,6 +1032,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_push_subscription(
+    List<PushSubscription> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_request_row(
     List<RequestRow> self,
     SseSerializer serializer,
@@ -1069,6 +1102,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_proof_failure(ProofFailure self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_push_error(PushError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_push_poll(PushPoll self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_push_subscription(
+    PushSubscription self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_request_row(RequestRow self, SseSerializer serializer);
