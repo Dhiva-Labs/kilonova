@@ -42,11 +42,7 @@ class KnCard extends StatelessWidget {
 /// `slivers` of a [CustomScrollView]; does not take its own padding (wrap
 /// in [SliverPadding] if needed).
 class SliverKnCard extends StatelessWidget {
-  const SliverKnCard({
-    super.key,
-    required this.itemCount,
-    required this.itemBuilder,
-  });
+  const SliverKnCard({super.key, required this.itemCount, required this.itemBuilder});
 
   final int itemCount;
 
@@ -68,7 +64,10 @@ class SliverKnCard extends StatelessWidget {
             type: MaterialType.transparency,
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [if (i > 0) const KnDivider(), itemBuilder(context, i)],
+              children: [
+                if (i > 0) const KnDivider(),
+                itemBuilder(context, i),
+              ],
             ),
           ),
           childCount: itemCount,
