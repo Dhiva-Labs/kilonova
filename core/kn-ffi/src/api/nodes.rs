@@ -410,6 +410,9 @@ pub struct ServerPaired {
     pub node: Option<String>,
     /// The light wallet server now set, if the code named one.
     pub lws: Option<String>,
+    /// The server's push service (ntfy), if the code named one; wallets on
+    /// this network can then turn on payment pushes (see `api::push`).
+    pub push: Option<String>,
     /// The addresses are onion services and no Tor proxy is set yet.
     pub needs_tor: bool,
 }
@@ -430,12 +433,16 @@ pub fn pair_with_server(code: String) -> Result<ServerPaired, NodeError> {
     if let Some(lws) = &pairing.lws {
         set_lws_server(network, lws.as_str().to_owned())?;
     }
+    if let Some(push) = &pairing.push {
+        super::push::remember_server(network, push)?;
+    }
     let onion = pairing.node.as_ref().is_some_and(NodeUrl::is_onion)
         || pairing.lws.as_ref().is_some_and(NodeUrl::is_onion);
     Ok(ServerPaired {
         network,
         node: pairing.node.map(|n| n.as_str().to_owned()),
         lws: pairing.lws.map(|n| n.as_str().to_owned()),
+        push: pairing.push.map(|n| n.as_str().to_owned()),
         needs_tor: onion && load()?.proxy.is_none(),
     })
 }

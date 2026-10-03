@@ -5,5 +5,8 @@ set -eu
 resolve() { getent hosts "$1" | awk '{print $1; exit}'; }
 node=$(resolve monerod)
 lws=$(resolve lws)
-sed -e "s/@MONEROD@/$node/" -e "s/@LWS@/$lws/" /etc/tor/torrc.in > /var/lib/tor/torrc
+ntfy=$(resolve ntfy)
+relay=$(resolve relay)
+sed -e "s/@MONEROD@/$node/" -e "s/@LWS@/$lws/" \
+    -e "s/@NTFY@/$ntfy/" -e "s/@RELAY@/$relay/" /etc/tor/torrc.in > /var/lib/tor/torrc
 exec tor -f /var/lib/tor/torrc

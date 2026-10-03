@@ -2,6 +2,16 @@
 
 Release notes for each version are in [docs/release-notes](docs/release-notes).
 
+## Unreleased
+
+Payment notifications from your own server: the self-hosting kit gains
+ntfy and a relay, `push-register` turns them on per wallet, and Kilonova
+receives the push through UnifiedPush on Android or by asking the server
+on Linux and Windows. A push says only that something arrived. On Linux
+and Windows, "Keep syncing when the window is closed" keeps unlocked
+wallets syncing from the system tray. Long onion addresses no longer
+overflow the pairing screen.
+
 ## 0.3.0 (2026-10-03)
 
 Resource use: full sync makes about 35 times fewer requests to the node,

@@ -332,6 +332,10 @@ class ServerPaired {
   /// The light wallet server now set, if the code named one.
   final String? lws;
 
+  /// The server's push service (ntfy), if the code named one; wallets on
+  /// this network can then turn on payment pushes (see `api::push`).
+  final String? push;
+
   /// The addresses are onion services and no Tor proxy is set yet.
   final bool needsTor;
 
@@ -339,12 +343,17 @@ class ServerPaired {
     required this.network,
     this.node,
     this.lws,
+    this.push,
     required this.needsTor,
   });
 
   @override
   int get hashCode =>
-      network.hashCode ^ node.hashCode ^ lws.hashCode ^ needsTor.hashCode;
+      network.hashCode ^
+      node.hashCode ^
+      lws.hashCode ^
+      push.hashCode ^
+      needsTor.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -354,5 +363,6 @@ class ServerPaired {
           network == other.network &&
           node == other.node &&
           lws == other.lws &&
+          push == other.push &&
           needsTor == other.needsTor;
 }

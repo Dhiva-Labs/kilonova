@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""Registers a wallet for payment pushes, or removes it.
+
+  register <address>            prints the code Kilonova scans
+  register --remove <address>   stops pushes for that wallet
+
+Runs in the light wallet server's network namespace (see compose.yaml), so
+it reaches monero-lws's admin API on 127.0.0.1. The topic is 16 random
+bytes: it is not derived from the address or the view key, and anyone who
+learns it learns only when this wallet receives a payment.
+"""
+
+import json
+import os
+import secrets
+import subprocess
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+ADMIN = os.environ.get("KN_LWS_ADMIN", "http://127.0.0.1:8444")
+HOOK = os.environ.get("KN_RELAY_HOOK", "http://relay:8091/hook")
+DATA = os.environ.get("KN_RELAY_DATA", "/data")
+HOSTNAME = "/var/lib/tor/kilonova/hostname"
+
+
+def admin(route, params):
+    request = urllib.request.Request(
+        f"{ADMIN}/{route}",
+        data=json.dumps({"params": params}).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.loads(response.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        sys.exit(
+            f"The light wallet server refused ({e.code}). Open this wallet in "
+            "Kilonova in LWS mode with this server first, then try again."
+        )
+    except OSError as e:
+        sys.exit(f"Could not reach the light wallet server: {e}")
+
+
+def push_server():
+    if os.environ.get("KN_PUSH_SERVER"):
+        return os.environ["KN_PUSH_SERVER"]
+    try:
+        with open(HOSTNAME, encoding="ascii") as f:
+            return "http://" + f.read().strip()
+    except OSError:
+        return None
+
+
+def tokens_dir():
+    path = os.path.join(DATA, "tokens")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def remove(address):
+    admin("webhook_delete", {"addresses": [address]})
+    folder = tokens_dir()
+    for name in os.listdir(folder):
+        path = os.path.join(folder, name)
+        try:
+            with open(path, encoding="utf-8") as f:
+                if json.load(f).get("address") == address:
+                    os.remove(path)
+        except (OSError, ValueError):
+            pass
+    print("Pushes for this wallet are off.")
+
+
+def register(address):
+    token = "kn" + secrets.token_hex(16)
+    admin(
+        "webhook_add",
+        {
+            "type": "tx-confirmation",
+            "address": address,
+            "url": f"{HOOK}/{token}",
+            "confirmations": 1,
+        },
+    )
+    with open(os.path.join(tokens_dir(), token + ".json"), "w", encoding="utf-8") as f:
+        json.dump({"address": address, "bound": []}, f)
+    query = {"topic": token}
+    server = push_server()
+    if server:
+        query["server"] = server
+    code = "kilonova-push:?" + urllib.parse.urlencode(query)
+    print(code)
+    print()
+    try:
+        subprocess.run(["qrencode", "-t", "ANSIUTF8", code], check=False)
+    except OSError:
+        pass
+    print(
+        "In Kilonova, open Settings, Background, Payment notifications from "
+        "your server, choose this wallet and scan the code."
+    )
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if len(args) == 2 and args[0] == "--remove":
+        remove(args[1])
+    elif len(args) == 1 and not args[0].startswith("-"):
+        register(args[0])
+    else:
+        sys.exit(__doc__)

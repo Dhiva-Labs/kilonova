@@ -1,0 +1,20 @@
+#!/bin/sh
+# Turns on payment pushes for one wallet and prints the code Kilonova scans
+# (Settings, Background, Payment notifications from your server).
+#
+#   ./push-register <address>            the wallet's primary address
+#   ./push-register --remove <address>   turns them off again
+#
+# The wallet must already sync from this server in LWS mode. Each run makes
+# a new random topic; the push says only that topic, never an amount, an
+# address or a transaction id. Run it where compose.yaml is (any extra
+# docker compose options, such as -p, go in KN_COMPOSE).
+set -eu
+cd "$(dirname "$0")"
+compose="docker compose ${KN_COMPOSE:-}"
+if [ -z "${KN_PUSH_SERVER:-}" ]; then
+  onion=$($compose run --rm -T pair --hostname 2>/dev/null || true)
+  [ -n "$onion" ] && KN_PUSH_SERVER="http://$onion"
+fi
+export KN_PUSH_SERVER="${KN_PUSH_SERVER:-}"
+exec $compose run --rm push-register "$@"

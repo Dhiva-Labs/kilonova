@@ -1,0 +1,95 @@
+# The push path of the self-hosting kit on a private regtest chain, for
+# ../test-push.sh. Same relay and ntfy as ../compose.yaml, no Tor. Run as
+# its own compose project (kn-push) on its own ports, so it never touches
+# tools/devnet.
+
+services:
+  monerod:
+    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.5.1@sha256:0329465ffc599048efd57712d91d3b4b7d66380bd7205d5d0992cd9faf668e38
+    user: "${KN_UID:-1000}:${KN_GID:-1000}"
+    command:
+      - --regtest
+      - --offline
+      - --fixed-difficulty=1
+      - --data-dir=/data
+      - --no-igd
+      - --rpc-bind-ip=0.0.0.0
+      - --rpc-bind-port=18081
+      - --confirm-external-bind
+      - --zmq-rpc-bind-ip=0.0.0.0
+      - --confirm-zmq-rpc-external-bind
+      - --zmq-rpc-bind-port=18082
+      - --zmq-pub=tcp://0.0.0.0:18083
+    ports:
+      - "127.0.0.1:29181:18081"
+    tmpfs:
+      - /data:uid=${KN_UID:-1000},gid=${KN_GID:-1000}
+
+  wallet-rpc:
+    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.5.1@sha256:09ff81f470d6d37811e3fde808c5cd1158a8cd2c42abbfb935b33f26f91e879d
+    depends_on: [monerod]
+    environment:
+      RPC_EXPOSE_UNAUTHENTICATED: "1"
+    command:
+      - --daemon-address=monerod:18081
+      - --trusted-daemon
+      - --allow-mismatched-daemon-version
+      - --disable-rpc-login
+      - --wallet-dir=/home/monero/wallet
+      - --rpc-bind-port=18083
+    ports:
+      - "127.0.0.1:29183:18083"
+
+  # Regtest needs a master build of monero-lws (as in tools/devnet).
+  lws:
+    image: ghcr.io/vtnerd/monero-lws:master@sha256:159e224076b6464c3cf14ca024827ea1a584957cd18ea13a0c5d4df0d1b98c74
+    user: "${KN_UID:-1000}:${KN_GID:-1000}"
+    depends_on: [monerod]
+    command:
+      - --network=main
+      - --regtest
+      - --db-path=/data
+      - --daemon=tcp://monerod:18082
+      - --sub=tcp://monerod:18083
+      - --rest-server=http://0.0.0.0:8443
+      - --confirm-external-bind
+      - --auto-accept-creation
+      - --auto-accept-import
+      - --admin-rest-server=http://127.0.0.1:8444
+      - --disable-admin-auth
+    ports:
+      - "127.0.0.1:29443:8443"
+    tmpfs:
+      - /data:uid=${KN_UID:-1000},gid=${KN_GID:-1000}
+
+  ntfy:
+    image: binwiederhier/ntfy:v2.28.0@sha256:6ef4b819f722fccdc036af611c4774cfdc2de821ab74fdd48bbf4c9d6f8973da
+    command: [serve]
+    environment:
+      NTFY_LISTEN_HTTP: ":80"
+      NTFY_UPSTREAM_BASE_URL: ""
+      NTFY_WEB_ROOT: disable
+    ports:
+      - "127.0.0.1:29480:80"
+
+  relay:
+    build: ../relay
+    image: kn-push-relay
+    depends_on: [ntfy]
+    ports:
+      - "127.0.0.1:29490:8090"
+    volumes:
+      - relay-data:/data
+
+  push-register:
+    image: kn-push-relay
+    profiles: [push]
+    network_mode: service:lws
+    entrypoint: ["/usr/local/bin/register"]
+    environment:
+      KN_PUSH_SERVER: http://127.0.0.1:29480
+    volumes:
+      - relay-data:/data
+
+volumes:
+  relay-data:
