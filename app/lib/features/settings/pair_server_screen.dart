@@ -4,6 +4,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../src/rust/api/nodes.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/copy_value.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
@@ -87,6 +88,7 @@ class _PairServerScreenState extends State<PairServerScreen> {
                 multiline: true,
                 enabled: !_busy,
                 onSubmitted: _pair,
+                trailing: [PasteButton(controller: _code)],
               ),
               const SizedBox(height: KnSpace.sm),
               KnButton.secondary(

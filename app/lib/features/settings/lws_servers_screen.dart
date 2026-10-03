@@ -6,6 +6,7 @@ import '../../src/rust/api/nodes.dart';
 import '../../src/rust/api/preferences.dart' as prefs_api;
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/copy_value.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
@@ -49,7 +50,8 @@ class _LwsServersScreenState extends State<LwsServersScreen> {
   }
 
   Future<void> _loadPrefs() async {
-    final loaded = widget.registry?.preferences ?? await prefs_api.preferences();
+    final loaded =
+        widget.registry?.preferences ?? await prefs_api.preferences();
     if (mounted) setState(() => _prefs = loaded);
   }
 
@@ -150,6 +152,7 @@ class _LwsServersScreenState extends State<LwsServersScreen> {
                 controller: _url,
                 label: l.lwsServerLabel,
                 onSubmitted: (_) => _save(),
+                trailing: [PasteButton(controller: _url)],
               ),
               const SizedBox(height: KnSpace.md),
               KnCard(

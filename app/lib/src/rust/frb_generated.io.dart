@@ -309,6 +309,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RequestStatus dco_decode_request_status(dynamic raw);
 
   @protected
+  RevealedKeys dco_decode_revealed_keys(dynamic raw);
+
+  @protected
   ScanProgress dco_decode_scan_progress(dynamic raw);
 
   @protected
@@ -629,6 +632,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RequestStatus sse_decode_request_status(SseDeserializer deserializer);
+
+  @protected
+  RevealedKeys sse_decode_revealed_keys(SseDeserializer deserializer);
 
   @protected
   ScanProgress sse_decode_scan_progress(SseDeserializer deserializer);
@@ -1001,6 +1007,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_request_status(RequestStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_revealed_keys(RevealedKeys self, SseSerializer serializer);
 
   @protected
   void sse_encode_scan_progress(ScanProgress self, SseSerializer serializer);

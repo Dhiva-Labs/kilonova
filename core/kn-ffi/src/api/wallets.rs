@@ -2,8 +2,8 @@
 //! wallets, and unlocked wallets.
 //!
 //! Secrets cross into Dart only where the user has to see them: a new seed
-//! before it is written down, and a seed the user asks to reveal after
-//! re-entering the password. Everything else stays in Rust.
+//! before it is written down, and a seed or keys the user asks to reveal
+//! after re-entering the password. Everything else stays in Rust.
 //!
 //! Arguments are owned because `flutter_rust_bridge` hands them over that
 //! way; secret ones are moved into `Zeroizing` first thing.
@@ -133,6 +133,15 @@ impl From<&kn_store::WalletEntry> for WalletSummary {
             cold: e.cold,
         }
     }
+}
+
+/// What restoring a wallet elsewhere needs, shown after the password.
+pub struct RevealedKeys {
+    pub address: String,
+    pub secret_view_key: String,
+    /// `None` for view-only wallets.
+    pub secret_spend_key: Option<String>,
+    pub restore_height: Option<u64>,
 }
 
 /// A freshly generated seed, shown once so the user can write it down.
@@ -465,6 +474,36 @@ impl OpenWallet {
         })
     }
 
+    /// Returns the address and secret keys after re-checking the password,
+    /// for restoring in another wallet. The spend key is `None` for
+    /// view-only wallets.
+    ///
+    /// # Errors
+    ///
+    /// [`WalletError::WrongPassword`] if the password does not open the file.
+    pub fn reveal_keys(&self, password: String) -> Result<RevealedKeys, WalletError> {
+        let password = Zeroizing::new(password);
+        let (id, network) = self.with(|w| Ok((w.entry.id.clone(), w.entry.network)))?;
+        let check = store()?.unlock(&id, password.as_bytes())?;
+        Ok(RevealedKeys {
+            address: check.keys.primary_address(network),
+            secret_view_key: check.keys.secret_view_key_hex().to_string(),
+            secret_spend_key: check.keys.secret_spend_key_hex().map(|k| k.to_string()),
+            restore_height: check.data.restore_height,
+        })
+    }
+
+    /// The block height a restore of this wallet can start scanning from,
+    /// if known. Not secret.
+    ///
+    /// # Errors
+    ///
+    /// Fails if the wallet has been locked.
+    #[frb(sync)]
+    pub fn restore_height(&self) -> Result<Option<u64>, WalletError> {
+        self.with(|w| Ok(w.data.restore_height))
+    }
+
     /// Re-encrypts the wallet under a new password.
     ///
     /// # Errors
@@ -620,6 +659,25 @@ mod tests {
             WalletError::WrongPassword
         );
         assert_eq!(wallet.reveal_seed("pw".into()).unwrap(), Some(seed.words));
+
+        assert!(matches!(
+            wallet.reveal_keys("nope".into()),
+            Err(WalletError::WrongPassword)
+        ));
+        let keys = wallet.reveal_keys("pw".into()).unwrap();
+        assert_eq!(keys.address, first[0].address);
+        assert_eq!(keys.secret_view_key.len(), 64);
+        assert_eq!(keys.secret_spend_key.as_deref().map(str::len), Some(64));
+        // The keys restore the same wallet.
+        let (from_keys, _) = kn_keys::WalletKeys::from_mnemonic(&phrase).unwrap();
+        assert_eq!(
+            Some(keys.secret_spend_key.unwrap().as_str()),
+            from_keys
+                .secret_spend_key_hex()
+                .as_deref()
+                .map(String::as_str)
+        );
+        assert_eq!(wallet.restore_height().unwrap(), keys.restore_height);
 
         wallet.change_password("pw".into(), "pw2".into()).unwrap();
         wallet.lock();

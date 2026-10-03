@@ -6,6 +6,7 @@ import '../../src/rust/api/wallets.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/amount.dart';
+import '../../widgets/copy_value.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
@@ -124,6 +125,7 @@ class _CheckPaymentScreenState extends State<CheckPaymentScreen> {
                 mono: true,
                 enabled: !_busy,
                 error: _idError,
+                trailing: [PasteButton(controller: _txId)],
               ),
               const SizedBox(height: KnSpace.md),
               KnField(
@@ -133,6 +135,7 @@ class _CheckPaymentScreenState extends State<CheckPaymentScreen> {
                 multiline: true,
                 enabled: !_busy,
                 error: _keyError,
+                trailing: [PasteButton(controller: _txKey)],
               ),
               const SizedBox(height: KnSpace.md),
               KnField(
@@ -142,6 +145,7 @@ class _CheckPaymentScreenState extends State<CheckPaymentScreen> {
                 multiline: true,
                 enabled: !_busy,
                 error: _addressError,
+                trailing: [PasteButton(controller: _address)],
               ),
               const SizedBox(height: KnSpace.lg),
               KnButton.primary(

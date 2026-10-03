@@ -9,6 +9,7 @@ import '../../src/rust/api/sync.dart';
 import '../../src/rust/api/wallets.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/copy_value.dart';
 import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
 import '../../widgets/kn_field.dart';
@@ -258,6 +259,19 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
         Text(l.seedWarning, style: text.bodyLarge),
         const SizedBox(height: KnSpace.lg),
         SeedGrid(words: _words),
+        const SizedBox(height: KnSpace.sm),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: KnButton.text(
+            l.copySeedAction,
+            onPressed: () => copyValue(
+              context,
+              label: l.copySeedAction,
+              value: _words.join(' '),
+              sensitive: true,
+            ),
+          ),
+        ),
         const SizedBox(height: KnSpace.lg),
         if (phone) ...[
           KnButton.primary(

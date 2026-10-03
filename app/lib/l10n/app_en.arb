@@ -744,5 +744,26 @@
   "pairServerNodeLabel": "Node",
   "pairServerServerLabel": "Server",
   "pairServerNeedsTorTitle": "These are onion addresses. Turn on Tor under Proxy and Tor to reach them.",
-  "pairServerProxyAction": "Proxy and Tor"
+  "pairServerProxyAction": "Proxy and Tor",
+  "copiedGeneric": "{what} copied",
+  "@copiedGeneric": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "copySensitiveWarning": "Anyone who can read your clipboard can take your funds. Copy anyway?",
+  "copiedClearsNotice": "Copied. The clipboard clears in 60 seconds.",
+  "copySeedAction": "Copy seed",
+  "showKeysAction": "Show keys",
+  "showKeysPrompt": "Enter the password to show the keys.",
+  "showKeysWarning": "The spend key controls your funds. The view key shows every payment you receive. Never share either.",
+  "secretViewKeyLabel": "Secret view key",
+  "secretSpendKeyLabel": "Secret spend key",
+  "revealedAddressLabel": "Primary address",
+  "addressCopyLabel": "Address",
+  "transactionKeyLabel": "Transaction key",
+  "revealedRestoreHeightLabel": "Restore height",
+  "revealedRestoreHeightHelp": "Enter this when restoring, so the new wallet scans from this block instead of the start."
 }

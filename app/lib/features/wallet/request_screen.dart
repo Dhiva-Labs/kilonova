@@ -35,10 +35,7 @@ enum _Expiry { none, day, week }
 
 /// Asks for an amount, a note and an expiry, then creates the request.
 /// Returns the new request, or null if cancelled.
-Future<RequestRow?> showRequestDialog(
-  BuildContext context,
-  OpenWallet wallet,
-) {
+Future<RequestRow?> showRequestDialog(BuildContext context, OpenWallet wallet) {
   final l = AppLocalizations.of(context);
   final key = GlobalKey<_RequestDialogState>();
   return showKnDialog<RequestRow>(
@@ -103,7 +100,9 @@ class _RequestDialogState extends State<_RequestDialog> {
       );
       if (mounted) Navigator.of(context).pop(row);
     } on WalletError catch (e) {
-      if (mounted) setState(() => _amountError = walletErrorMessage(context, e));
+      if (mounted) {
+        setState(() => _amountError = walletErrorMessage(context, e));
+      }
     }
   }
 
@@ -243,7 +242,7 @@ class _RequestScreenState extends State<RequestScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
+                            child: SelectableText(
                               row.address,
                               style: monoStyle(context, size: 13),
                             ),
@@ -269,7 +268,10 @@ class _RequestScreenState extends State<RequestScreen> {
                 ),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: KnButton.text(l.requestDeleteAction, onPressed: _delete),
+                  child: KnButton.text(
+                    l.requestDeleteAction,
+                    onPressed: _delete,
+                  ),
                 ),
               ],
             ),

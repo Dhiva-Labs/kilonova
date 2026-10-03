@@ -372,6 +372,23 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// Fails if the wallet has been locked.
   List<RequestRow> requests();
 
+  /// The block height a restore of this wallet can start scanning from,
+  /// if known. Not secret.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked.
+  BigInt? restoreHeight();
+
+  /// Returns the address and secret keys after re-checking the password,
+  /// for restoring in another wallet. The spend key is `None` for
+  /// view-only wallets.
+  ///
+  /// # Errors
+  ///
+  /// [`WalletError::WrongPassword`] if the password does not open the file.
+  Future<RevealedKeys> revealKeys({required String password});
+
   /// Returns the seed words after re-checking the password. `None` for
   /// wallets restored from keys or view-only wallets, which have no seed.
   ///
@@ -511,6 +528,40 @@ class NewSeed {
           runtimeType == other.runtimeType &&
           format == other.format &&
           words == other.words;
+}
+
+/// What restoring a wallet elsewhere needs, shown after the password.
+class RevealedKeys {
+  final String address;
+  final String secretViewKey;
+
+  /// `None` for view-only wallets.
+  final String? secretSpendKey;
+  final BigInt? restoreHeight;
+
+  const RevealedKeys({
+    required this.address,
+    required this.secretViewKey,
+    this.secretSpendKey,
+    this.restoreHeight,
+  });
+
+  @override
+  int get hashCode =>
+      address.hashCode ^
+      secretViewKey.hashCode ^
+      secretSpendKey.hashCode ^
+      restoreHeight.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RevealedKeys &&
+          runtimeType == other.runtimeType &&
+          address == other.address &&
+          secretViewKey == other.secretViewKey &&
+          secretSpendKey == other.secretSpendKey &&
+          restoreHeight == other.restoreHeight;
 }
 
 enum SeedFormat {

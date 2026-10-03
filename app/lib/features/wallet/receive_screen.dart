@@ -7,6 +7,7 @@ import '../../src/rust/api/wallets.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/amount.dart';
+import '../../widgets/copy_value.dart';
 import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
 import '../../widgets/kn_field.dart';
@@ -147,17 +148,9 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       ),
     );
 
-    final addressLine = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: Text(row.address, style: monoStyle(context, size: 13))),
-        const SizedBox(width: KnSpace.sm),
-        KnIconButton(
-          icon: const Icon(Icons.copy_outlined),
-          tooltip: l.copyAction,
-          onPressed: () => _copy(row.address),
-        ),
-      ],
+    final addressLine = CopyValue(
+      label: row.label.isEmpty ? _title(context, row) : row.label,
+      value: row.address,
     );
 
     // Desktop shows the QR and address on the `surface` card background;
@@ -225,10 +218,20 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                     _shorten(a.address),
                     style: monoStyle(context, size: 13),
                   ),
-                  trailing: KnIconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    tooltip: l.editLabelAction,
-                    onPressed: () => _editLabel(a),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      KnIconButton(
+                        icon: const Icon(Icons.copy_outlined),
+                        tooltip: l.copyAction,
+                        onPressed: () => _copy(a.address),
+                      ),
+                      KnIconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        tooltip: l.editLabelAction,
+                        onPressed: () => _editLabel(a),
+                      ),
+                    ],
                   ),
                   onTap: () => setState(() => _selected = i),
                 ),

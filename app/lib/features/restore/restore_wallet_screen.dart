@@ -6,6 +6,7 @@ import '../../src/rust/api/network.dart';
 import '../../src/rust/api/wallets.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/copy_value.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
@@ -172,6 +173,7 @@ class _RestoreWalletScreenState extends State<RestoreWalletScreen> {
                             KnField(
                               controller: _address,
                               label: l.addressLabel,
+                              trailing: [PasteButton(controller: _address)],
                             ),
                             const SizedBox(height: KnSpace.md),
                           ],
@@ -182,6 +184,7 @@ class _RestoreWalletScreenState extends State<RestoreWalletScreen> {
                             helper: _method == RestoreMethod.seed
                                 ? l.seedWordsHelp
                                 : null,
+                            trailing: [PasteButton(controller: _secret)],
                           ),
                           const SizedBox(height: KnSpace.md),
                           KnField(
