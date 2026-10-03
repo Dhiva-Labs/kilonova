@@ -945,5 +945,7 @@
   "checksNoWallets": "You have no wallets that can be checked.",
   "keepSyncingConsentRisk": "Anyone using this computer meanwhile can open those wallets from the tray.",
   "keepSyncingConsentQuit": "Once you quit Kilonova, nothing checks for payments. This computer has no checks while the app is closed.",
-  "keepSyncingConsentCost": "It uses some battery and data. You can turn this off any time."
+  "keepSyncingConsentCost": "It uses some battery and data. You can turn this off any time.",
+  "checksTitle": "Background checks",
+  "keepSyncingTitle": "Keep syncing"
 }

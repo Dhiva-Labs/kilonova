@@ -72,7 +72,8 @@ class _BackgroundConsentScreenState extends State<BackgroundConsentScreen> {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final phone = context.isPhoneWidth;
-    final title = widget.desktop ? l.keepSyncingWindowLabel : l.checksLabel;
+    // Short, so it fits a phone's app bar; the body explains the option.
+    final title = widget.desktop ? l.keepSyncingTitle : l.checksTitle;
 
     final List<Widget> body;
     if (widget.desktop) {
