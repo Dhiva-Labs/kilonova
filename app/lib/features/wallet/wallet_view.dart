@@ -87,7 +87,8 @@ class _WalletViewState extends State<WalletView> {
         ],
         Text(
           [
-            summary.mode.label(context),
+            // A cold wallet never syncs, so its mode would mislead.
+            summary.cold ? l.coldOfflineLabel : summary.mode.label(context),
             if (summary.viewOnly) l.viewOnlyTag,
           ].join(' · '),
           style: text.bodySmall,
