@@ -14,7 +14,7 @@ use kn_tx::{Priority, Request};
 use zeroize::Zeroizing;
 
 use super::nodes::RUNTIME;
-use super::send::{FeePriority, Payment, Route, SendError, SendSummary};
+use super::send::{FeePriority, Payment, Route, SendError, SendSummary, SentThrough};
 use super::sync::hex_string;
 use super::wallets::{OpenWallet, SyncMode, WalletError, create_view_only_wallet, store};
 
@@ -289,6 +289,9 @@ pub struct ColdImport {
     pub key_images: u32,
     /// The published transaction, for a signed answer.
     pub published_tx: Option<String>,
+    /// The other node did not take it in time, so it went through the
+    /// wallet's own node or server; the app tells the owner.
+    pub fell_back: bool,
 }
 
 impl OpenWallet {
@@ -489,6 +492,7 @@ impl OpenWallet {
             state.rescan_from(height);
         }
         let mut published = None;
+        let mut fell_back = false;
         if let Some(signed) = &answer.signed {
             // The rescan above may not have run yet; the spent check needs
             // key images on the coins, which learning already set.
@@ -496,12 +500,15 @@ impl OpenWallet {
                 .map_err(|_| ColdFailure::Send)?;
             let tip = state.next_height;
             let result = RUNTIME.block_on(route.publish_signed(network, signed, &mut state, tip));
-            if let Err(e) = result {
-                self.inner.sync.replace(&self.inner, state);
-                return Err(match e {
-                    SendError::Build => ColdFailure::NotOurs,
-                    _ => ColdFailure::Send,
-                });
+            match result {
+                Ok(sent) => fell_back = sent == SentThrough::FellBack,
+                Err(e) => {
+                    self.inner.sync.replace(&self.inner, state);
+                    return Err(match e {
+                        SendError::Build => ColdFailure::NotOurs,
+                        _ => ColdFailure::Send,
+                    });
+                }
             }
             let hash = hex_string(&signed.hash);
             let _ = self.inner.with(|w| {
@@ -523,6 +530,7 @@ impl OpenWallet {
         Ok(ColdImport {
             key_images: u32::try_from(answer.key_images.len()).unwrap_or(u32::MAX),
             published_tx: published,
+            fell_back,
         })
     }
 

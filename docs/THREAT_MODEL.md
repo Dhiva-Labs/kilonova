@@ -26,6 +26,25 @@ mainnet's normal rate) are refused and the review screen warns when the fee
 is over 5% of the amount; outputs that reuse a one-time key (the "burning
 bug") count once, at the larger amount; Tor/SOCKS proxy support.
 
+**A node linking a transaction to the wallet that syncs from it.** The
+sync node sees the wallet's address (or exit) and which blocks it fetches;
+if it also received the wallet's transactions, it could tie them to that
+sync pattern. With a proxy set and "send through a different node" on (the
+default), every transaction, cold-wallet ones included, is published
+through a node drawn at random from the bundled list for the network,
+never the sync node (in LWS mode, never the network's node), over the
+wallet's broadcast circuit (`kn-tx`, `publish_through`; `kn-sync`,
+`other_node`). The sync node is not contacted at all unless that node fails
+or does not answer in 45 seconds, in which case the transaction goes the
+usual way and the app says so. Tested on two regtest daemons with the link
+between them cut: the transaction is in the other node's pool and never
+reaches the sync node (`kn-tx/tests/regtest_broadcast.rs`). What remains:
+the broadcast node sees the transaction and the broadcast circuit's exit;
+a fallback reveals it to the sync node as before; the sync node can still
+guess from timing (a decoy and fee request right before a transaction
+appears on the network). Without a proxy it is off, since it would show
+the user's IP address to one more node.
+
 **Light wallet server (LWS mode).** Holds the view key, so it sees all
 incoming payments and can infer spends. Can lie about outputs, spent status
 and decoys.
@@ -52,7 +71,8 @@ dishonest server (`kn-sync/tests/lws_dishonest_server.rs`):
 - answers are capped at 64 MiB, so a server cannot exhaust memory.
 
 When sending in LWS mode the server also picks the decoys, suggests the fee
-and broadcasts the transaction (`kn-tx`, `Backend::Lws`). Kilonova checks
+and, without a proxy (or with sending through a different node turned
+off), broadcasts the transaction (`kn-tx`, `Backend::Lws`). Kilonova checks
 that the ring has 16 distinct, valid outputs with the real one included, and
 refuses fee rates or rounding masks above the caps, and shows the fee
 before anything is broadcast. A server already knows which output
@@ -61,8 +81,9 @@ parties; a dishonest server could pick decoys that are easy for others to
 rule out.
 
 What remains possible for a dishonest server: hiding payments, inventing
-incoming payments (which fail when spent), hiding spends, weak decoys, and
-not broadcasting a transaction. A transaction the server withholds while
+incoming payments (which fail when spent), hiding spends, weak decoys, and,
+when it is the one broadcasting (no proxy, or sending through a different
+node turned off, or that node failing), not broadcasting a transaction. A transaction the server withholds while
 reporting it unconfirmed is released after 30 blocks; one it withholds while
 claiming it was mined shows as sent, and its inputs stay marked spent until
 the wallet syncs in full mode. These are inherent to giving a server the

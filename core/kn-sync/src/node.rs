@@ -346,6 +346,46 @@ pub fn bundled_nodes(network: Network) -> Vec<NodeUrl> {
         .collect()
 }
 
+/// Test chains' stand-ins for the bundled nodes when broadcasting.
+static BROADCAST_NODES: RwLock<Vec<(Network, Vec<NodeUrl>)>> = RwLock::new(Vec::new());
+
+/// Replaces the nodes [`broadcast_nodes`] offers for `network`, or restores
+/// the bundled list with `None`. For tests on private chains, where no
+/// bundled node can help; not a user setting.
+#[doc(hidden)]
+pub fn set_broadcast_nodes_for_tests(network: Network, nodes: Option<Vec<NodeUrl>>) {
+    let mut list = BROADCAST_NODES
+        .write()
+        .unwrap_or_else(PoisonError::into_inner);
+    list.retain(|(n, _)| *n != network);
+    if let Some(nodes) = nodes {
+        list.push((network, nodes));
+    }
+}
+
+/// The nodes a transaction can be broadcast through instead of the sync
+/// node: the bundled ones for `network`.
+#[must_use]
+pub fn broadcast_nodes(network: Network) -> Vec<NodeUrl> {
+    BROADCAST_NODES
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .iter()
+        .find(|(n, _)| *n == network)
+        .map_or_else(|| bundled_nodes(network), |(_, nodes)| nodes.clone())
+}
+
+/// One of `candidates` other than `avoid`, chosen uniformly at random, so
+/// no single bundled node sees every wallet's broadcasts or checks.
+#[must_use]
+pub fn other_node(candidates: Vec<NodeUrl>, avoid: &NodeUrl) -> Option<NodeUrl> {
+    let mut others: Vec<NodeUrl> = candidates.into_iter().filter(|n| n != avoid).collect();
+    if others.is_empty() {
+        return None;
+    }
+    Some(others.swap_remove(crate::random::index(others.len())))
+}
+
 /// The HTTP transport monero-oxide's daemon client runs on.
 #[derive(Clone)]
 pub struct Http {
@@ -547,6 +587,22 @@ mod tests {
         assert_ne!(a, Circuit::app(Purpose::Sync).socks_credentials());
         assert_eq!(a.0.len(), 24);
         assert!(a.0.bytes().all(|b| b.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn another_node_is_never_the_one_avoided() {
+        let a = NodeUrl::parse("a.example:1").unwrap();
+        let b = NodeUrl::parse("b.example:1").unwrap();
+        let c = NodeUrl::parse("c.example:1").unwrap();
+        let (mut saw_b, mut saw_c) = (false, false);
+        for _ in 0..200 {
+            let pick = other_node(vec![a.clone(), b.clone(), c.clone()], &a).unwrap();
+            assert_ne!(pick, a);
+            saw_b |= pick == b;
+            saw_c |= pick == c;
+        }
+        assert!(saw_b && saw_c, "the choice is random");
+        assert_eq!(other_node(vec![a.clone()], &a), None);
     }
 
     #[test]

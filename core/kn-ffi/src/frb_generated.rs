@@ -4345,9 +4345,11 @@ impl SseDecode for crate::api::cold::ColdImport {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_keyImages = <u32>::sse_decode(deserializer);
         let mut var_publishedTx = <Option<String>>::sse_decode(deserializer);
+        let mut var_fellBack = <bool>::sse_decode(deserializer);
         return crate::api::cold::ColdImport {
             key_images: var_keyImages,
             published_tx: var_publishedTx,
+            fell_back: var_fellBack,
         };
     }
 }
@@ -4864,10 +4866,12 @@ impl SseDecode for crate::api::preferences::Preferences {
         let mut var_notifyIncoming = <bool>::sse_decode(deserializer);
         let mut var_backgroundSync = <bool>::sse_decode(deserializer);
         let mut var_confirmLwsPayments = <bool>::sse_decode(deserializer);
+        let mut var_broadcastElsewhere = <bool>::sse_decode(deserializer);
         return crate::api::preferences::Preferences {
             notify_incoming: var_notifyIncoming,
             background_sync: var_backgroundSync,
             confirm_lws_payments: var_confirmLwsPayments,
+            broadcast_elsewhere: var_broadcastElsewhere,
         };
     }
 }
@@ -5016,6 +5020,19 @@ impl SseDecode for crate::api::send::SendSummary {
             change: var_change,
             via: var_via,
             linked_addresses: var_linkedAddresses,
+        };
+    }
+}
+
+impl SseDecode for crate::api::send::SentThrough {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::send::SentThrough::Usual,
+            1 => crate::api::send::SentThrough::OtherNode,
+            2 => crate::api::send::SentThrough::FellBack,
+            _ => unreachable!("Invalid variant for SentThrough: {}", inner),
         };
     }
 }
@@ -5764,6 +5781,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::cold::ColdImport {
         [
             self.key_images.into_into_dart().into_dart(),
             self.published_tx.into_into_dart().into_dart(),
+            self.fell_back.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6121,6 +6139,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::preferences::Preferences {
             self.notify_incoming.into_into_dart().into_dart(),
             self.background_sync.into_into_dart().into_dart(),
             self.confirm_lws_payments.into_into_dart().into_dart(),
+            self.broadcast_elsewhere.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6332,6 +6351,25 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::send::SendSummary>
     for crate::api::send::SendSummary
 {
     fn into_into_dart(self) -> crate::api::send::SendSummary {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::send::SentThrough {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Usual => 0.into_dart(),
+            Self::OtherNode => 1.into_dart(),
+            Self::FellBack => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::send::SentThrough {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::send::SentThrough>
+    for crate::api::send::SentThrough
+{
+    fn into_into_dart(self) -> crate::api::send::SentThrough {
         self
     }
 }
@@ -6796,6 +6834,7 @@ impl SseEncode for crate::api::cold::ColdImport {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u32>::sse_encode(self.key_images, serializer);
         <Option<String>>::sse_encode(self.published_tx, serializer);
+        <bool>::sse_encode(self.fell_back, serializer);
     }
 }
 
@@ -7219,6 +7258,7 @@ impl SseEncode for crate::api::preferences::Preferences {
         <bool>::sse_encode(self.notify_incoming, serializer);
         <bool>::sse_encode(self.background_sync, serializer);
         <bool>::sse_encode(self.confirm_lws_payments, serializer);
+        <bool>::sse_encode(self.broadcast_elsewhere, serializer);
     }
 }
 
@@ -7352,6 +7392,23 @@ impl SseEncode for crate::api::send::SendSummary {
         <u64>::sse_encode(self.change, serializer);
         <String>::sse_encode(self.via, serializer);
         <u32>::sse_encode(self.linked_addresses, serializer);
+    }
+}
+
+impl SseEncode for crate::api::send::SentThrough {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::send::SentThrough::Usual => 0,
+                crate::api::send::SentThrough::OtherNode => 1,
+                crate::api::send::SentThrough::FellBack => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 

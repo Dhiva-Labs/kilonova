@@ -12,12 +12,12 @@ use std::ops::RangeInclusive;
 use monero_daemon_rpc::MoneroDaemon;
 use monero_interface::ProvidesBlockchainMeta as _;
 use monero_wallet::transaction::Transaction;
-use ring::rand::{SecureRandom as _, SystemRandom};
 use serde::Deserialize;
 use serde_json::json;
 
 use crate::ProofError;
 use crate::node::Http;
+use crate::random::{index, uniform};
 
 /// Hashes in every lookup request: one real, the rest cover.
 pub const LOOKUP_BATCH: usize = 8;
@@ -166,28 +166,6 @@ fn window(height: Option<u64>, tip: u64, offset: u64) -> RangeInclusive<u64> {
     if end > tip { last_blocks } else { start..=end }
 }
 
-/// A uniformly random number below `bound` (which must be above zero).
-fn uniform(bound: u64) -> u64 {
-    let rng = SystemRandom::new();
-    // Rejection sampling keeps every value equally likely.
-    let zone = u64::MAX - u64::MAX % bound;
-    loop {
-        let mut bytes = [0u8; 8];
-        rng.fill(&mut bytes)
-            .expect("the system random number generator works");
-        let value = u64::from_le_bytes(bytes);
-        if value < zone {
-            return value % bound;
-        }
-    }
-}
-
-/// A uniformly random index below `len` (which must be above zero).
-fn index(len: usize) -> usize {
-    let bound = u64::try_from(len).unwrap_or(u64::MAX);
-    usize::try_from(uniform(bound)).expect("below a usize bound")
-}
-
 /// Asks for `batch` and returns only `wanted`; every other answer is
 /// dropped without being parsed.
 async fn request(
@@ -201,6 +179,12 @@ async fn request(
         tx_hash: Option<String>,
         #[serde(default)]
         as_hex: String,
+        // monerod sends some transactions (miner ones among them) split
+        // in two with `as_hex` empty; together they are the whole blob.
+        #[serde(default)]
+        pruned_as_hex: String,
+        #[serde(default)]
+        prunable_as_hex: String,
         #[serde(default)]
         block_height: Option<u64>,
         #[serde(default)]
@@ -233,7 +217,12 @@ async fn request(
             // only used if it hashes to the wanted transaction.
             None => false,
         };
-        let parsed = hex::decode(&entry.as_hex)
+        let blob = if entry.as_hex.is_empty() {
+            format!("{}{}", entry.pruned_as_hex, entry.prunable_as_hex)
+        } else {
+            entry.as_hex
+        };
+        let parsed = hex::decode(&blob)
             .ok()
             .and_then(|raw| Transaction::read(&mut raw.as_slice()).ok());
         match parsed {
@@ -276,14 +265,5 @@ mod tests {
         // Near genesis.
         assert_eq!(window(Some(2), 10_000, 7), 0..=19);
         assert_eq!(window(None, 5, 0), 0..=5);
-    }
-
-    #[test]
-    fn uniform_stays_below_its_bound() {
-        let mut seen = [false; 8];
-        for _ in 0..1_000 {
-            seen[index(8)] = true;
-        }
-        assert!(seen.iter().all(|s| *s));
     }
 }

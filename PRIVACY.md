@@ -51,7 +51,8 @@ The node can see:
 
 - your IP address, unless you use Tor or a proxy;
 - when you sync and how much you download;
-- transactions you send, when you broadcast them.
+- transactions you send, when you broadcast them, unless a proxy is set
+  (see "Sending through a different node" below).
 
 The node does **not** receive your keys and cannot tell which incoming
 transactions are yours. Running your own node gives you the most privacy.
@@ -75,8 +76,9 @@ needs your **private view key**. With it, the server can see:
 
 It can also see outgoing payments when it notices your coins being spent.
 When you send in LWS mode, the server also chooses the decoys for your
-transaction, suggests its fee and broadcasts it, so it sees the transaction
-before anyone else. It
+transaction and suggests its fee. Without a proxy it also broadcasts it, so
+it sees the transaction before anyone else; with a proxy, the transaction
+goes out through a different node instead (see below). It
 **cannot** spend your funds, because your spend key stays on your device. Only
 use a server you run yourself or one you trust, such as MyMonero. Kilonova
 does not run a light wallet server and never picks one for you.
@@ -98,6 +100,20 @@ size, and the answers for the other 7 are thrown away unread. The node
 sees your IP address (or your proxy's) and a batch of ordinary recent
 transactions, and cannot tell which one you cared about. It can still see
 when you look things up, so Tor or your own node remain the best choice.
+
+### Sending through a different node
+
+When a proxy is set, the app sends each transaction you make (cold-wallet
+transactions included) through a node picked at random from the bundled
+public nodes, never the node your wallet syncs from (in LWS mode, never
+your network's node or your server). That node sees your proxy's address
+(a separate Tor circuit for each wallet's payments) and the transaction,
+but not your syncing. The node your wallet syncs from learns of the
+transaction only the way every node does, from the network. If the other
+node does not take the transaction within 45 seconds, the app sends it the
+usual way and tells you so. You can turn this off in Settings, Proxy and
+Tor. Without a proxy it is off, because it would only show your IP
+address to one more node.
 
 ### Your own server (optional)
 
@@ -148,6 +164,7 @@ or font/CDN providers. Fonts and icons are bundled with the app.
   its payment, come from the same phone. The credentials are a hash of the
   wallet's internal id and the kind of request, nothing secret; a proxy
   that is not Tor and does not ask for a password is sent none.
+- With a proxy set, leave "Send through a different node" on.
 - Leave fiat prices off.
 
 ## Permissions
@@ -191,6 +208,7 @@ Security issues: see SECURITY.md in the repository.
 
 Newest first.
 
+- 2026-10-03: with a proxy, transactions are sent through a different node than the one you sync from.
 - 2026-10-03: cover lookups; confirming a light wallet server's payments is now on by default.
 - 2026-10-03: backups you make; each wallet and kind of request gets its own Tor circuit.
 - 2026-10-03: offline wallets, the node check against a public node, confirming server payments, payment proofs, self-hosting and finding nodes on your network.

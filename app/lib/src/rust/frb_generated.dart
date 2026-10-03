@@ -143,7 +143,7 @@ abstract class RustLibApi extends BaseApi {
     required OpenWallet that,
   });
 
-  Future<void> crateApiWalletsOpenWalletConfirmSend({
+  Future<SentThrough> crateApiWalletsOpenWalletConfirmSend({
     required OpenWallet that,
     required PreparedSend send,
     required String password,
@@ -985,7 +985,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiWalletsOpenWalletConfirmSend({
+  Future<SentThrough> crateApiWalletsOpenWalletConfirmSend({
     required OpenWallet that,
     required PreparedSend send,
     required String password,
@@ -1011,7 +1011,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
+          decodeSuccessData: sse_decode_sent_through,
           decodeErrorData: sse_decode_send_error,
         ),
         constMeta: kCrateApiWalletsOpenWalletConfirmSendConstMeta,
@@ -3977,11 +3977,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ColdImport dco_decode_cold_import(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return ColdImport(
       keyImages: dco_decode_u_32(arr[0]),
       publishedTx: dco_decode_opt_String(arr[1]),
+      fellBack: dco_decode_bool(arr[2]),
     );
   }
 
@@ -4323,12 +4324,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Preferences dco_decode_preferences(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return Preferences(
       notifyIncoming: dco_decode_bool(arr[0]),
       backgroundSync: dco_decode_bool(arr[1]),
       confirmLwsPayments: dco_decode_bool(arr[2]),
+      broadcastElsewhere: dco_decode_bool(arr[3]),
     );
   }
 
@@ -4417,6 +4419,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       via: dco_decode_String(arr[4]),
       linkedAddresses: dco_decode_u_32(arr[5]),
     );
+  }
+
+  @protected
+  SentThrough dco_decode_sent_through(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SentThrough.values[raw as int];
   }
 
   @protected
@@ -4890,7 +4898,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_keyImages = sse_decode_u_32(deserializer);
     var var_publishedTx = sse_decode_opt_String(deserializer);
-    return ColdImport(keyImages: var_keyImages, publishedTx: var_publishedTx);
+    var var_fellBack = sse_decode_bool(deserializer);
+    return ColdImport(
+      keyImages: var_keyImages,
+      publishedTx: var_publishedTx,
+      fellBack: var_fellBack,
+    );
   }
 
   @protected
@@ -5337,10 +5350,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_notifyIncoming = sse_decode_bool(deserializer);
     var var_backgroundSync = sse_decode_bool(deserializer);
     var var_confirmLwsPayments = sse_decode_bool(deserializer);
+    var var_broadcastElsewhere = sse_decode_bool(deserializer);
     return Preferences(
       notifyIncoming: var_notifyIncoming,
       backgroundSync: var_backgroundSync,
       confirmLwsPayments: var_confirmLwsPayments,
+      broadcastElsewhere: var_broadcastElsewhere,
     );
   }
 
@@ -5444,6 +5459,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       via: var_via,
       linkedAddresses: var_linkedAddresses,
     );
+  }
+
+  @protected
+  SentThrough sse_decode_sent_through(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return SentThrough.values[inner];
   }
 
   @protected
@@ -5929,6 +5951,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.keyImages, serializer);
     sse_encode_opt_String(self.publishedTx, serializer);
+    sse_encode_bool(self.fellBack, serializer);
   }
 
   @protected
@@ -6320,6 +6343,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.notifyIncoming, serializer);
     sse_encode_bool(self.backgroundSync, serializer);
     sse_encode_bool(self.confirmLwsPayments, serializer);
+    sse_encode_bool(self.broadcastElsewhere, serializer);
   }
 
   @protected
@@ -6387,6 +6411,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_64(self.change, serializer);
     sse_encode_String(self.via, serializer);
     sse_encode_u_32(self.linkedAddresses, serializer);
+  }
+
+  @protected
+  void sse_encode_sent_through(SentThrough self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -6678,15 +6708,16 @@ class OpenWalletImpl extends RustOpaque implements OpenWallet {
   Future<ColdMessage> coldSyncRequest() =>
       RustLib.instance.api.crateApiWalletsOpenWalletColdSyncRequest(that: this);
 
-  /// Checks `password` and publishes `send`. Its inputs count as spent at
-  /// once; sync confirms the spend when it is mined. Sync is paused while
-  /// publishing; start it again afterwards.
+  /// Checks `password` and publishes `send`, and says which way it went.
+  /// Its inputs count as spent at once; sync confirms the spend when it
+  /// is mined. Sync is paused while publishing; start it again
+  /// afterwards.
   ///
   /// # Errors
   ///
   /// [`SendError::WrongPassword`] leaves `send` usable; after any other
   /// error it is discarded.
-  Future<void> confirmSend({
+  Future<SentThrough> confirmSend({
     required PreparedSend send,
     required String password,
   }) => RustLib.instance.api.crateApiWalletsOpenWalletConfirmSend(

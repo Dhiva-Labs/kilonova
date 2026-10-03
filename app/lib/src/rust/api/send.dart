@@ -7,9 +7,9 @@ import '../frb_generated.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `for_wallet`, `parse_keys`, `prepare_send_inner`, `prepare_unsigned`, `prepare`, `publish_signed`, `publish`, `url`
+// These functions are ignored because they are not marked as `pub`: `circuit`, `connect`, `elsewhere`, `for_wallet`, `parse_keys`, `prepare_send_inner`, `prepare_unsigned`, `prepare`, `publish_signed`, `publish`, `url`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Route`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 
 /// Checks an address for `network` without a wallet.
 ///
@@ -100,7 +100,8 @@ class SendSummary {
   /// Returned to this wallet.
   final BigInt change;
 
-  /// The node or light wallet server that will publish it.
+  /// The node or light wallet server that will publish it (if it does
+  /// not answer, the wallet's own one does).
   final String via;
 
   /// How many of this wallet's addresses the spent coins arrived on. More
@@ -136,4 +137,17 @@ class SendSummary {
           change == other.change &&
           via == other.via &&
           linkedAddresses == other.linkedAddresses;
+}
+
+/// Which way a sent transaction went.
+enum SentThrough {
+  /// The wallet's node or light wallet server, as usual.
+  usual,
+
+  /// A different node, so the wallet's own node did not see it sent.
+  otherNode,
+
+  /// The other node did not take it in time, so it went the usual way.
+  /// The app tells the owner.
+  fellBack,
 }

@@ -178,3 +178,28 @@ async fn full_and_lws_wallets_pay_each_other() {
         7 * XMR - 2 * XMR - back.fee
     );
 }
+
+/// Mined payments reach the wallet through the server and are confirmed
+/// by the node: monerod sends miner transactions split in two, without
+/// `as_hex`, and they must not count as contradicted.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs the regtest devnet; see the file header"]
+async fn mined_payments_are_confirmed_by_the_node() {
+    let (light, _) = WalletKeys::generate(SeedFormat::Polyseed);
+    let mut state = SyncState::default();
+    lws_sync_to_tip(&light, &mut state).await;
+    mine(&light.primary_address(Network::Mainnet), 3).await;
+    for _ in 0..60 {
+        lws_sync_to_tip(&light, &mut state).await;
+        if state.outputs.len() == 3 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    assert_eq!(state.outputs.len(), 3);
+    let check = kn_sync::cross_check(&daemon().await, &mut state)
+        .await
+        .unwrap();
+    assert_eq!((check.confirmed, check.contradicted), (3, 0));
+    assert_eq!(state.outputs.len(), 3);
+}

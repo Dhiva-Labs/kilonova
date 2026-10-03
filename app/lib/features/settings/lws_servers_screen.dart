@@ -62,6 +62,7 @@ class _LwsServersScreenState extends State<LwsServersScreen> {
       notifyIncoming: current.notifyIncoming,
       backgroundSync: current.backgroundSync,
       confirmLwsPayments: on,
+      broadcastElsewhere: current.broadcastElsewhere,
     );
     await prefs_api.setPreferences(preferences: next);
     widget.registry?.preferences = next;

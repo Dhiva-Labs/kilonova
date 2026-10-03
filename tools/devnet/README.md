@@ -10,6 +10,7 @@ Full mode and LWS mode can be developed without touching mainnet.
 | `monerod-testnet` | simple-monerod v0.18.5.1 | `127.0.0.1:28081` (RPC) |
 | `lws-testnet` | monero-lws 0.3 | `127.0.0.1:28443` (REST), `28444` (admin) |
 | `monerod-regtest` | simple-monerod v0.18.5.1 | `127.0.0.1:18181` (RPC, unrestricted) |
+| `monerod-regtest-b` | simple-monerod v0.18.5.1 | `127.0.0.1:18191` (RPC, unrestricted; peered only with `monerod-regtest`) |
 | `wallet-rpc-regtest` | simple-monero-wallet-rpc v0.18.5.1 | `127.0.0.1:18183` |
 | `lws-regtest` | monero-lws master (pinned digest; `--regtest` is not in a release yet) | `127.0.0.1:18443` (REST) |
 

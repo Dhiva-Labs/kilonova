@@ -73,7 +73,7 @@ class SettingsScreen extends StatelessWidget {
                       icon: Icons.vpn_lock_outlined,
                       title: l.proxyTitle,
                       subtitle: l.proxySubtitle,
-                      onTap: () => open(const ProxyScreen()),
+                      onTap: () => open(ProxyScreen(registry: registry)),
                     ),
                     row(
                       icon: Icons.dns_outlined,

@@ -128,10 +128,19 @@ class ColdImport {
   /// The published transaction, for a signed answer.
   final String? publishedTx;
 
-  const ColdImport({required this.keyImages, this.publishedTx});
+  /// The other node did not take it in time, so it went through the
+  /// wallet's own node or server; the app tells the owner.
+  final bool fellBack;
+
+  const ColdImport({
+    required this.keyImages,
+    this.publishedTx,
+    required this.fellBack,
+  });
 
   @override
-  int get hashCode => keyImages.hashCode ^ publishedTx.hashCode;
+  int get hashCode =>
+      keyImages.hashCode ^ publishedTx.hashCode ^ fellBack.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -139,7 +148,8 @@ class ColdImport {
       other is ColdImport &&
           runtimeType == other.runtimeType &&
           keyImages == other.keyImages &&
-          publishedTx == other.publishedTx;
+          publishedTx == other.publishedTx &&
+          fellBack == other.fellBack;
 }
 
 /// What a message is, so the app can route a scan to the right screen.

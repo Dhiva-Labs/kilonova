@@ -214,15 +214,16 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// [`ColdFailure::NotWatching`] for a wallet that can sign itself.
   Future<ColdMessage> coldSyncRequest();
 
-  /// Checks `password` and publishes `send`. Its inputs count as spent at
-  /// once; sync confirms the spend when it is mined. Sync is paused while
-  /// publishing; start it again afterwards.
+  /// Checks `password` and publishes `send`, and says which way it went.
+  /// Its inputs count as spent at once; sync confirms the spend when it
+  /// is mined. Sync is paused while publishing; start it again
+  /// afterwards.
   ///
   /// # Errors
   ///
   /// [`SendError::WrongPassword`] leaves `send` usable; after any other
   /// error it is discarded.
-  Future<void> confirmSend({
+  Future<SentThrough> confirmSend({
     required PreparedSend send,
     required String password,
   });

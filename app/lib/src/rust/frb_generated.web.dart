@@ -345,6 +345,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SendSummary dco_decode_send_summary(dynamic raw);
 
   @protected
+  SentThrough dco_decode_sent_through(dynamic raw);
+
+  @protected
   ServerPaired dco_decode_server_paired(dynamic raw);
 
   @protected
@@ -688,6 +691,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SendSummary sse_decode_send_summary(SseDeserializer deserializer);
+
+  @protected
+  SentThrough sse_decode_sent_through(SseDeserializer deserializer);
 
   @protected
   ServerPaired sse_decode_server_paired(SseDeserializer deserializer);
@@ -1090,6 +1096,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_send_summary(SendSummary self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sent_through(SentThrough self, SseSerializer serializer);
 
   @protected
   void sse_encode_server_paired(ServerPaired self, SseSerializer serializer);

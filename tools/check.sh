@@ -30,7 +30,7 @@ if [[ "${1:-}" == "--regtest" ]]; then
   cd "$root/core"
   for t in "kn-sync regtest" "kn-sync regtest_lws" "kn-tx regtest_send" \
            "kn-tx regtest_lws_send" "kn-tx regtest_full_lws" "kn-tx regtest_cold" \
-           "kn-sync lws_dishonest_server" "kn-tx regtest_coins"; do
+           "kn-sync lws_dishonest_server" "kn-tx regtest_coins" "kn-tx regtest_broadcast"; do
     set -- $t
     cargo test --quiet -p "$1" --test "$2" -- --ignored --test-threads 1
   done

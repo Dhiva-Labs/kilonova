@@ -21,6 +21,8 @@ pub(crate) struct PerNetwork {
     pub(crate) lws: Option<String>,
 }
 
+// Independent on/off choices, not states of one thing.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Settings {
     #[serde(flatten)]
@@ -49,6 +51,11 @@ pub(crate) struct Settings {
     /// and otherwise ignored.
     #[serde(rename = "confirm_lws_payments", default, skip_serializing)]
     pub(crate) _old_confirm_lws_payments: Option<serde::de::IgnoredAny>,
+    /// With a proxy set, publish transactions through a random bundled
+    /// node other than the wallet's own. On by default; no effect without
+    /// a proxy.
+    #[serde(default = "on")]
+    pub(crate) broadcast_elsewhere: bool,
     /// Pinned certificate fingerprints by https address.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) pins: BTreeMap<String, String>,
@@ -68,6 +75,7 @@ impl Default for Settings {
             background_sync: false,
             confirm_lws_payments: on(),
             _old_confirm_lws_payments: None,
+            broadcast_elsewhere: on(),
             pins: BTreeMap::new(),
         }
     }
@@ -116,6 +124,7 @@ mod tests {
             Some("http://n:1")
         );
         assert!(Settings::default().confirm_lws_payments);
+        assert!(settings.broadcast_elsewhere, "on unless turned off");
 
         let off = Settings {
             confirm_lws_payments: false,

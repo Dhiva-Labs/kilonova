@@ -44,6 +44,7 @@ void main() {
         notifyIncoming: true,
         backgroundSync: true,
         confirmLwsPayments: false,
+        broadcastElsewhere: true,
       ),
     );
     await registry.reload();
@@ -75,6 +76,7 @@ void main() {
         notifyIncoming: false,
         backgroundSync: false,
         confirmLwsPayments: false,
+        broadcastElsewhere: true,
       ),
     );
   });

@@ -5,6 +5,9 @@
 //!
 //! Full-mode wallets get decoys and fees from their node and publish
 //! through it; LWS-mode wallets use their light wallet server for both.
+//! With a proxy set (and the owner not opting out), the transaction is
+//! published through a different, randomly chosen bundled node instead,
+//! falling back to the usual route if that node does not take it.
 //!
 //! Arguments are owned because `flutter_rust_bridge` hands them over that way.
 #![allow(clippy::needless_pass_by_value)]
@@ -14,8 +17,11 @@ use std::sync::Mutex;
 use flutter_rust_bridge::frb;
 use kn_keys::WalletKeys;
 use kn_store::SyncMode as StoreSyncMode;
-use kn_sync::{Circuit, LwsServer, NodeUrl, Purpose, SyncState, connect, probe_proxy};
-use kn_tx::{Backend, Prepared, Priority, Request, Selection, TxError};
+use kn_sync::{
+    Circuit, LwsServer, NodeUrl, Purpose, SyncState, broadcast_nodes, connect, other_node,
+    probe_proxy, proxy,
+};
+use kn_tx::{Backend, Connected, Elsewhere, Prepared, Priority, Request, Selection, Sent, TxError};
 use zeroize::Zeroizing;
 
 use super::network::Network;
@@ -114,6 +120,28 @@ pub struct Payment {
     pub amount: u64,
 }
 
+/// Which way a sent transaction went.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SentThrough {
+    /// The wallet's node or light wallet server, as usual.
+    Usual,
+    /// A different node, so the wallet's own node did not see it sent.
+    OtherNode,
+    /// The other node did not take it in time, so it went the usual way.
+    /// The app tells the owner.
+    FellBack,
+}
+
+impl From<Sent> for SentThrough {
+    fn from(sent: Sent) -> Self {
+        match sent {
+            Sent::Backend => Self::Usual,
+            Sent::Elsewhere => Self::OtherNode,
+            Sent::FellBack => Self::FellBack,
+        }
+    }
+}
+
 /// What a prepared transaction will do, for the confirmation screen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SendSummary {
@@ -124,7 +152,8 @@ pub struct SendSummary {
     pub fee: u64,
     /// Returned to this wallet.
     pub change: u64,
-    /// The node or light wallet server that will publish it.
+    /// The node or light wallet server that will publish it (if it does
+    /// not answer, the wallet's own one does).
     pub via: String,
     /// How many of this wallet's addresses the spent coins arrived on. More
     /// than one lets whoever paid them see they belong to one wallet.
@@ -138,6 +167,8 @@ pub struct PreparedSend {
     prepared: Mutex<Option<Prepared>>,
     summary: SendSummary,
     route: Route,
+    /// The other node it goes through first, if any.
+    elsewhere: Option<NodeUrl>,
     tip: u64,
 }
 
@@ -190,6 +221,45 @@ impl Route {
     pub(crate) fn url(&self) -> &NodeUrl {
         match self {
             Self::Node(url, _) | Self::Lws(url, _) => url,
+        }
+    }
+
+    fn circuit(&self) -> &Circuit {
+        match self {
+            Self::Node(_, circuit) | Self::Lws(_, circuit) => circuit,
+        }
+    }
+
+    /// A bundled node to publish through instead, when a proxy is set and
+    /// the owner has not turned this off: chosen at random, never the
+    /// wallet's own node. Without a proxy it would only show a second node
+    /// the owner's address.
+    pub(crate) fn elsewhere(&self, network: kn_keys::Network) -> Option<NodeUrl> {
+        proxy()?;
+        let enabled = crate::node_settings::load().map_or(true, |s| s.broadcast_elsewhere);
+        if !enabled {
+            return None;
+        }
+        let own = match self {
+            Self::Node(url, _) => url.clone(),
+            // The node LWS-mode wallets confirm payments with.
+            Self::Lws(..) => current_node(network.into()).ok()?,
+        };
+        other_node(broadcast_nodes(network), &own)
+    }
+
+    async fn connect(&self, network: kn_keys::Network) -> Result<Connected, TxError> {
+        match self {
+            Self::Node(url, circuit) => connect(url, network, circuit)
+                .await
+                .map(|(daemon, _)| Connected::Node(daemon))
+                .map_err(|e| TxError::Node(e.to_string())),
+            Self::Lws(url, circuit) => {
+                probe_proxy().await;
+                LwsServer::new(url, circuit)
+                    .map(Connected::Lws)
+                    .map_err(|e| TxError::Node(e.to_string()))
+            }
         }
     }
 
@@ -267,44 +337,44 @@ impl Route {
         signed: &kn_tx::cold::Signed,
         state: &mut SyncState,
         tip: u64,
-    ) -> Result<(), SendError> {
-        match self {
-            Self::Node(url, circuit) => {
-                let (daemon, _) = connect(url, network, circuit)
-                    .await
-                    .map_err(|_| SendError::Unreachable)?;
-                kn_tx::publish_signed(Backend::Node(&daemon), signed, state, tip).await?;
-            }
-            Self::Lws(url, circuit) => {
-                probe_proxy().await;
-                let server = LwsServer::new(url, circuit).map_err(|_| SendError::Unreachable)?;
-                kn_tx::publish_signed(Backend::Lws(&server), signed, state, tip).await?;
-            }
-        }
-        Ok(())
+    ) -> Result<SentThrough, SendError> {
+        let elsewhere = self.elsewhere(network);
+        let sent = kn_tx::publish_signed_through(
+            elsewhere.as_ref().map(|node| Elsewhere {
+                node,
+                network,
+                circuit: self.circuit(),
+            }),
+            async || self.connect(network).await,
+            signed,
+            state,
+            tip,
+        )
+        .await?;
+        Ok(sent.into())
     }
 
     async fn publish(
         &self,
         network: kn_keys::Network,
+        elsewhere: Option<&NodeUrl>,
         prepared: &Prepared,
         state: &mut SyncState,
         tip: u64,
-    ) -> Result<(), SendError> {
-        match self {
-            Self::Node(url, circuit) => {
-                let (daemon, _) = connect(url, network, circuit)
-                    .await
-                    .map_err(|_| SendError::Unreachable)?;
-                kn_tx::publish(Backend::Node(&daemon), prepared, state, tip).await?;
-            }
-            Self::Lws(url, circuit) => {
-                probe_proxy().await;
-                let server = LwsServer::new(url, circuit).map_err(|_| SendError::Unreachable)?;
-                kn_tx::publish(Backend::Lws(&server), prepared, state, tip).await?;
-            }
-        }
-        Ok(())
+    ) -> Result<SentThrough, SendError> {
+        let sent = kn_tx::publish_through(
+            elsewhere.map(|node| Elsewhere {
+                node,
+                network,
+                circuit: self.circuit(),
+            }),
+            async || self.connect(network).await,
+            prepared,
+            state,
+            tip,
+        )
+        .await?;
+        Ok(sent.into())
     }
 }
 
@@ -418,7 +488,12 @@ impl OpenWallet {
                 amount: prepared.amount,
             }],
         };
-        let via = route.url().as_str().to_owned();
+        let elsewhere = route.elsewhere(network);
+        let via = elsewhere
+            .as_ref()
+            .unwrap_or_else(|| route.url())
+            .as_str()
+            .to_owned();
         Ok(PreparedSend {
             summary: SendSummary {
                 tx_hash: hex_string(&prepared.hash),
@@ -430,19 +505,25 @@ impl OpenWallet {
             },
             prepared: Mutex::new(Some(prepared)),
             route,
+            elsewhere,
             tip,
         })
     }
 
-    /// Checks `password` and publishes `send`. Its inputs count as spent at
-    /// once; sync confirms the spend when it is mined. Sync is paused while
-    /// publishing; start it again afterwards.
+    /// Checks `password` and publishes `send`, and says which way it went.
+    /// Its inputs count as spent at once; sync confirms the spend when it
+    /// is mined. Sync is paused while publishing; start it again
+    /// afterwards.
     ///
     /// # Errors
     ///
     /// [`SendError::WrongPassword`] leaves `send` usable; after any other
     /// error it is discarded.
-    pub fn confirm_send(&self, send: &PreparedSend, password: String) -> Result<(), SendError> {
+    pub fn confirm_send(
+        &self,
+        send: &PreparedSend,
+        password: String,
+    ) -> Result<SentThrough, SendError> {
         let password = Zeroizing::new(password);
         let id = self.inner.with(|w| Ok(w.entry.id.clone()))?;
         store()?
@@ -464,7 +545,13 @@ impl OpenWallet {
             .sync
             .caught_up_state()
             .ok_or(SendError::NotSynced)?;
-        RUNTIME.block_on(send.route.publish(network, &prepared, &mut state, send.tip))?;
+        let through = RUNTIME.block_on(send.route.publish(
+            network,
+            send.elsewhere.as_ref(),
+            &prepared,
+            &mut state,
+            send.tip,
+        ))?;
         self.inner.sync.replace(&self.inner, state);
         // Remember who was paid and the transaction key; the chain does not
         // tell the sender later. A failed save loses only these details.
@@ -478,7 +565,7 @@ impl OpenWallet {
             );
             Ok(store()?.save(w)?)
         });
-        Ok(())
+        Ok(through)
     }
 }
 

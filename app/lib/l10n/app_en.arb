@@ -874,5 +874,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "broadcastElsewhereTitle": "Send through a different node",
+  "broadcastElsewhereSubtitle": "With a proxy set, payments go out through a random public node instead of the one your wallet syncs from, so that node does not see you send. Has no effect without a proxy.",
+  "sendFellBackTitle": "Sent",
+  "sendFellBackNotice": "Sent through your sync node because the other node did not answer."
 }

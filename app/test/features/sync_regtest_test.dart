@@ -109,6 +109,9 @@ void main() {
       tester.view.physicalSize = const Size(1280, 2200);
       late String address;
       await tester.runAsync(() async {
+        // Payments are confirmed with this node (on by default), through
+        // cover lookups.
+        await selectNode(network: Network.mainnet, url: _node);
         await setLwsServer(network: Network.mainnet, url: _lws);
         final seed = await generateSeed(format: SeedFormat.polyseed);
         final wallet = await createWalletFromSeed(
@@ -291,6 +294,7 @@ void main() {
             notifyIncoming: true,
             backgroundSync: false,
             confirmLwsPayments: false,
+            broadcastElsewhere: true,
           ),
         );
         await registry.reload();
@@ -355,6 +359,7 @@ void main() {
             notifyIncoming: false,
             backgroundSync: false,
             confirmLwsPayments: false,
+            broadcastElsewhere: true,
           ),
         ),
       );

@@ -15,6 +15,7 @@ import '../../widgets/kn_card.dart';
 import '../../widgets/kn_field.dart';
 import '../../widgets/kn_icons.dart';
 import '../../widgets/kn_segments.dart';
+import '../../widgets/kn_sheet.dart';
 import '../../widgets/password_fields.dart';
 import '../book/address_book_screen.dart';
 import '../cold/animated_qr.dart';
@@ -235,10 +236,29 @@ class _SendScreenState extends State<SendScreen> {
     });
   }
 
-  void _sent() {
+  /// [fellBack]: the other node did not take it, so it went through the
+  /// wallet's own node or server; the owner is told before leaving.
+  Future<void> _sent(bool fellBack) async {
     final id = widget.wallet.summary().id;
     // Publishing pauses sync; it picks the spend up from here.
     widget.registry.startSync(id);
+    if (fellBack) {
+      final l = AppLocalizations.of(context);
+      await showKnDialog<void>(
+        context,
+        Text(l.sendFellBackNotice),
+        title: l.sendFellBackTitle,
+        actions: [
+          Builder(
+            builder: (inner) => KnButton.primary(
+              l.closeAction,
+              onPressed: () => Navigator.of(inner).pop(),
+            ),
+          ),
+        ],
+      );
+      if (!mounted) return;
+    }
     Navigator.of(context).pop(true);
   }
 
@@ -500,7 +520,9 @@ class _ConfirmView extends StatefulWidget {
   final BiometricUnlock biometric;
   final PreparedSend prepared;
   final VoidCallback onEdit;
-  final VoidCallback onSent;
+
+  /// With true when the transaction fell back to the wallet's own node.
+  final ValueChanged<bool> onSent;
   final ValueChanged<String> onFailed;
 
   @override
@@ -534,12 +556,12 @@ class _ConfirmViewState extends State<_ConfirmView> {
       _passwordError = null;
     });
     try {
-      await widget.wallet.confirmSend(
+      final through = await widget.wallet.confirmSend(
         send: widget.prepared,
         password: _password.text,
       );
       _password.clear();
-      widget.onSent();
+      widget.onSent(through == SentThrough.fellBack);
     } on SendError catch (e) {
       _password.clear();
       if (!mounted) return;
@@ -757,7 +779,9 @@ class _ColdConfirmView extends StatefulWidget {
   final WalletRegistry registry;
   final ColdSend coldSend;
   final VoidCallback onEdit;
-  final VoidCallback onSent;
+
+  /// With true when the transaction fell back to the wallet's own node.
+  final ValueChanged<bool> onSent;
   final ValueChanged<String> onFailed;
 
   @override
@@ -780,12 +804,12 @@ class _ColdConfirmViewState extends State<_ColdConfirmView> {
       return;
     }
     try {
-      await widget.wallet.importColdAnswer(
+      final imported = await widget.wallet.importColdAnswer(
         message: bytes,
         destinations: widget.coldSend.summary().payments,
       );
       widget.registry.startSync(widget.wallet.summary().id);
-      widget.onSent();
+      widget.onSent(imported.fellBack);
     } on ColdFailure catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
