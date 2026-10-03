@@ -52,6 +52,6 @@ void main() {
     await tester.tap(find.text('About Kilonova'));
     await tester.pumpAndSettle();
 
-    expect(find.text('0.2.0'), findsOneWidget);
+    expect(find.text('0.3.0'), findsOneWidget);
   });
 }

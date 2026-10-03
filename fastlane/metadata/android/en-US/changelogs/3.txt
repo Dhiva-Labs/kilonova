@@ -1,0 +1,1 @@
+Faster sync with far fewer requests and disk writes, less battery use in the background, a smaller app, and smoother long histories. Not audited: keep only small amounts in it.

@@ -2,6 +2,14 @@
 
 Release notes for each version are in [docs/release-notes](docs/release-notes).
 
+## 0.3.0 (2026-10-03)
+
+Resource use: full sync makes about 35 times fewer requests to the node,
+downloads about 7 times less and writes about 24 times less to disk;
+wallets at the chain tip check less often in the background and write
+nothing while idle; the bundled Rust library is a third smaller; long
+histories and coin lists build only the rows on screen.
+
 ## 0.2.0 (2026-10-03)
 
 Every feature in [docs/ROADMAP.md](docs/ROADMAP.md): a phone as an offline
