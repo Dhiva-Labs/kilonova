@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kilonova/app.dart';
+import 'package:kilonova/features/cold/cold_transport.dart';
 import 'package:kilonova/features/settings/price_feed.dart';
 import 'package:kilonova/features/wallets/wallet_registry.dart';
 import 'package:kilonova/platform/biometric_unlock.dart';
 import 'package:kilonova/platform/notifications.dart';
+import 'package:kilonova/src/rust/api/cold.dart';
 import 'package:kilonova/src/rust/api/network.dart';
 import 'package:kilonova/src/rust/api/nodes.dart';
 import 'package:kilonova/src/rust/api/wallets.dart';
@@ -44,13 +46,25 @@ Future<void> initRustForTests() async {
 Future<Widget> testApp(
   WidgetTester tester, {
   BiometricUnlock biometric = const BiometricUnlock(),
+  ColdTransport cold = const ColdTransport(),
   PriceFeed? price,
 }) async {
   // Prices never come from the real service in tests.
   final registry = WalletRegistry(
     biometric: biometric,
+    cold: cold,
     price: price ?? PriceFeed(fetch: () async => null),
   );
+  await tester.runAsync(registry.reload);
+  return KilonovaApp(registry: registry);
+}
+
+/// Builds the app around a given [registry], for tests that need to keep
+/// a handle to it (for example to call `registry.cold` after pumping).
+Future<Widget> testAppWithRegistry(
+  WidgetTester tester,
+  WalletRegistry registry,
+) async {
   await tester.runAsync(registry.reload);
   return KilonovaApp(registry: registry);
 }
@@ -139,6 +153,37 @@ class FakeNotifier implements Notifier {
 
   @override
   Future<void> stopKeepAlive() async => keptAlive = false;
+}
+
+/// Records messages shown through `AnimatedQr`, and returns queued bytes
+/// from `receive` instead of scanning a camera or opening a file.
+class FakeColdTransport extends ColdTransport {
+  FakeColdTransport();
+
+  /// Bytes `receive` returns, in order; consumed one call at a time.
+  final List<Uint8List> toReceive = [];
+
+  /// Every message an `AnimatedQr` has shown, in order.
+  final List<ColdMessage> shownMessages = [];
+
+  /// Every message passed to `saveFile`.
+  final List<ColdMessage> savedFiles = [];
+
+  @override
+  Future<Uint8List?> receive(
+    BuildContext context, {
+    required String title,
+  }) async => toReceive.isEmpty ? null : toReceive.removeAt(0);
+
+  @override
+  Future<void> saveFile(BuildContext context, ColdMessage message) async {
+    savedFiles.add(message);
+  }
+
+  @override
+  void shown(ColdMessage message) {
+    shownMessages.add(message);
+  }
 }
 
 /// The [TextField] inside the [KnField] labelled [label] (label above the

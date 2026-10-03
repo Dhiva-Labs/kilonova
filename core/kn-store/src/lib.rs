@@ -73,6 +73,10 @@ pub struct WalletEntry {
     pub view_only: bool,
     /// Seconds since the Unix epoch.
     pub created_at: u64,
+    /// An offline wallet that only signs for a watching wallet; it never
+    /// syncs or contacts any server.
+    #[serde(default)]
+    pub cold: bool,
 }
 
 /// What a wallet was created or restored from. This is what the encrypted
@@ -268,6 +272,7 @@ impl Store {
             mode,
             view_only: keys.is_view_only(),
             created_at,
+            cold: false,
         };
         let wallet = UnlockedWallet {
             entry,
@@ -419,6 +424,23 @@ impl Store {
             .ok_or(StoreError::NotFound)?;
         entry.mode = mode;
         self.write_registry(&entries)?;
+        self.remove_cache(id)
+    }
+
+    /// Marks a wallet as an offline (cold) wallet, or back.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an unknown id or I/O failure.
+    pub fn set_cold(&self, id: &str, cold: bool) -> Result<(), StoreError> {
+        let mut entries = self.list()?;
+        let entry = entries
+            .iter_mut()
+            .find(|e| e.id == id)
+            .ok_or(StoreError::NotFound)?;
+        entry.cold = cold;
+        self.write_registry(&entries)?;
+        // A cold wallet keeps no record of the chain.
         self.remove_cache(id)
     }
 

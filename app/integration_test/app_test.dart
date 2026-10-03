@@ -41,10 +41,16 @@ void main() {
   testWidgets('app boots and reads the network list from Rust', (tester) async {
     await tester.pumpWidget(KilonovaApp(registry: registry));
 
-    expect(find.text('Mainnet'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Create wallet'), findsOneWidget);
+
+    // The network menu lists every network the core knows.
+    await tester.tap(find.byType(PopupMenuButton<Network>));
+    await tester.pumpAndSettle();
+    expect(find.text('Mainnet'), findsWidgets);
     expect(find.text('Stagenet'), findsOneWidget);
     expect(find.text('Testnet'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Create wallet'), findsOneWidget);
+    await tester.tapAt(Offset.zero);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('QR codes the app shows can be read back by its scanner', (
@@ -107,7 +113,13 @@ void main() {
   testWidgets('privacy policy renders from the bundled asset', (tester) async {
     await tester.pumpWidget(KilonovaApp(registry: registry));
 
-    await tester.tap(find.byTooltip('Settings'));
+    // A text button on wide windows, an icon on phones.
+    final settings = find.text('Settings');
+    await tester.tap(
+      settings.evaluate().isNotEmpty ? settings : find.byTooltip('Settings'),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Privacy policy'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Privacy policy'));
     await tester.pumpAndSettle();

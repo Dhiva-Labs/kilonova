@@ -121,6 +121,11 @@ pub struct SyncState {
     /// Payments waiting in the transaction pool, as of the last sync.
     #[serde(default)]
     pub pool: Vec<PoolPayment>,
+    /// Key images a cold wallet supplied, by output key (both hex). A
+    /// view-only wallet cannot derive them, and without them it cannot see
+    /// its own spends.
+    #[serde(default)]
+    key_images: BTreeMap<String, String>,
 }
 
 impl SyncState {
@@ -139,6 +144,50 @@ impl SyncState {
             self.recent.pop_front();
         }
         self.next_height = height + 1;
+    }
+
+    /// The key image a cold wallet supplied for the output with this
+    /// one-time key, if any.
+    #[must_use]
+    pub fn known_key_image(&self, output_key: &[u8; 32]) -> Option<[u8; 32]> {
+        hex::decode(self.key_images.get(&hex::encode(output_key))?)
+            .ok()?
+            .try_into()
+            .ok()
+    }
+
+    /// Outputs whose key image this wallet does not know: what a watching
+    /// wallet asks its cold wallet about.
+    #[must_use]
+    pub fn outputs_without_key_images(&self) -> Vec<&OwnedOutput> {
+        self.outputs
+            .iter()
+            .filter(|o| o.key_image.is_none())
+            .collect()
+    }
+
+    /// Records key images from a cold wallet, `(output key, key image)`.
+    /// Returns the height to rescan from so spends that already happened
+    /// are found, if any output gained a key image.
+    pub fn learn_key_images(&mut self, pairs: &[([u8; 32], [u8; 32])]) -> Option<u64> {
+        let mut rescan_from: Option<u64> = None;
+        for (output_key, key_image) in pairs {
+            self.key_images
+                .insert(hex::encode(output_key), hex::encode(key_image));
+            for o in &mut self.outputs {
+                if o.key_image.is_none() && o.output.key().compress().to_bytes() == *output_key {
+                    o.key_image = Some(*key_image);
+                    rescan_from = Some(rescan_from.map_or(o.height, |h| h.min(o.height)));
+                }
+            }
+        }
+        rescan_from
+    }
+
+    /// Scans again from `height`: what was found there is forgotten and
+    /// found again, this time with any key images learned since.
+    pub fn rescan_from(&mut self, height: u64) {
+        self.rewind_to(height);
     }
 
     /// Forgets everything from `height` on, after a reorganization.

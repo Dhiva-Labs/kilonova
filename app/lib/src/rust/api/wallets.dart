@@ -5,6 +5,7 @@
 
 import '../frb_generated.dart';
 import 'book.dart';
+import 'cold.dart';
 import 'network.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'send.dart';
@@ -156,6 +157,17 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// Fails if the wallet has been locked.
   List<AddressRow> addresses();
 
+  /// Cold wallet: answers a request. Signing asks for the password again.
+  ///
+  /// # Errors
+  ///
+  /// [`ColdFailure::WrongPassword`] leaves the request usable; a request
+  /// can be signed once.
+  Future<ColdMessage> answerColdRequest({
+    required ColdRequest request,
+    required String password,
+  });
+
   /// Balance from what has been scanned so far.
   WalletBalance balance();
 
@@ -168,6 +180,30 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required String current,
     required String newPassword,
   });
+
+  /// Watching wallet: how many coins still need key images from the cold
+  /// wallet before they can be spent.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked.
+  int coinsWithoutKeyImages();
+
+  /// The pairing code a watching wallet is created from. It carries the
+  /// private view key, so it asks for the password.
+  ///
+  /// # Errors
+  ///
+  /// [`ColdFailure::WrongPassword`], or [`ColdFailure::ViewOnly`].
+  Future<ColdMessage> coldPairing({required String password});
+
+  /// Watching wallet: asks the cold wallet for the key images of every
+  /// coin that lacks one, so spends become visible.
+  ///
+  /// # Errors
+  ///
+  /// [`ColdFailure::NotWatching`] for a wallet that can sign itself.
+  Future<ColdMessage> coldSyncRequest();
 
   /// Checks `password` and publishes `send`. Its inputs count as spent at
   /// once; sync confirms the spend when it is mined. Sync is paused while
@@ -207,6 +243,29 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// Transactions found so far, newest first.
   List<HistoryItem> history();
 
+  /// Watching wallet: takes the cold wallet's answer, with the
+  /// destinations of the [`ColdSend`] it answers (empty for a sync). Key
+  /// images are
+  /// learned (and the chain rescanned from the oldest affected coin in
+  /// full mode); a signed transaction is checked to spend only this
+  /// wallet's coins and published. Sync is paused; start it again
+  /// afterwards.
+  ///
+  /// # Errors
+  ///
+  /// See [`ColdFailure`]; publishing failures are [`ColdFailure::Send`].
+  Future<ColdImport> importColdAnswer({
+    required List<int> message,
+    required List<Payment> destinations,
+  });
+
+  /// Whether this is an offline (cold) wallet.
+  ///
+  /// # Errors
+  ///
+  /// Fails if the wallet has been locked.
+  bool isCold();
+
   /// Wipes the keys now instead of waiting for Dart to release the object.
   void lock();
 
@@ -227,6 +286,18 @@ abstract class OpenWallet implements RustOpaqueInterface {
   /// Fails if the wallet has been locked or cannot be saved.
   Future<AddressRow> newAddress({required String label});
 
+  /// Watching wallet: builds a transaction for the cold wallet to sign.
+  ///
+  /// # Errors
+  ///
+  /// [`ColdFailure::Send`] with the reason in the returned summary's
+  /// absence; call [`OpenWallet::prepare_send`]'s error mapping in the app.
+  Future<ColdSend> prepareColdSend({
+    required List<Payment> payments,
+    String? sweepTo,
+    required FeePriority priority,
+  });
+
   /// Builds and signs a transaction paying `payments`, or, with
   /// `sweep_to`, sending everything spendable to that address. Nothing is
   /// published; show [`PreparedSend::summary`] and call
@@ -240,6 +311,15 @@ abstract class OpenWallet implements RustOpaqueInterface {
     String? sweepTo,
     required FeePriority priority,
   });
+
+  /// Cold wallet: reads and checks a scanned request. Nothing is signed
+  /// until [`OpenWallet::answer_cold_request`].
+  ///
+  /// # Errors
+  ///
+  /// See [`ColdFailure`]: a transaction that is not this wallet's own and
+  /// sane is refused here.
+  Future<ColdRequest> readColdRequest({required List<int> message});
 
   /// Returns the seed words after re-checking the password. `None` for
   /// wallets restored from keys or view-only wallets, which have no seed.
@@ -280,6 +360,14 @@ abstract class OpenWallet implements RustOpaqueInterface {
     required int index,
     required String label,
   });
+
+  /// Makes this an offline wallet that only signs for a watching wallet,
+  /// or a normal wallet again. Stops sync and forgets what was scanned.
+  ///
+  /// # Errors
+  ///
+  /// [`ColdFailure::ViewOnly`] for a view-only wallet, which cannot sign.
+  Future<void> setCold({required bool cold});
 
   /// Switches between full sync and a light wallet server. Stops sync and
   /// clears what was scanned; start sync again afterwards.
@@ -406,6 +494,9 @@ class WalletSummary {
   final bool viewOnly;
   final BigInt createdAt;
 
+  /// An offline wallet that only signs for a watching wallet.
+  final bool cold;
+
   const WalletSummary({
     required this.id,
     required this.name,
@@ -413,6 +504,7 @@ class WalletSummary {
     required this.mode,
     required this.viewOnly,
     required this.createdAt,
+    required this.cold,
   });
 
   @override
@@ -422,7 +514,8 @@ class WalletSummary {
       network.hashCode ^
       mode.hashCode ^
       viewOnly.hashCode ^
-      createdAt.hashCode;
+      createdAt.hashCode ^
+      cold.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -434,5 +527,6 @@ class WalletSummary {
           network == other.network &&
           mode == other.mode &&
           viewOnly == other.viewOnly &&
-          createdAt == other.createdAt;
+          createdAt == other.createdAt &&
+          cold == other.cold;
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kilonova/features/settings/price_feed.dart';
 import 'package:kilonova/features/wallets/wallet_registry.dart';
+import 'package:kilonova/src/rust/api/cold.dart';
 import 'package:kilonova/src/rust/api/preferences.dart';
 import 'package:kilonova/src/rust/api/send.dart';
 import 'package:kilonova/src/rust/api/sync.dart';
@@ -351,4 +352,169 @@ void main() {
     },
     skip: Platform.environment['KN_REGTEST'] != '1',
   );
+
+  testWidgets('a cold wallet pairs, syncs key images, and signs a send for its '
+      'watching wallet', (tester) async {
+    useDesktopWindow(tester);
+    final cold = FakeColdTransport();
+    final registry = WalletRegistry(
+      cold: cold,
+      price: PriceFeed(fetch: () async => null),
+    );
+    late String aId;
+    late String payee;
+    await tester.runAsync(() async {
+      await selectNode(network: Network.mainnet, url: _node);
+      final seed = await generateSeed(format: SeedFormat.classic);
+      final a = await createWalletFromSeed(
+        name: 'Cold owner',
+        network: Network.mainnet,
+        mode: SyncMode.full,
+        words: seed.words.join(' '),
+        password: 'regtest password',
+        restoreHeight: BigInt.zero,
+        createdHere: true,
+      );
+      aId = a.summary().id;
+      payee = (await createWalletFromSeed(
+        name: 'Payee',
+        network: Network.mainnet,
+        mode: SyncMode.full,
+        words: (await generateSeed(format: SeedFormat.classic)).words.join(' '),
+        password: 'regtest password',
+        restoreHeight: BigInt.zero,
+        createdHere: true,
+      )).addresses().first.address;
+      // Mined outputs unlock after 60 blocks.
+      await _mine(a.addresses().first.address, 70);
+      a.lock();
+    });
+
+    await tester.pumpWidget(await testAppWithRegistry(tester, registry));
+    await tester.tap(find.text('Cold owner'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'regtest password');
+    await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
+    await pumpUntilFound(
+      tester,
+      find.textContaining('Synced, block'),
+      timeout: const Duration(seconds: 90),
+    );
+
+    // Turn the owner's wallet into an offline, signing-only wallet.
+    await tester.tap(find.byTooltip('Wallet options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Use as offline wallet'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Use as offline wallet'),
+    );
+    await pumpUntilFound(tester, find.text('Offline wallet'));
+
+    // Pair a watching wallet from it.
+    await tester.tap(find.text('Pair a watching wallet'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'regtest password');
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+    await pumpUntilFound(
+      tester,
+      find.text('Show this to your watching wallet'),
+    );
+    final pairing = cold.shownMessages.last;
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    cold.toReceive.add(pairing.file);
+    await openAddWallet(tester);
+    await tester.tap(find.text('Pair with an offline wallet'));
+    await tester.pumpAndSettle();
+    await tester.enterText(fieldWithLabel('Wallet name'), 'Watching');
+    await tester.enterText(fieldWithLabel('Password'), 'watcher password');
+    await tester.enterText(
+      fieldWithLabel('Confirm password'),
+      'watcher password',
+    );
+    await tester.tap(find.text('Create watching wallet'));
+    await pumpUntilFound(
+      tester,
+      find.text('Sync with offline wallet'),
+      timeout: const Duration(seconds: 90),
+    );
+
+    // Learn key images for the coins the watching wallet can see but not
+    // yet derive key images for, by relaying through the cold wallet's
+    // own API (standing in for its UI, which is covered elsewhere).
+    await tester.tap(find.text('Sync with offline wallet'));
+    await pumpUntilFound(tester, find.text('Show this to your offline wallet'));
+    final syncRequest = cold.shownMessages.last;
+    late ColdMessage syncAnswer;
+    await tester.runAsync(() async {
+      final a = registry.openWallet(aId)!;
+      final request = await a.readColdRequest(message: syncRequest.file);
+      syncAnswer = await a.answerColdRequest(request: request, password: '');
+    });
+    cold.toReceive.add(syncAnswer.file);
+    await tester.tap(find.text('Scan the answer'));
+    await pumpUntilFound(
+      tester,
+      find.textContaining('Learned key images'),
+      timeout: const Duration(seconds: 90),
+    );
+    await tester.pumpAndSettle();
+    await pumpUntilFound(
+      tester,
+      find.textContaining('Synced, block'),
+      timeout: const Duration(seconds: 90),
+    );
+
+    // Send from the watching wallet; the cold wallet signs it.
+    await tester.tap(find.widgetWithText(FilledButton, 'Send'));
+    await tester.pumpAndSettle();
+    await tester.enterText(fieldWithLabel('To'), payee);
+    await tester.enterText(fieldWithLabel('Amount'), '1.5');
+    await tester.tap(find.text('Review'));
+    await pumpUntilFound(
+      tester,
+      find.text('Sign this on your offline wallet'),
+      timeout: const Duration(seconds: 60),
+    );
+    final signRequest = cold.shownMessages.last;
+    late ColdMessage signed;
+    await tester.runAsync(() async {
+      final a = registry.openWallet(aId)!;
+      final request = await a.readColdRequest(message: signRequest.file);
+      signed = await a.answerColdRequest(
+        request: request,
+        password: 'regtest password',
+      );
+    });
+    cold.toReceive.add(signed.file);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    await pumpUntilFound(tester, find.text('Scan the signed transaction'));
+    await tester.tap(find.text('Scan the signed transaction'));
+    await pumpUntilFound(
+      tester,
+      find.text('Sent. It confirms when the next block is mined.'),
+      timeout: const Duration(seconds: 30),
+    );
+
+    final watching = registry.find(
+      registry.on(Network.mainnet).firstWhere((w) => w.name == 'Watching').id,
+    )!;
+    final b = registry.openWallet(watching.id)!;
+    expect(
+      b.history().any((h) => !h.incoming),
+      isTrue,
+      reason: 'the watching wallet should show the send it just signed',
+    );
+
+    await tester.runAsync(() => _mine(payee, 1));
+    await pumpUntil(
+      tester,
+      () => b.history().any((h) => !h.incoming && !h.pending),
+      what: 'the signed send to confirm',
+      timeout: const Duration(seconds: 90),
+    );
+  }, skip: Platform.environment['KN_REGTEST'] != '1');
 }

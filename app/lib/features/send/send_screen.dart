@@ -17,6 +17,9 @@ import '../../widgets/kn_icons.dart';
 import '../../widgets/kn_segments.dart';
 import '../../widgets/password_fields.dart';
 import '../book/address_book_screen.dart';
+import '../cold/animated_qr.dart';
+import '../cold/cold_failure_text.dart';
+import '../../src/rust/api/cold.dart';
 import '../wallets/wallet_registry.dart';
 import 'monero_uri.dart';
 import 'scan_qr.dart';
@@ -57,6 +60,7 @@ class _SendScreenState extends State<SendScreen> {
   String? _error;
   String? _requestNote;
   PreparedSend? _prepared;
+  ColdSend? _coldPrepared;
 
   @override
   void dispose() {
@@ -171,6 +175,8 @@ class _SendScreenState extends State<SendScreen> {
     return ok ? payments : null;
   }
 
+  bool get _coldFlow => widget.wallet.summary().viewOnly;
+
   Future<void> _review() async {
     final payments = _validate();
     if (payments == null) return;
@@ -179,14 +185,25 @@ class _SendScreenState extends State<SendScreen> {
       _error = null;
     });
     try {
-      final prepared = await widget.wallet.prepareSend(
-        payments: _sweep ? const [] : payments,
-        sweepTo: _sweep ? _recipients.first.address.text.trim() : null,
-        priority: _priority,
-      );
-      if (mounted) setState(() => _prepared = prepared);
+      if (_coldFlow) {
+        final prepared = await widget.wallet.prepareColdSend(
+          payments: _sweep ? const [] : payments,
+          sweepTo: _sweep ? _recipients.first.address.text.trim() : null,
+          priority: _priority,
+        );
+        if (mounted) setState(() => _coldPrepared = prepared);
+      } else {
+        final prepared = await widget.wallet.prepareSend(
+          payments: _sweep ? const [] : payments,
+          sweepTo: _sweep ? _recipients.first.address.text.trim() : null,
+          priority: _priority,
+        );
+        if (mounted) setState(() => _prepared = prepared);
+      }
     } on SendError catch (e) {
       if (mounted) setState(() => _error = sendErrorMessage(context, e));
+    } on ColdFailure catch (e) {
+      if (mounted) setState(() => _error = coldFailureMessage(context, e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -196,6 +213,7 @@ class _SendScreenState extends State<SendScreen> {
     _prepared?.dispose();
     setState(() {
       _prepared = null;
+      _coldPrepared = null;
       _error = null;
     });
   }
@@ -212,6 +230,7 @@ class _SendScreenState extends State<SendScreen> {
     _prepared?.dispose();
     setState(() {
       _prepared = null;
+      _coldPrepared = null;
       _error = message;
     });
   }
@@ -220,7 +239,30 @@ class _SendScreenState extends State<SendScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final prepared = _prepared;
+    final coldPrepared = _coldPrepared;
     final isPhone = context.isPhoneWidth;
+    final Widget body;
+    if (coldPrepared != null) {
+      body = _ColdConfirmView(
+        wallet: widget.wallet,
+        registry: widget.registry,
+        coldSend: coldPrepared,
+        onEdit: _edit,
+        onSent: _sent,
+        onFailed: _failed,
+      );
+    } else if (prepared != null) {
+      body = _ConfirmView(
+        wallet: widget.wallet,
+        biometric: widget.registry.biometric,
+        prepared: prepared,
+        onEdit: _edit,
+        onSent: _sent,
+        onFailed: _failed,
+      );
+    } else {
+      body = _form(context);
+    }
     return PopScope(
       canPop: !_busy,
       // Recipients and amounts stay out of screenshots and the app switcher.
@@ -232,16 +274,7 @@ class _SendScreenState extends State<SendScreen> {
               alignment: Alignment.topLeft,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 560),
-                child: prepared == null
-                    ? _form(context)
-                    : _ConfirmView(
-                        wallet: widget.wallet,
-                        biometric: widget.registry.biometric,
-                        prepared: prepared,
-                        onEdit: _edit,
-                        onSent: _sent,
-                        onFailed: _failed,
-                      ),
+                child: body,
               ),
             ),
           ),
@@ -680,6 +713,137 @@ class _ConfirmViewState extends State<_ConfirmView> {
   }
 
   static String _host(String url) => Uri.tryParse(url)?.host ?? url;
+}
+
+/// What a cold-signed send will do, and the scan step that relays the
+/// signed transaction back from the offline wallet.
+class _ColdConfirmView extends StatefulWidget {
+  const _ColdConfirmView({
+    required this.wallet,
+    required this.registry,
+    required this.coldSend,
+    required this.onEdit,
+    required this.onSent,
+    required this.onFailed,
+  });
+
+  final OpenWallet wallet;
+  final WalletRegistry registry;
+  final ColdSend coldSend;
+  final VoidCallback onEdit;
+  final VoidCallback onSent;
+  final ValueChanged<String> onFailed;
+
+  @override
+  State<_ColdConfirmView> createState() => _ColdConfirmViewState();
+}
+
+class _ColdConfirmViewState extends State<_ColdConfirmView> {
+  late final ColdMessage _message = widget.coldSend.message();
+  bool _busy = false;
+
+  Future<void> _scanSigned() async {
+    final l = AppLocalizations.of(context);
+    setState(() => _busy = true);
+    final bytes = await widget.registry.cold.receive(
+      context,
+      title: l.coldScanSignedAction,
+    );
+    if (bytes == null) {
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
+    try {
+      await widget.wallet.importColdAnswer(
+        message: bytes,
+        destinations: widget.coldSend.summary().payments,
+      );
+      widget.registry.startSync(widget.wallet.summary().id);
+      widget.onSent();
+    } on ColdFailure catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      widget.onFailed(coldFailureMessage(context, e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    final c = context.kn;
+    final isPhone = context.isPhoneWidth;
+    final s = widget.coldSend.summary();
+    final paid = s.payments.fold(BigInt.zero, (sum, p) => sum + p.amount);
+    final contacts = {
+      for (final contact in widget.wallet.contacts())
+        contact.address: contact.name,
+    };
+    final pad = isPhone ? KnSpace.md : KnSpace.xl;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(pad, pad, pad, pad),
+      children: [
+        Text(
+          l.sendConfirmTitle,
+          style: isPhone ? text.titleLarge : text.headlineSmall,
+        ),
+        const SizedBox(height: KnSpace.lg),
+        KnCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Eyebrow(l.sendSendingLabel),
+              const SizedBox(height: KnSpace.md),
+              for (final p in s.payments) ...[
+                if (contacts[p.address] != null) ...[
+                  Text(contacts[p.address]!, style: text.bodyMedium),
+                  const SizedBox(height: 2),
+                ],
+                AmountText(p.amount, size: text.titleLarge!.fontSize),
+                const SizedBox(height: 2),
+                Text(
+                  p.address,
+                  style: monoStyle(context, size: 13, color: c.textSecondary),
+                ),
+                const SizedBox(height: KnSpace.md),
+              ],
+              ...withDividers([
+                KeyValue(label: l.sendFeeLine, value: AmountText(s.fee)),
+                KeyValue(
+                  label: l.sendTotalLine,
+                  value: AmountText(paid + s.fee),
+                  strong: true,
+                ),
+                if (s.change > BigInt.zero)
+                  KeyValue(
+                    label: l.sendChangeLine,
+                    value: AmountText(s.change),
+                  ),
+              ]),
+            ],
+          ),
+        ),
+        const SizedBox(height: KnSpace.lg),
+        Text(l.coldSignOnOfflineTitle, style: text.titleMedium),
+        const SizedBox(height: KnSpace.md),
+        Center(
+          child: AnimatedQr(message: _message, registry: widget.registry),
+        ),
+        const SizedBox(height: KnSpace.lg),
+        KnButton.primary(
+          l.coldScanSignedAction,
+          onPressed: _busy ? null : _scanSigned,
+          expand: true,
+        ),
+        const SizedBox(height: KnSpace.sm),
+        KnButton.text(
+          l.sendEditAction,
+          onPressed: _busy ? null : widget.onEdit,
+        ),
+      ],
+    );
+  }
 }
 
 String sendErrorMessage(BuildContext context, SendError e) {

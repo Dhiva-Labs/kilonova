@@ -13,6 +13,7 @@ import '../../widgets/kn_sheet.dart';
 import '../../widgets/network_label.dart';
 import '../../widgets/sync_orbit.dart';
 import '../../widgets/test_network_strip.dart';
+import '../cold/cold_screens.dart';
 import '../create/create_wallet_screen.dart';
 import '../restore/restore_wallet_screen.dart';
 import '../settings/settings_screen.dart';
@@ -57,6 +58,13 @@ class _WalletsScreenState extends State<WalletsScreen> {
   void _restore() =>
       _add((n) => RestoreWalletScreen(network: n, registry: widget.registry));
 
+  void _pairWithOffline() => _doPairWithOffline();
+
+  Future<void> _doPairWithOffline() async {
+    final id = await openPairWithOfflineWallet(context, widget.registry);
+    if (id != null && mounted) _select(id);
+  }
+
   Future<void> _addWalletMenu() async {
     final l = AppLocalizations.of(context);
     final action = await showKnDialog<VoidCallback>(
@@ -73,6 +81,11 @@ class _WalletsScreenState extends State<WalletsScreen> {
           KnButton.text(
             l.restoreWallet,
             onPressed: () => Navigator.of(context).pop(_restore),
+          ),
+          const SizedBox(height: KnSpace.xs),
+          KnButton.text(
+            l.coldPairWatchingMenuAction,
+            onPressed: () => Navigator.of(context).pop(_pairWithOffline),
           ),
         ],
       ),
@@ -441,6 +454,19 @@ class _WalletRowSubtitle extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             l.walletLockedLabel,
+            style: monoStyle(context, size: 13, color: c.textSecondary),
+          ),
+        ],
+      );
+    }
+    if (wallet.cold) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          KnIcon(KnIcons.lock, size: 14, color: c.textSecondary),
+          const SizedBox(width: 4),
+          Text(
+            l.coldOfflineLabel,
             style: monoStyle(context, size: 13, color: c.textSecondary),
           ),
         ],
