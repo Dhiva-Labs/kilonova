@@ -42,9 +42,9 @@ RepoType: git
 Repo: https://github.com/Dhiva-Labs/kilonova.git
 
 Builds:
-  - versionName: '0.3.0'
-    versionCode: 3
-    commit: v0.3.0
+  - versionName: '0.4.0'
+    versionCode: 4
+    commit: v0.4.0
     subdir: app/android
     sudo:
       - apt-get update
@@ -82,8 +82,8 @@ Builds:
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: '0.3.0'
-CurrentVersionCode: 3
+CurrentVersion: '0.4.0'
+CurrentVersionCode: 4
 
 # Fixture and fuzz-corpus files that are genuinely binary test data (an
 # encrypted wallet-file fixture, fuzzer seed corpus), not vendored

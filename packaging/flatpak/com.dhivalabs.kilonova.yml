@@ -37,9 +37,9 @@ modules:
     buildsystem: simple
     sources:
       - type: archive
-        url: https://github.com/Dhiva-Labs/kilonova/releases/download/v0.3.0/kilonova-0.3.0-linux-x64.tar.gz
-        sha256: 950df71c8a1f687652495ec49d6d3ce1fce3069c4b999ad7142871306bcb3b07
-        dest: kilonova-0.3.0
+        url: https://github.com/Dhiva-Labs/kilonova/releases/download/v0.4.0/kilonova-0.4.0-linux-x64.tar.gz
+        sha256: 818611aeb3dbecff35ec412b761b6f2a119804850a5b4a7067a27741f1d83b08
+        dest: kilonova-0.4.0
       - type: file
         path: ../linux/com.dhivalabs.kilonova.desktop
       - type: file
@@ -58,7 +58,7 @@ modules:
         dest: icons/512x512
     build-commands:
       - mkdir -p /app/lib/kilonova
-      - cp -r kilonova-0.3.0/* /app/lib/kilonova/
+      - cp -r kilonova-0.4.0/* /app/lib/kilonova/
       - mkdir -p /app/bin
       - ln -s /app/lib/kilonova/kilonova /app/bin/kilonova
       - install -Dm644 com.dhivalabs.kilonova.desktop /app/share/applications/com.dhivalabs.kilonova.desktop

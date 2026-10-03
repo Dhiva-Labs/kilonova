@@ -7,7 +7,7 @@
 name: kilonova
 title: Kilonova
 base: core24
-version: '0.3.0'
+version: '0.4.0'
 summary: Monero wallet that checks what your node and server tell it
 description: |
   Kilonova is an open-source Monero wallet. Sync from a node you choose, or
@@ -61,8 +61,8 @@ apps:
 parts:
   kilonova:
     plugin: dump
-    source: https://github.com/Dhiva-Labs/kilonova/releases/download/v0.3.0/kilonova-0.3.0-linux-x64.tar.gz
-    source-checksum: sha256/950df71c8a1f687652495ec49d6d3ce1fce3069c4b999ad7142871306bcb3b07
+    source: https://github.com/Dhiva-Labs/kilonova/releases/download/v0.4.0/kilonova-0.4.0-linux-x64.tar.gz
+    source-checksum: sha256/818611aeb3dbecff35ec412b761b6f2a119804850a5b4a7067a27741f1d83b08
 
   desktop-entry:
     plugin: dump
