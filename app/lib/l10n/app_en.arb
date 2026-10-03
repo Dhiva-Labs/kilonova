@@ -874,5 +874,43 @@
         "type": "String"
       }
     }
-  }
+  },
+  "pushRow": "Payment notifications from your server",
+  "pushSubtitle": "Your own server tells you when a payment arrives",
+  "pushExplain": "Your own server can tell you as soon as a payment reaches a wallet, even while the wallet is locked. The message says only that something arrived, never the amount, and goes only through your server.",
+  "pushAndroidNote": "Pushes reach this phone through a UnifiedPush app such as ntfy. In ntfy, set the default server to your server's onion address and keep Orbot on.",
+  "pushDesktopNote": "While Kilonova runs, also from the tray, it asks your server for pushes about once a minute through your proxy.",
+  "pushNoWallets": "Only wallets in LWS mode that sync from your server can get pushes. You have none yet.",
+  "pushWalletExplain": "On your server, run push-register with this wallet's primary address. Then scan the code it prints.",
+  "pushScanAction": "Scan the code",
+  "pushPasteField": "Or paste the code",
+  "pushTurnOnAction": "Turn on",
+  "pushTurnOffAction": "Turn off",
+  "pushStatusLabel": "Status",
+  "pushStateOff": "Off",
+  "pushStateOn": "On",
+  "pushStateWaiting": "Waiting for your server",
+  "pushStateNoDistributor": "No UnifiedPush app found. Install ntfy, then turn this on again.",
+  "pushStateWrongServer": "Your UnifiedPush app uses another server. Set its default server to your own, then turn this on again.",
+  "pushStateUnreachable": "Cannot reach your server",
+  "pushBadCode": "This is not a code from push-register.",
+  "pushNoServer": "This code names no server. Pair with your server again, then scan the code.",
+  "pushCannotSave": "Could not save this. Try again.",
+  "pushArrivedTitle": "Something arrived for {wallet}",
+  "@pushArrivedTitle": {
+    "placeholders": {
+      "wallet": {
+        "type": "String"
+      }
+    }
+  },
+  "pushArrivedBody": "Open Kilonova to see it.",
+  "pairServerPushLabel": "Push",
+  "keepSyncingWindowLabel": "Keep syncing when the window is closed",
+  "keepSyncingWindowHelp": "Closing the window hides Kilonova in the system tray. Unlocked wallets stay unlocked, keep syncing and can notify you. Quit from the tray icon to lock them.",
+  "keepSyncingNoTray": "Your desktop shows no tray icons, so closing the window minimizes Kilonova instead.",
+  "trayOpen": "Open Kilonova",
+  "trayQuit": "Quit",
+  "trayMissingTitle": "Kilonova is still syncing",
+  "trayMissingBody": "Your desktop has no tray, so the window was minimized instead of closed."
 }

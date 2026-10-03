@@ -8,7 +8,8 @@
 #
 # Runs as its own compose project, kn-push, on ports 29181, 29183, 29443,
 # 29480 and 29490 of 127.0.0.1, and removes it afterwards (set
-# KN_PUSH_KEEP=1 to keep it running).
+# KN_PUSH_KEEP=1 to keep it running; KN_PUSH_TOPIC_FILE=<path> also writes
+# the topic there, for core/kn-sync/tests/selfhost_push.rs).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 export KN_UID KN_GID
@@ -76,6 +77,7 @@ topic=$(sed -n 's/.*topic=\(kn[0-9a-f]*\).*/\1/p' <<<"$code")
 [[ ${#topic} -eq 34 ]] || fail "bad topic in $code"
 [[ $code == *"server=http%3A%2F%2F127.0.0.1%3A29480"* ]] || fail "no server in $code"
 echo "$code"
+[[ -z "${KN_PUSH_TOPIC_FILE:-}" ]] || printf '%s\n' "$topic" >"$KN_PUSH_TOPIC_FILE"
 # A phone's UnifiedPush topic, bound the way Kilonova binds it.
 curl -sf -X POST "http://127.0.0.1:29490/bind/$topic" -d upKnPushTest1 ||
   fail "bind refused"

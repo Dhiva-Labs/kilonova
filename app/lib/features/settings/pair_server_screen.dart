@@ -119,6 +119,11 @@ class _PairServerScreenState extends State<PairServerScreen> {
                           label: l.pairServerServerLabel,
                           value: Text(result.lws!),
                         ),
+                      if (result.push != null)
+                        KeyValue(
+                          label: l.pairServerPushLabel,
+                          value: Text(result.push!),
+                        ),
                     ]),
                   ),
                 ),

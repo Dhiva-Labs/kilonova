@@ -21,6 +21,19 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"
             android:stopWithTask="true" />
+        <!-- Payment pushes from the owner's own server, through their
+             UnifiedPush distributor; replaces the plugin's own service so
+             no Dart starts while the app is closed. -->
+        <service
+            android:name="org.unifiedpush.flutter.connector.UnifiedPushService"
+            tools:node="remove" />
+        <service
+            android:name=".KilonovaPushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.PUSH_EVENT" />
+            </intent-filter>
+        </service>
         <activity
             android:name=".MainActivity"
             android:exported="true"

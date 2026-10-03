@@ -95,6 +95,25 @@ and compared output by output (one-time key and amount or commitment);
 payments the node contradicts are dropped and stay dropped. Off by default,
 because the node then learns which transactions the wallet looks up.
 
+**The push path (self-hosted, optional).** With payment pushes on
+(`tools/selfhost`, `push-register`), the owner's monero-lws calls the kit's
+relay for each payment to a registered wallet. The relay drops the webhook
+body and posts only the wallet's topic to the kit's ntfy, so a push carries
+no amount, address or transaction id (`tools/selfhost/test-push.sh` checks
+this on regtest). The topic is 16 random bytes, never derived from the
+address or view key; whoever learns it (from the code, the device, the
+phone's UnifiedPush app or the server) learns when that wallet receives
+payments and nothing else. A push only makes the wallet sync, so a forged
+or replayed push costs a sync and a misleading "something arrived"
+notification, never a wrong balance. On Android a UnifiedPush endpoint is
+bound at the relay only if it is on the wallet's own server
+(`kn-sync/src/push.rs`, `endpoint_topic`), so pushes never pass through a
+third-party push service; the relay and ntfy are reachable only through the
+onion address, and ntfy is set to forward nothing upstream. Desktops poll
+the topic through the proxy on the wallet's sync circuit, which the server
+could link to that wallet anyway. Anyone who can reach the relay and knows
+a topic can also bind their own endpoint to it and receive its pushes.
+
 **A watching wallet (or whoever controls it) talking to a cold wallet.** The
 cold wallet holds the spend key and never goes online. It reads payments,
 change and fee from the transaction it signs, never from the request's
@@ -129,7 +148,10 @@ name, and bundle contents are length-checked and fuzzed
 
 **Someone with the device, unlocked and the wallet open.** Can spend.
 Mitigations: on Android every unlocked wallet is locked when the app leaves
-the foreground; showing the seed, changing the password and deleting a
+the foreground, and on desktops when the window is closed, unless the owner
+turns on background sync (Android) or syncing with the window closed (Linux
+and Windows; the app then stays in the system tray, or minimized where
+there is no tray, until quit from there); showing the seed, changing the password and deleting a
 wallet all ask for the password again; seed screens are kept out of screenshots
 and screen recording (`FLAG_SECURE` on Android, display affinity on Windows
 10 2004 and later; Linux has no equivalent). Sending, signing on a cold

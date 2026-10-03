@@ -20,7 +20,7 @@ import androidx.fragment.app.FragmentActivity
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
-private const val PAYMENTS_CHANNEL = "payments"
+internal const val PAYMENTS_CHANNEL = "payments"
 private const val SYNC_CHANNEL = "background_sync"
 private const val SYNC_NOTIFICATION_ID = 1
 
@@ -54,6 +54,19 @@ class BackgroundSync(private val activity: FragmentActivity) : MethodChannel.Met
                 activity.stopService(Intent(activity, SyncService::class.java))
                 result.success(null)
             }
+            "pushWallet" -> {
+                rememberPushWallet(
+                    activity,
+                    call.argument<String>("instance") ?: "",
+                    call.argument<String>("title") ?: "",
+                    call.argument<String>("body") ?: "",
+                )
+                result.success(null)
+            }
+            "pushWalletRemoved" -> {
+                forgetPushWallet(activity, call.argument<String>("instance") ?: "")
+                result.success(null)
+            }
             "canNotify" -> result.success(canNotify())
             "requestNotifications" -> {
                 if (Build.VERSION.SDK_INT >= 33 && !canNotify()) {
@@ -69,10 +82,7 @@ class BackgroundSync(private val activity: FragmentActivity) : MethodChannel.Met
         }
     }
 
-    private fun canNotify(): Boolean =
-        Build.VERSION.SDK_INT < 33 ||
-            ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
+    private fun canNotify(): Boolean = canNotify(activity)
 
     private fun notifyPayment(id: Int, title: String, body: String, publicTitle: String) {
         if (!canNotify()) return
@@ -98,14 +108,19 @@ class BackgroundSync(private val activity: FragmentActivity) : MethodChannel.Met
     }
 }
 
-private fun openApp(context: Context): PendingIntent = PendingIntent.getActivity(
+internal fun canNotify(context: Context): Boolean =
+    Build.VERSION.SDK_INT < 33 ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
+
+internal fun openApp(context: Context): PendingIntent = PendingIntent.getActivity(
     context,
     0,
     Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
     PendingIntent.FLAG_IMMUTABLE,
 )
 
-private fun createChannels(context: Context) {
+internal fun createChannels(context: Context) {
     if (Build.VERSION.SDK_INT < 26) return
     val manager = context.getSystemService(NotificationManager::class.java)
     manager.createNotificationChannel(
