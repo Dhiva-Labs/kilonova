@@ -2,7 +2,7 @@
 
 Release notes for each version are in [docs/release-notes](docs/release-notes).
 
-## Unreleased
+## 0.2.0 (2026-10-03)
 
 Every feature in [docs/ROADMAP.md](docs/ROADMAP.md): a phone as an offline
 cold wallet that signs over QR codes, pairing with a self-hosted node and

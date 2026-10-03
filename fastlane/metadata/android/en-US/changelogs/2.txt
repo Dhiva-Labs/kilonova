@@ -1,0 +1,1 @@
+Phone as an offline cold wallet, payment requests, coin control, payment proof checks, pairing with your own server, and copy buttons for addresses, keys and the seed. Not audited: keep only small amounts in it.

@@ -1108,7 +1108,7 @@ dependencies = [
 
 [[package]]
 name = "kn-keys"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "curve25519-dalek",
  "hex",
@@ -1124,7 +1124,7 @@ dependencies = [
 
 [[package]]
 name = "kn-store"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "argon2",
  "chacha20poly1305",
@@ -1139,7 +1139,7 @@ dependencies = [
 
 [[package]]
 name = "kn-sync"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "curve25519-dalek",
  "hex",
@@ -1163,7 +1163,7 @@ dependencies = [
 
 [[package]]
 name = "kn-tx"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "curve25519-dalek",
  "hex",
@@ -1183,7 +1183,7 @@ dependencies = [
 
 [[package]]
 name = "kn_ffi"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "flutter_rust_bridge",
  "hex",
