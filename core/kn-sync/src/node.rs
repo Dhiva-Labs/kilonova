@@ -614,12 +614,14 @@ mod tests {
 }
 
 /// What a self-hosted server's pairing code names (see `tools/selfhost`):
-/// `kilonova-server:?network=mainnet&node=<url>&lws=<url>`.
+/// `kilonova-server:?network=mainnet&node=<url>&lws=<url>&push=<url>`.
+/// `push` (ntfy, for payment pushes) is optional and newer than the rest.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ServerPairing {
     pub network: Network,
     pub node: Option<NodeUrl>,
     pub lws: Option<NodeUrl>,
+    pub push: Option<NodeUrl>,
 }
 
 impl ServerPairing {
@@ -636,6 +638,7 @@ impl ServerPairing {
         let mut network = None;
         let mut node = None;
         let mut lws = None;
+        let mut push = None;
         for pair in query.split('&').filter(|p| !p.is_empty()) {
             let (key, value) = pair.split_once('=').ok_or(SyncError::BadNodeUrl)?;
             let value = percent_decode(value).ok_or(SyncError::BadNodeUrl)?;
@@ -650,6 +653,7 @@ impl ServerPairing {
                 }
                 "node" => node = Some(NodeUrl::parse(&value)?),
                 "lws" => lws = Some(NodeUrl::parse(&value)?),
+                "push" => push = Some(NodeUrl::parse(&value)?),
                 // Later versions may add fields; ignore what is not known.
                 _ => {}
             }
@@ -661,11 +665,12 @@ impl ServerPairing {
             network: network.ok_or(SyncError::BadNodeUrl)?,
             node,
             lws,
+            push,
         })
     }
 }
 
-fn percent_decode(text: &str) -> Option<String> {
+pub(crate) fn percent_decode(text: &str) -> Option<String> {
     let bytes = text.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
@@ -700,12 +705,22 @@ mod pairing_tests {
         );
         let lws = pairing.lws.unwrap();
         assert!(lws.is_onion() && lws.is_private_channel());
+        assert_eq!(pairing.push, None, "codes from before push stay valid");
+
+        let with_push = format!("{code}&push=http%3A%2F%2F{onion}");
+        let pairing = ServerPairing::parse(&with_push).unwrap();
+        assert_eq!(pairing.push.unwrap().as_str(), format!("http://{onion}"));
+        assert_eq!(
+            pairing.lws.unwrap().as_str(),
+            format!("http://{onion}:8443")
+        );
         for bad in [
             "monero:4abc",
             "kilonova-server:?network=mainnet",
             "kilonova-server:?network=moon&node=http%3A%2F%2Fa.onion%3A1",
             "kilonova-server:?node=http%3A%2F%2Fa.onion%3A1",
             "kilonova-server:?network=mainnet&node=%ZZ",
+            "kilonova-server:?network=mainnet&lws=http%3A%2F%2Fa.onion%3A1&push=ftp%3A%2F%2Fa",
         ] {
             assert!(ServerPairing::parse(bad).is_err(), "{bad}");
         }

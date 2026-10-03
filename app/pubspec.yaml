@@ -7,6 +7,7 @@ environment:
   sdk: ^3.12.2
 
 dependencies:
+  dbus: ^0.7.15
   file_selector: ^1.1.0
   flutter:
     sdk: flutter
@@ -21,6 +22,9 @@ dependencies:
     path: rust_builder
   path_provider: ^2.1.6
   qr_flutter: ^4.1.0
+  unifiedpush_android: ^3.5.0
+  unifiedpush_platform_interface: ^4.0.0
+  window_manager: ^0.5.2
 
 dev_dependencies:
   flutter_lints: ^6.0.0

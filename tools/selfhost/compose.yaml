@@ -3,6 +3,7 @@
 #
 #   docker compose up -d          # start (the node then syncs, for days)
 #   docker compose run --rm pair  # print the pairing code for Kilonova
+#   ./push-register <address>     # payment pushes for one wallet
 
 x-monerod: &monerod
   image: ghcr.io/sethforprivacy/simple-monerod:v0.18.5.1@sha256:0329465ffc599048efd57712d91d3b4b7d66380bd7205d5d0992cd9faf668e38
@@ -44,13 +45,52 @@ services:
       - --auto-accept-creation
       - --auto-accept-import
       - --max-subaddresses=1000
+      # The admin API, for push-register: on this container's loopback
+      # only, so nothing else on the network (and nothing through Tor)
+      # reaches it.
+      - --admin-rest-server=http://127.0.0.1:8444
+      - --disable-admin-auth
     volumes:
       - lws-data:/data
+
+  # Payment pushes. monero-lws calls the relay's webhook; the relay drops
+  # what the webhook says (amount, transaction id) and posts only the
+  # wallet's random token to ntfy, which phones and desktops reach through
+  # the onion service. See README.md.
+  ntfy:
+    image: binwiederhier/ntfy:v2.28.0@sha256:6ef4b819f722fccdc036af611c4774cfdc2de821ab74fdd48bbf4c9d6f8973da
+    restart: unless-stopped
+    command: [serve]
+    environment:
+      NTFY_LISTEN_HTTP: ":80"
+      # No upstream server: nothing is forwarded to ntfy.sh or anyone else.
+      NTFY_UPSTREAM_BASE_URL: ""
+      NTFY_WEB_ROOT: disable
+      NTFY_LOG_LEVEL: warn
+
+  relay:
+    build: relay
+    restart: unless-stopped
+    depends_on: [ntfy]
+    volumes:
+      - relay-data:/data
+
+  # One-shot, run by ./push-register: adds the webhook for one wallet. It
+  # shares the light wallet server's network to reach its admin API.
+  push-register:
+    build: relay
+    profiles: [push]
+    network_mode: service:lws
+    entrypoint: ["/usr/local/bin/register"]
+    environment:
+      KN_PUSH_SERVER: ${KN_PUSH_SERVER:-}
+    volumes:
+      - relay-data:/data
 
   tor:
     build: tor
     restart: unless-stopped
-    depends_on: [monerod, lws]
+    depends_on: [monerod, lws, ntfy, relay]
     volumes:
       - tor-data:/var/lib/tor
 
@@ -68,3 +108,4 @@ volumes:
   monerod-data:
   lws-data:
   tor-data:
+  relay-data:

@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "tray_icon.h"
 #include "win32_window.h"
 
 // A window that does nothing but host a Flutter view.
@@ -33,6 +34,9 @@ class FlutterWindow : public Win32Window {
   // Lets seed screens exclude the window from screen capture.
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       secure_window_channel_;
+
+  // The notification-area icon while the window is hidden.
+  std::unique_ptr<TrayIcon> tray_icon_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

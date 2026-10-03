@@ -1,8 +1,12 @@
-# One onion service carries both: the node's restricted RPC and the light
-# wallet server. No SOCKS port: this Tor only publishes.
+# One onion service carries all of it: the node's restricted RPC, the light
+# wallet server, ntfy for payment pushes (port 80) and the relay where
+# phones bind their push topic (port 8090). No SocksPort: this Tor only
+# publishes.
 SocksPort 0
 DataDirectory /var/lib/tor
 HiddenServiceDir /var/lib/tor/kilonova
 HiddenServiceVersion 3
 HiddenServicePort 18089 @MONEROD@:18089
 HiddenServicePort 8443 @LWS@:8443
+HiddenServicePort 80 @NTFY@:80
+HiddenServicePort 8090 @RELAY@:8090
