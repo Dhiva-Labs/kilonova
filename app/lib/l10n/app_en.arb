@@ -763,5 +763,7 @@
   "secretSpendKeyLabel": "Secret spend key",
   "revealedAddressLabel": "Primary address",
   "addressCopyLabel": "Address",
-  "transactionKeyLabel": "Transaction key"
+  "transactionKeyLabel": "Transaction key",
+  "revealedRestoreHeightLabel": "Restore height",
+  "revealedRestoreHeightHelp": "Enter this when restoring, so the new wallet scans from this block instead of the start."
 }

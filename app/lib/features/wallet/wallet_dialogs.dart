@@ -410,16 +410,16 @@ class _RevealSeedDialogState extends State<_RevealSeedDialog> {
                 ),
               ),
             ),
-            if (height != null) ...[
+            if (height != null && height > BigInt.zero) ...[
               const SizedBox(height: KnSpace.lg),
               CopyValue(
-                label: l.restoreHeightLabel,
+                label: l.revealedRestoreHeightLabel,
                 value: height.toString(),
                 mono: true,
               ),
               const SizedBox(height: KnSpace.xs),
               Text(
-                l.restoreHeightHelp,
+                l.revealedRestoreHeightHelp,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -535,15 +535,16 @@ class _RevealKeysDialogState extends State<_RevealKeysDialog> {
                 sensitive: true,
               ),
             ],
-            if (keys.restoreHeight != null) ...[
+            if (keys.restoreHeight != null &&
+                keys.restoreHeight! > BigInt.zero) ...[
               const SizedBox(height: KnSpace.lg),
               CopyValue(
-                label: l.restoreHeightLabel,
+                label: l.revealedRestoreHeightLabel,
                 value: keys.restoreHeight.toString(),
               ),
               const SizedBox(height: KnSpace.xs),
               Text(
-                l.restoreHeightHelp,
+                l.revealedRestoreHeightHelp,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
