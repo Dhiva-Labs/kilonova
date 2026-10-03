@@ -4,19 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications_linux/flutter_local_notifications_linux.dart';
 import 'package:flutter_local_notifications_windows/flutter_local_notifications_windows.dart';
 
-/// Payment notifications and, on Android, the service that keeps syncing
-/// alive in the background. Both are only used after the owner turns them
-/// on in settings.
+/// Payment notifications, only shown after the owner turns them on in
+/// settings.
 class Notifier {
   const Notifier();
 
   static const _android = MethodChannel('kilonova/background');
   static LinuxFlutterLocalNotificationsPlugin? _linux;
   static FlutterLocalNotificationsWindows? _windows;
-
-  /// Whether background sync is possible here. Desktops keep syncing while
-  /// the window is open anyway.
-  bool get supportsBackgroundSync => Platform.isAndroid;
 
   Future<void> _ensureDesktop() async {
     if (Platform.isLinux && _linux == null) {
@@ -65,23 +60,5 @@ class Notifier {
     await _ensureDesktop();
     await _linux?.show(id: id, title: title, body: body);
     await _windows?.show(id: id, title: title, body: body);
-  }
-
-  /// Android: keeps the app running while it syncs in the background, with
-  /// an ongoing notification saying so.
-  Future<void> startKeepAlive({
-    required String title,
-    required String text,
-  }) async {
-    if (!Platform.isAndroid) return;
-    await _android.invokeMethod<void>('startKeepAlive', {
-      'title': title,
-      'text': text,
-    });
-  }
-
-  Future<void> stopKeepAlive() async {
-    if (!Platform.isAndroid) return;
-    await _android.invokeMethod<void>('stopKeepAlive');
   }
 }

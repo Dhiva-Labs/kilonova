@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show Locale;
 
 import '../../l10n/generated/app_localizations.dart';
+import '../../platform/background_checks.dart';
 import '../../platform/biometric_unlock.dart';
 import '../../platform/desktop_shell.dart';
 import '../../platform/notifications.dart';
 import '../../platform/push.dart';
+import '../../src/rust/api/background.dart';
 import '../../src/rust/api/push.dart' show removePushSubscription;
 import '../../src/rust/api/preferences.dart' as prefs;
 import '../../widgets/amount.dart';
@@ -28,11 +30,20 @@ class WalletRegistry extends ChangeNotifier {
     this.cold = const ColdTransport(),
     this.backupFiles = const BackupFiles(),
     this.push = const NoPush(),
+    this.background = const BackgroundChecks(),
+    this.walletDir = '',
     PriceFeed? price,
   }) : price = price ?? PriceFeed();
 
   final BiometricUnlock biometric;
   final Notifier notifier;
+
+  /// Android: checks for payments while the app is closed, for the
+  /// wallets the owner chose; a fake in tests.
+  final BackgroundChecks background;
+
+  /// The wallet directory, whose settings background checks follow.
+  final String walletDir;
 
   /// Payment pushes from the owner's own server.
   final PushChannel push;
@@ -51,7 +62,8 @@ class WalletRegistry extends ChangeNotifier {
   /// Where backups are saved and read from; a fake in tests.
   final BackupFiles backupFiles;
 
-  /// Notifications and background sync, both off until turned on;
+  /// Notifications and background checks (Android) or syncing with the
+  /// window closed (desktop), both off until turned on;
   /// confirming a light wallet server's payments and broadcasting through
   /// another node, on.
   prefs.Preferences get preferences => _preferences;
@@ -192,29 +204,104 @@ class WalletRegistry extends ChangeNotifier {
     }
   }
 
-  /// The app left the screen. Wallets lock, unless background sync is on
-  /// (Android), in which case they keep syncing behind an ongoing
-  /// notification, or the owner keeps them syncing with the window closed
-  /// (desktop).
+  /// The app left the screen. Wallets lock, unless the owner keeps them
+  /// syncing with the window closed (desktop). On Android, background
+  /// checks look for payments while the app is closed, without unlocking
+  /// anything.
   void paused() {
     foreground = false;
     if (preferences.backgroundSync && keepsSyncingHidden) return;
-    if (preferences.backgroundSync &&
-        notifier.supportsBackgroundSync &&
-        _open.isNotEmpty) {
-      final l = lookupAppLocalizations(const Locale('en'));
-      notifier.startKeepAlive(
-        title: l.keepAliveTitle,
-        text: l.keepAliveText(_open.length),
-      );
-    } else {
-      lockAll();
+    lockAll();
+  }
+
+  void resumed() => foreground = true;
+
+  /// The wallets background checks look at, by id; empty where they are
+  /// not supported.
+  Future<List<String>> checkedWallets() async {
+    if (!background.supported) return const [];
+    try {
+      return await background.wallets();
+    } on Object {
+      return const [];
     }
   }
 
-  void resumed() {
-    foreground = true;
-    notifier.stopKeepAlive();
+  /// Starts checking wallet [id] for payments while the app is closed:
+  /// exports its view-only data after checking [password] and hands it to
+  /// the platform.
+  ///
+  /// Throws [BackgroundError] (wrong password, offline wallet, light
+  /// wallet server not agreed yet).
+  Future<void> checkWallet(String id, String password) async {
+    final state = await exportWatchState(id: id, password: password);
+    try {
+      await background.watch(id, state, walletDir);
+    } finally {
+      state.fillRange(0, state.length, 0);
+    }
+    await _updateCheckLabels();
+  }
+
+  /// Stops checking wallet [id] and deletes what was kept for it. With
+  /// none left, checks turn off.
+  Future<void> stopCheckingWallet(String id) async {
+    await background.forget(id);
+    if ((await checkedWallets()).isEmpty && preferences.backgroundSync) {
+      await setBackgroundChecks(on: false);
+    }
+  }
+
+  /// Turns background checks (or, on desktop, syncing with the window
+  /// closed) on or off. Turning them off deletes every kept view key.
+  Future<void> setBackgroundChecks({required bool on}) async {
+    if (!on && background.supported) await background.forgetAll();
+    final next = prefs.Preferences(
+      notifyIncoming: preferences.notifyIncoming,
+      backgroundSync: on,
+      confirmLwsPayments: preferences.confirmLwsPayments,
+      broadcastElsewhere: preferences.broadcastElsewhere,
+    );
+    await prefs.setPreferences(preferences: next);
+    preferences = next;
+    notifyListeners();
+  }
+
+  /// Keeps what background checks know in line with the app: no kept view
+  /// keys while checks are off (as after the upgrade that introduced
+  /// them), none for deleted wallets, and notification text with each
+  /// wallet's current name.
+  Future<void> _reconcileChecks() async {
+    if (!background.supported) return;
+    try {
+      final ids = await background.wallets();
+      if (ids.isEmpty) return;
+      if (!preferences.backgroundSync) {
+        await background.forgetAll();
+        return;
+      }
+      for (final id in ids.where((id) => find(id) == null)) {
+        await background.forget(id);
+      }
+      await _updateCheckLabels();
+    } on Object {
+      // The platform side is missing (tests) or failed; checks keep what
+      // they had.
+    }
+  }
+
+  Future<void> _updateCheckLabels() async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    final ids = await background.wallets();
+    await background.labels({
+      for (final id in ids)
+        if (find(id) case final wallet?)
+          id: CheckLabels(
+            title: l.notifyPaymentTitle(wallet.name),
+            body: l.notifyPaymentBody('{amount}'),
+            pending: l.notifyPaymentPending('{amount}'),
+          ),
+    }, l.notifyPaymentPublic);
   }
 
   /// Desktop: the owner closed the window. Wallets lock and the app quits,
@@ -278,6 +365,7 @@ class WalletRegistry extends ChangeNotifier {
     _all = await listWallets();
     preferences = await prefs.preferences();
     if (price.currency == null) await price.reload();
+    await _reconcileChecks();
     notifyListeners();
   }
 
@@ -311,6 +399,13 @@ class WalletRegistry extends ChangeNotifier {
     _stopSync(id);
     _open.remove(id)?.lock();
     await biometric.disable(id);
+    if (background.supported) {
+      try {
+        await stopCheckingWallet(id);
+      } on Object {
+        // Reload below forgets checks for wallets that are gone.
+      }
+    }
     try {
       await push.unsubscribe(id);
       await removePushSubscription(walletId: id);

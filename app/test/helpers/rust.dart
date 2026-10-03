@@ -7,6 +7,7 @@ import 'package:kilonova/app.dart';
 import 'package:kilonova/features/cold/cold_transport.dart';
 import 'package:kilonova/features/settings/price_feed.dart';
 import 'package:kilonova/features/wallets/wallet_registry.dart';
+import 'package:kilonova/platform/background_checks.dart';
 import 'package:kilonova/platform/biometric_unlock.dart';
 import 'package:kilonova/platform/notifications.dart';
 import 'package:kilonova/src/rust/api/cold.dart';
@@ -126,16 +127,19 @@ void useDesktopWindow(WidgetTester tester) {
 
 /// Records what the app would show, instead of showing it.
 class FakeNotifier implements Notifier {
-  FakeNotifier({this.supportsBackgroundSync = true});
+  FakeNotifier({this.allowed = true});
 
-  @override
-  final bool supportsBackgroundSync;
+  /// What asking for the notification permission answers.
+  bool allowed;
 
   final payments = <(String, String)>[];
-  bool keptAlive = false;
+  int permissionRequests = 0;
 
   @override
-  Future<bool> requestPermission() async => true;
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return allowed;
+  }
 
   @override
   Future<void> payment({
@@ -144,15 +148,58 @@ class FakeNotifier implements Notifier {
     required String body,
     required String publicTitle,
   }) async => payments.add((title, body));
+}
+
+/// Background checks without Android: keeps what the app hands over in
+/// memory.
+class FakeBackgroundChecks extends BackgroundChecks {
+  FakeBackgroundChecks({this.supported = true});
 
   @override
-  Future<void> startKeepAlive({
-    required String title,
-    required String text,
-  }) async => keptAlive = true;
+  final bool supported;
+
+  /// Each checked wallet's watch state, by id.
+  final states = <String, Uint8List>{};
+  Map<String, CheckLabels> labelled = const {};
+  int batterySettingsOpened = 0;
 
   @override
-  Future<void> stopKeepAlive() async => keptAlive = false;
+  Future<List<String>> wallets() async => states.keys.toList()..sort();
+
+  @override
+  Future<void> watch(String walletId, Uint8List state, String walletDir) async {
+    // The caller wipes its buffer afterwards, as the platform does.
+    states[walletId] = Uint8List.fromList(state);
+  }
+
+  @override
+  Future<void> labels(
+    Map<String, CheckLabels> wallets,
+    String publicTitle,
+  ) async {
+    labelled = wallets;
+  }
+
+  @override
+  Future<void> forget(String walletId) async {
+    states.remove(walletId);
+    if (states.isEmpty) labelled = const {};
+  }
+
+  @override
+  Future<void> forgetAll() async {
+    states.clear();
+    labelled = const {};
+  }
+
+  @override
+  Future<bool> batteryUnrestricted() async => false;
+
+  @override
+  Future<bool> openBatterySettings() async {
+    batterySettingsOpened++;
+    return true;
+  }
 }
 
 /// Records messages shown through `AnimatedQr`, and returns queued bytes

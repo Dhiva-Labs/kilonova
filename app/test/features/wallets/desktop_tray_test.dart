@@ -36,6 +36,7 @@ Future<void> _keepSyncing(bool on) => setPreferences(
 /// A desktop registry, as the desktop shell sets it up.
 WalletRegistry _desktopRegistry(FakeNotifier notifier) => WalletRegistry(
   notifier: notifier,
+  background: FakeBackgroundChecks(supported: false),
   price: PriceFeed(fetch: () async => null),
 )..keepsSyncingHidden = true;
 
@@ -59,9 +60,7 @@ void main() {
   });
 
   test('with the setting off, closing the window locks wallets', () async {
-    final registry = _desktopRegistry(
-      FakeNotifier(supportsBackgroundSync: false),
-    );
+    final registry = _desktopRegistry(FakeNotifier());
     await registry.reload();
     final wallet = await _wallet('Closed');
     final id = wallet.summary().id;
@@ -73,7 +72,7 @@ void main() {
 
   test('with the setting on, a closed window keeps wallets syncing', () async {
     await _keepSyncing(true);
-    final notifier = FakeNotifier(supportsBackgroundSync: false);
+    final notifier = FakeNotifier();
     final registry = _desktopRegistry(notifier);
     await registry.reload();
     final wallet = await _wallet('Tray');
@@ -86,7 +85,6 @@ void main() {
     // The system may also report the app as paused; that must not lock.
     registry.paused();
     expect(registry.openWallet(id), isNotNull);
-    expect(notifier.keptAlive, isFalse, reason: 'no Android service here');
 
     registry.windowOpened();
     expect(registry.foreground, isTrue);
@@ -96,12 +94,10 @@ void main() {
     registry.lockAll();
   });
 
-  testWidgets('the Background screen offers the setting on desktops', (
+  testWidgets('the Background screen offers the setting behind consent', (
     tester,
   ) async {
-    final registry = _desktopRegistry(
-      FakeNotifier(supportsBackgroundSync: false),
-    )..hasTray = false;
+    final registry = _desktopRegistry(FakeNotifier())..hasTray = false;
     await tester.runAsync(registry.reload);
     await tester.pumpWidget(
       MaterialApp(
@@ -125,6 +121,18 @@ void main() {
     await tester.tap(
       find.descendant(of: row.first, matching: find.byType(Switch)),
     );
+    await tester.pumpAndSettle();
+    // The consent screen says what it means, including that nothing
+    // checks once Kilonova is quit.
+    expect(find.textContaining('Anyone using this computer'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'This computer has no checks while the app is closed',
+      ),
+      findsOneWidget,
+    );
+    expect(registry.preferences.backgroundSync, isFalse);
+    await tester.tap(find.text('Turn on'));
     await pumpUntil(tester, () => registry.preferences.backgroundSync);
     final saved = await tester.runAsync(preferences);
     expect(saved!.backgroundSync, isTrue);

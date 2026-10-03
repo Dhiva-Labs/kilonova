@@ -21,6 +21,7 @@ mod restore_height;
 mod scan;
 mod state;
 mod tls;
+mod watch;
 
 pub use cover::{COVER_WINDOW, CoverLookups, LOOKUP_BATCH, LookedUp};
 pub use crosscheck::{CROSS_CHECK_LIMIT, CrossCheck, cross_check};
@@ -45,6 +46,10 @@ pub use state::{
     PENDING_EXPIRY_BLOCKS, PoolPayment, Spend, SyncState,
 };
 pub use tls::{CertificateInfo, Fingerprint, fingerprint, server_certificate, set_pins};
+pub use watch::{
+    Arrival, CATCH_UP_BLOCKS, MAX_BEHIND, MAX_BLOCKS_PER_RUN, NOTIFIED_LIMIT, WATCH_VERSION,
+    WatchError, WatchLimits, WatchMode, WatchReport, WatchState, watch_full, watch_lws,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum SyncError {

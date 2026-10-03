@@ -28,8 +28,10 @@ class Preferences {
   /// front.
   final bool notifyIncoming;
 
-  /// Android: keep unlocked wallets syncing in the background instead of
-  /// locking them when the app leaves the screen.
+  /// Android: check the chosen wallets for payments while the app is
+  /// closed (see `api::background`). Linux and Windows: keep syncing with
+  /// the window closed. Off until the owner agrees on the consent screen;
+  /// turned off by the upgrade that introduced background checks.
   final bool backgroundSync;
 
   /// LWS-mode wallets confirm each payment the server reports with the

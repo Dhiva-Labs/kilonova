@@ -20,6 +20,9 @@ terms, what the app does with your information.
   only your password opens.
 - Your transaction history, balances, address labels, address book and notes.
 - Your settings, including which nodes and servers you use.
+- If you turn on checking for payments while the app is closed (Android),
+  the address and private view key of each wallet you chose, encrypted
+  with a key held by the phone's secure hardware (see Permissions below).
 
 We cannot see any of this, recover it, or reset your password. If you lose
 your seed and your password, nobody can restore your wallet.
@@ -200,12 +203,30 @@ or font/CDN providers. Fonts and icons are bundled with the app.
 
 Kilonova does not ask for the microphone, contacts, location or shared storage.
 - **Notifications:** to tell you about incoming payments, if you turn that on
-  (Settings, Notifications and background). Off by default. A locked phone
-  shows only that a payment arrived, not the amount or wallet.
-- **Background sync (Android):** off by default. If you turn it on, unlocked
-  wallets stay unlocked when you leave the app so they keep syncing, behind an
-  ongoing notification. Anyone who opens Kilonova on your phone during that
-  time can use those wallets.
+  (Settings, Notifications and background) or turn on checking for payments
+  while the app is closed. Off by default. A locked phone shows only that a
+  payment arrived, not the amount or wallet.
+- **Checking for payments while the app is closed (Android):** off by
+  default. Turning it on shows what it means first, asks for the
+  notification permission (no permission, no checks) and asks for the
+  password of each wallet you choose, once. Kilonova then checks those
+  wallets for incoming payments about every 15 minutes, even when it is
+  closed, and notifies you when one arrives. To do that without your
+  password, each chosen wallet's address and private view key are kept on
+  the phone, encrypted with a key that the phone's secure hardware (Android
+  Keystore) holds and never gives out. The view key can see incoming
+  payments but cannot spend. Your seed and spend key never leave the
+  password-protected wallet file, and wallets still lock when you leave
+  the app. Each check asks the wallet's node, or the light wallet server you
+  already share that wallet's view key with, the same way a sync does,
+  through your proxy if you set one; if the proxy does not answer, the
+  check is skipped until the next one. So that node or server sees a short
+  request about every 15 minutes. The view key is never sent to a light
+  wallet server you have not agreed to for that wallet. Turning checks off,
+  or taking a wallet off the list, deletes what was kept for it, and with
+  the last wallet the key in the secure hardware. Checks use some battery
+  and data. Kilonova never asks Android to lift its battery limits by
+  itself; it can open the system list where you choose that.
 - **Syncing with the window closed (Linux, Windows):** off by default. If you
   turn it on, closing the window hides Kilonova in the system tray and
   unlocked wallets stay unlocked and keep syncing until you quit from the
@@ -236,6 +257,7 @@ Security issues: see SECURITY.md in the repository.
 
 Newest first.
 
+- 2026-10-03: checking for payments while the app is closed replaces background sync on Android, which is turned off by the update; turn it on again to choose wallets.
 - 2026-10-03: with a proxy, transactions are sent through a different node than the one you sync from.
 - 2026-10-03: cover lookups; confirming a light wallet server's payments is now on by default.
 - 2026-10-03: payment pushes from your own server, and syncing with the window closed on desktops; both off by default.

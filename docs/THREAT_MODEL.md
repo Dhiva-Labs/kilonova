@@ -181,15 +181,46 @@ name, and bundle contents are length-checked and fuzzed
 
 **Someone with the device, unlocked and the wallet open.** Can spend.
 Mitigations: on Android every unlocked wallet is locked when the app leaves
-the foreground, and on desktops when the window is closed, unless the owner
-turns on background sync (Android) or syncing with the window closed (Linux
-and Windows; the app then stays in the system tray, or minimized where
-there is no tray, until quit from there); showing the seed, changing the password and deleting a
+the foreground (background checks, below, need no unlocked wallet), and on
+desktops when the window is closed, unless the owner turns on syncing with
+the window closed (Linux and Windows, after a consent screen; the app then
+stays in the system tray, or minimized where there is no tray, until quit
+from there); showing the seed, changing the password and deleting a
 wallet all ask for the password again; seed screens are kept out of screenshots
 and screen recording (`FLAG_SECURE` on Android, display affinity on Windows
 10 2004 and later; Linux has no equivalent). Sending, signing on a cold
 wallet and showing a transaction key ask for the password (or a fingerprint)
 again.
+
+**Background checks (Android, optional, off by default).** After a consent
+screen, the owner picks wallets to check for incoming payments about every
+15 minutes with the app closed (WorkManager; no Flutter engine starts). For
+each, a watch state is kept (`kn-sync/src/watch.rs`): network, mode,
+primary address, private view key, public spend key, subaddress counts,
+scanned height and recent block hashes, transactions already announced,
+and the node or the light wallet server the owner agreed to. Never the
+spend key or seed (unit-tested; the format refuses unknown fields). It is
+encrypted with AES-GCM under a non-exportable Android Keystore key, bound
+to the wallet id, in the app's no-backup directory. The key has no
+user-authentication requirement, so checks run with the phone locked;
+whoever can run code as Kilonova on the device (or root) can therefore
+read the chosen wallets' view keys and see their incoming payments, but
+not spend. Copied off the device, the files are useless without the
+Keystore key. Turning checks off, taking a wallet off the list or deleting
+the wallet deletes its watch state; with none left, the key too, and the
+periodic work is cancelled. The upgrade that introduced checks turns the
+old background sync setting off. Checks use the wallet's sync circuit and
+the app's current proxy, node and pinned certificates (read from its
+settings); with a proxy set and not answering, a check is skipped, never
+sent directly. In LWS mode the view key goes only to the server the owner
+agreed to for that wallet; if the app's server setting changed, checks
+skip. In full mode a check is a view-only scan (`sync_with`, at most 1,440
+blocks or one minute per run; a wallet more than a week behind skips to the
+last day), so it finds incoming payments and pool payments but not spends.
+What remains: the node or server sees a request about every 15 minutes
+from the wallet's circuit, including while the app is closed, which says
+the phone is on and checking; a node can still hide payments from a check
+as it can from a sync.
 
 **Malicious dependency or build pipeline.** Could ship code that leaks keys.
 Mitigations: few dependencies with exact pins for crypto crates, reviewed

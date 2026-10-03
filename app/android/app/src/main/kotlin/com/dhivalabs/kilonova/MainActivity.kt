@@ -9,6 +9,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterFragmentActivity() {
     // Registered for its result while the activity is constructed.
     private val saveDocument = SaveDocument(this)
+    private val notifications = NotificationsChannel(this)
 
     override fun onResume() {
         super.onResume()
@@ -41,7 +42,7 @@ class MainActivity : FlutterFragmentActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kilonova/biometric")
             .setMethodCallHandler(BiometricVault(this))
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kilonova/background")
-            .setMethodCallHandler(BackgroundSync(this))
+            .setMethodCallHandler(notifications)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kilonova/files")
             .setMethodCallHandler(saveDocument)
     }

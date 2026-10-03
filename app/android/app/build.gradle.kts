@@ -67,4 +67,6 @@ flutter {
 
 dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
+    // Background checks for payments, only once the owner turns them on.
+    implementation("androidx.work:work-runtime:2.10.1")
 }

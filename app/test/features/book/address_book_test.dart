@@ -66,10 +66,17 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Send'));
+    // Back on the wallet page, which rebuilds from async calls into the
+    // core: wait for each control rather than assume one settle is enough.
+    final send = find.widgetWithText(FilledButton, 'Send');
+    await pumpUntilFound(tester, send);
+    await tester.tap(send);
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Choose from address book'));
+    final pick = find.byTooltip('Choose from address book');
+    await pumpUntilFound(tester, pick);
+    await tester.tap(pick);
     await tester.pumpAndSettle();
+    await pumpUntilFound(tester, find.text('Ana'));
     await tester.tap(find.text('Ana'));
     await tester.pumpAndSettle();
     final field = tester.widget<TextField>(fieldWithLabel('To'));

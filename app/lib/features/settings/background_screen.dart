@@ -8,9 +8,13 @@ import '../../theme/tokens.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/kn_card.dart';
 import '../wallets/wallet_registry.dart';
+import 'background_consent_screen.dart';
 import 'push_screen.dart';
 
-/// Payment notifications and background sync. Both start off.
+/// Payment notifications, and background work: checks for payments with
+/// the app closed (Android) or syncing with the window closed (Linux,
+/// Windows). Everything starts off; background work is turned on only
+/// through the consent screen.
 class BackgroundScreen extends StatefulWidget {
   const BackgroundScreen({super.key, required this.registry, this.desktop});
 
@@ -27,27 +31,69 @@ class BackgroundScreen extends StatefulWidget {
 class _BackgroundScreenState extends State<BackgroundScreen> {
   late Preferences _prefs = widget.registry.preferences;
   bool _denied = false;
+  int _checked = 0;
 
-  Future<void> _save(Preferences next) async {
-    var allowed = true;
-    if (next.notifyIncoming && !_prefs.notifyIncoming) {
-      allowed = await widget.registry.notifier.requestPermission();
+  @override
+  void initState() {
+    super.initState();
+    _loadChecked();
+  }
+
+  Future<void> _loadChecked() async {
+    final ids = await widget.registry.checkedWallets();
+    if (mounted) {
+      setState(() {
+        _checked = ids.length;
+        _prefs = widget.registry.preferences;
+      });
     }
+  }
+
+  Future<void> _notify(bool on) async {
+    var allowed = true;
+    if (on) allowed = await widget.registry.notifier.requestPermission();
+    final next = Preferences(
+      notifyIncoming: on,
+      backgroundSync: _prefs.backgroundSync,
+      confirmLwsPayments: _prefs.confirmLwsPayments,
+      broadcastElsewhere: _prefs.broadcastElsewhere,
+    );
     await setPreferences(preferences: next);
     widget.registry.preferences = next;
     if (mounted) {
       setState(() {
         _prefs = next;
-        _denied = next.notifyIncoming && !allowed;
+        _denied = on && !allowed;
       });
     }
+  }
+
+  /// Turning background work on goes through the consent screen; turning
+  /// it off deletes what was kept.
+  Future<void> _background(bool on, {required bool desktop}) async {
+    if (on) {
+      final agreed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => BackgroundConsentScreen(
+            registry: widget.registry,
+            desktop: desktop,
+          ),
+        ),
+      );
+      if (agreed == true && desktop) {
+        await widget.registry.setBackgroundChecks(on: true);
+      }
+    } else {
+      await widget.registry.setBackgroundChecks(on: false);
+    }
+    await _loadChecked();
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
-    final background = widget.registry.notifier.supportsBackgroundSync;
+    final checks = widget.registry.background.supported;
     final desktop = widget.desktop ?? DesktopShell.supported;
     final phone = context.isPhoneWidth;
     final push = widget.registry.push.supported;
@@ -70,33 +116,39 @@ class _BackgroundScreenState extends State<BackgroundScreen> {
                       subtitle: Text(l.notifyIncomingHelp),
                       trailing: Switch(
                         value: _prefs.notifyIncoming,
-                        onChanged: (on) => _save(
-                          Preferences(
-                            notifyIncoming: on,
-                            backgroundSync: _prefs.backgroundSync,
-                            confirmLwsPayments: _prefs.confirmLwsPayments,
-                            broadcastElsewhere: _prefs.broadcastElsewhere,
-                          ),
-                        ),
+                        onChanged: _notify,
                       ),
                     ),
-                    if (background)
+                    if (checks) ...[
                       KnRow(
-                        title: Text(l.backgroundSyncLabel),
-                        subtitle: Text(l.backgroundSyncHelp),
+                        title: Text(l.checksLabel),
+                        subtitle: Text(
+                          _prefs.backgroundSync
+                              ? l.checksOnHelp(_checked)
+                              : l.checksOffHelp,
+                        ),
                         trailing: Switch(
                           value: _prefs.backgroundSync,
-                          onChanged: (on) => _save(
-                            Preferences(
-                              notifyIncoming: _prefs.notifyIncoming,
-                              backgroundSync: on,
-                              confirmLwsPayments: _prefs.confirmLwsPayments,
-                              broadcastElsewhere: _prefs.broadcastElsewhere,
-                            ),
-                          ),
+                          onChanged: (on) => _background(on, desktop: false),
                         ),
                       ),
-                    if (!background && desktop)
+                      if (_prefs.backgroundSync)
+                        KnRow(
+                          title: Text(l.checksWalletsRow),
+                          subtitle: Text(l.checksWalletsHelp),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => BackgroundWalletsScreen(
+                                  registry: widget.registry,
+                                ),
+                              ),
+                            );
+                            await _loadChecked();
+                          },
+                        ),
+                    ],
+                    if (!checks && desktop)
                       KnRow(
                         title: Text(l.keepSyncingWindowLabel),
                         subtitle: Text(
@@ -106,14 +158,7 @@ class _BackgroundScreenState extends State<BackgroundScreen> {
                         ),
                         trailing: Switch(
                           value: _prefs.backgroundSync,
-                          onChanged: (on) => _save(
-                            Preferences(
-                              notifyIncoming: _prefs.notifyIncoming,
-                              backgroundSync: on,
-                              confirmLwsPayments: _prefs.confirmLwsPayments,
-                              broadcastElsewhere: _prefs.broadcastElsewhere,
-                            ),
-                          ),
+                          onChanged: (on) => _background(on, desktop: true),
                         ),
                       ),
                     if (push)
@@ -130,7 +175,7 @@ class _BackgroundScreenState extends State<BackgroundScreen> {
                   ]),
                 ),
               ),
-              if (!background) ...[
+              if (!checks) ...[
                 const SizedBox(height: KnSpace.md),
                 Text(l.backgroundDesktopNote, style: text.bodyMedium),
               ],

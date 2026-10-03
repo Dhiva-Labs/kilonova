@@ -503,14 +503,10 @@
   "notifyPaymentBody": "+{amount} XMR",
   "notifyPaymentPending": "+{amount} XMR, waiting for a block",
   "notifyPaymentPublic": "Kilonova: payment received",
-  "keepAliveTitle": "Kilonova is syncing",
-  "keepAliveText": "{count, plural, =1{1 wallet stays unlocked and synced} other{{count} wallets stay unlocked and synced}}",
   "backgroundTitle": "Notifications and background",
   "backgroundSubtitle": "Payment notifications and syncing in the background",
   "notifyIncomingLabel": "Notify me about incoming payments",
   "notifyIncomingHelp": "While Kilonova is not on screen. The lock screen shows only that a payment arrived, not the amount.",
-  "backgroundSyncLabel": "Keep wallets syncing in the background",
-  "backgroundSyncHelp": "Unlocked wallets stay unlocked when you leave Kilonova, so they keep syncing and can notify you. Anyone who opens the app on this phone can then see and spend from them. Android shows an ongoing notification while this happens and may stop it after some hours.",
   "backgroundDesktopNote": "On this computer, wallets keep syncing while Kilonova is open, even when its window is hidden.",
   "notifyDenied": "Notifications are blocked for Kilonova in the system settings.",
   "@notifyPaymentTitle": {
@@ -531,13 +527,6 @@
     "placeholders": {
       "amount": {
         "type": "String"
-      }
-    }
-  },
-  "@keepAliveText": {
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },
@@ -916,5 +905,47 @@
   "trayOpen": "Open Kilonova",
   "trayQuit": "Quit",
   "trayMissingTitle": "Kilonova is still syncing",
-  "trayMissingBody": "Your desktop has no tray, so the window was minimized instead of closed."
+  "trayMissingBody": "Your desktop has no tray, so the window was minimized instead of closed.",
+  "checksLabel": "Check for payments when Kilonova is closed",
+  "checksOffHelp": "Off. Kilonova looks for payments only while it is open.",
+  "checksOnHelp": "{count, plural, =1{On for 1 wallet} other{On for {count} wallets}}",
+  "@checksOnHelp": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "checksWalletsRow": "Wallets to check",
+  "checksWalletsHelp": "Choose which wallets are checked",
+  "checksExplainWhat": "Kilonova checks the wallets you choose for incoming payments about every 15 minutes, even when the app is closed, and notifies you when one arrives.",
+  "checksExplainKey": "To do that without your password, each chosen wallet's view key is kept on this phone, locked by the phone's secure hardware. A view key can see incoming payments but cannot spend.",
+  "checksExplainSeed": "Your seed and spend key never leave the password-protected wallet file. Wallets still lock when you leave Kilonova.",
+  "checksExplainCost": "Checks use some battery and data. They go to the same node or light wallet server as the wallet, through your proxy if you set one.",
+  "checksExplainOff": "You can turn this off any time. The stored view keys are then deleted.",
+  "checksNeedNotifications": "Kilonova needs to show notifications for this. Allow notifications for Kilonova in the system settings, then try again.",
+  "checksChooseHelp": "Each wallet asks for its password once, to copy its view key.",
+  "checksPasswordTitle": "Check {wallet}",
+  "@checksPasswordTitle": {
+    "placeholders": {
+      "wallet": {
+        "type": "String"
+      }
+    }
+  },
+  "checksPasswordPrompt": "Enter this wallet's password. Kilonova keeps its view key so it can check for payments while closed.",
+  "checksColdWallet": "Offline wallets never go online, so they cannot be checked.",
+  "checksLwsConsent": "Open this wallet first and agree to share its view key with your light wallet server.",
+  "checksSaveFailed": "Could not save this. Try again.",
+  "checksBatteryEyebrow": "Battery",
+  "checksBatteryHelp": "Android may delay checks to save battery. To let them run on time, let Kilonova run without battery limits.",
+  "checksBatteryAction": "Open battery settings",
+  "checksBatteryUnrestricted": "Kilonova runs without battery limits.",
+  "checksTurnOnAction": "Turn on",
+  "checksNoWallets": "You have no wallets that can be checked.",
+  "keepSyncingConsentRisk": "Anyone using this computer meanwhile can open those wallets from the tray.",
+  "keepSyncingConsentQuit": "Once you quit Kilonova, nothing checks for payments. This computer has no checks while the app is closed.",
+  "keepSyncingConsentCost": "It uses some battery and data. You can turn this off any time.",
+  "checksTitle": "Background checks",
+  "keepSyncingTitle": "Keep syncing"
 }
