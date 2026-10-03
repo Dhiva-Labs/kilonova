@@ -7,7 +7,7 @@ use monero_daemon_rpc::MoneroDaemon;
 use monero_interface::{ProvidesBlockchain as _, ProvidesBlockchainMeta as _};
 
 use crate::SyncError;
-use crate::node::{Http, NodeUrl, connect};
+use crate::node::{Circuit, Http, NodeUrl, connect};
 
 /// Blocks below the lower of the two tips that are compared, so normal
 /// propagation delay and one-block reorganizations do not count.
@@ -23,7 +23,8 @@ pub struct Opinion {
     pub theirs: u64,
 }
 
-/// Compares `ours` with the node at `reference` at a height both have.
+/// Compares `ours` with the node at `reference` at a height both have,
+/// reaching `reference` over `circuit`.
 ///
 /// # Errors
 ///
@@ -33,8 +34,9 @@ pub async fn second_opinion(
     ours: &MoneroDaemon<Http>,
     reference: &NodeUrl,
     network: Network,
+    circuit: &Circuit,
 ) -> Result<Opinion, SyncError> {
-    let (theirs, _) = connect(reference, network).await?;
+    let (theirs, _) = connect(reference, network, circuit).await?;
     let our_tip = ours.latest_block_number().await?;
     let their_tip = theirs.latest_block_number().await?;
     let Some(height) = our_tip.min(their_tip).checked_sub(OPINION_DEPTH) else {

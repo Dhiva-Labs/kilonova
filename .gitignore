@@ -14,3 +14,4 @@ build/
 core/fuzz/target/
 core/fuzz/artifacts/
 core/fuzz/coverage/
+*.snap

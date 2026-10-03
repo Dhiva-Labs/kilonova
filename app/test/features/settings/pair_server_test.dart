@@ -35,4 +35,26 @@ void main() {
     );
     expect(saved, contains('example.onion'));
   });
+
+  testWidgets('real onion addresses fit on a phone', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(await testApp(tester));
+    await openSettings(tester);
+    await tester.tap(find.text('Pair with your server'));
+    await tester.pumpAndSettle();
+
+    const onion =
+        'ciczdlujjvdfuvwndzmqpefmndzxelyh3cbip4eqwet6it3tmuwgh2ad.onion';
+    await tester.enterText(
+      find.byType(TextField),
+      'kilonova-server:?network=testnet'
+      '&node=http%3A%2F%2F$onion%3A18089&lws=http%3A%2F%2F$onion%3A8443'
+      '&push=http%3A%2F%2F$onion',
+    );
+    await tester.tap(find.text('Pair'));
+    await pumpUntilFound(tester, find.text('PUSH'));
+    expect(tester.takeException(), isNull);
+  });
 }

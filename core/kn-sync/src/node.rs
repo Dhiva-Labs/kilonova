@@ -132,12 +132,14 @@ impl ProxyUrl {
 }
 
 /// Checks that a SOCKS5 proxy answers at `proxy`, with the protocol's
-/// greeting only: nothing is sent to any other host.
+/// greeting only: nothing is sent to any other host. Also learns whether
+/// the proxy takes a username and password, which Tor uses to keep
+/// connections with different credentials on different circuits.
 ///
 /// # Errors
 ///
 /// [`SyncError::Node`] if nothing answers or it is not a SOCKS5 proxy that
-/// accepts connections without a password.
+/// accepts connections without a password of its own.
 pub async fn check_proxy(proxy: &ProxyUrl) -> Result<(), SyncError> {
     use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
     let url = reqwest::Url::parse(proxy.as_str()).map_err(|_| SyncError::BadProxyUrl)?;
@@ -148,36 +150,174 @@ pub async fn check_proxy(proxy: &ProxyUrl) -> Result<(), SyncError> {
         let mut stream = tokio::net::TcpStream::connect((host, port))
             .await
             .map_err(unreachable)?;
-        // Version 5, one method offered: no authentication.
-        stream.write_all(&[5, 1, 0]).await.map_err(unreachable)?;
+        // Version 5, two methods offered: none, and username/password
+        // (which Tor accepts with any values and uses only to isolate).
+        stream.write_all(&[5, 2, 0, 2]).await.map_err(unreachable)?;
         let mut reply = [0u8; 2];
         stream.read_exact(&mut reply).await.map_err(unreachable)?;
-        if reply == [5, 0] {
-            Ok(())
-        } else {
-            Err(SyncError::Node(
+        match reply {
+            [5, 0] => Ok(false),
+            [5, 2] => Ok(true),
+            _ => Err(SyncError::Node(
                 "not a SOCKS5 proxy without a password".into(),
-            ))
+            )),
         }
     };
-    tokio::time::timeout(Duration::from_secs(10), exchange)
+    let isolates = tokio::time::timeout(Duration::from_secs(10), exchange)
         .await
-        .map_err(|_| SyncError::Node("proxy did not answer".into()))?
+        .map_err(|_| SyncError::Node("proxy did not answer".into()))??;
+    let mut current = PROXY.write().unwrap_or_else(PoisonError::into_inner);
+    if let Some(state) = current.as_mut()
+        && state.url == *proxy
+    {
+        state.isolates = Some(isolates);
+    }
+    Ok(())
 }
 
-static PROXY: RwLock<Option<ProxyUrl>> = RwLock::new(None);
+/// Learns whether the proxy set with [`set_proxy`] takes credentials, once
+/// per proxy, if that is not known yet. A proxy that does not answer is
+/// asked again next time.
+pub async fn probe_proxy() {
+    let unknown = PROXY
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .as_ref()
+        .filter(|s| s.isolates.is_none())
+        .map(|s| s.url.clone());
+    if let Some(url) = unknown {
+        let _ = check_proxy(&url).await;
+    }
+}
+
+struct ProxyState {
+    url: ProxyUrl,
+    /// Whether the proxy accepts a username and password; `None` until
+    /// [`check_proxy`] has asked.
+    isolates: Option<bool>,
+}
+
+static PROXY: RwLock<Option<ProxyState>> = RwLock::new(None);
 
 /// Sends every later request, to nodes and light wallet servers alike,
 /// through `proxy`, or directly with `None`. Clients already built keep
 /// their setting; the app restarts sync after changing it.
 pub fn set_proxy(proxy: Option<ProxyUrl>) {
-    *PROXY.write().unwrap_or_else(PoisonError::into_inner) = proxy;
+    *PROXY.write().unwrap_or_else(PoisonError::into_inner) = proxy.map(|url| ProxyState {
+        url,
+        isolates: None,
+    });
 }
 
 /// The proxy set with [`set_proxy`].
 #[must_use]
 pub fn proxy() -> Option<ProxyUrl> {
-    PROXY.read().unwrap_or_else(PoisonError::into_inner).clone()
+    PROXY
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .as_ref()
+        .map(|s| s.url.clone())
+}
+
+/// Why a connection is made. Each purpose of each wallet gets its own
+/// SOCKS credentials, and so its own Tor circuit.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Purpose {
+    /// Following the chain, or the light wallet server's reports.
+    Sync,
+    /// Preparing and publishing a transaction.
+    Broadcast,
+    /// Confirming a light wallet server's payments with a node.
+    CrossCheck,
+    /// Comparing the wallet's node with an independent one.
+    Opinion,
+    /// The fiat price.
+    Price,
+    /// Testing nodes and servers, and reading their certificates.
+    Discovery,
+    /// Checking a payment proof.
+    Proof,
+}
+
+impl Purpose {
+    fn tag(self) -> &'static str {
+        match self {
+            Self::Sync => "sync",
+            Self::Broadcast => "broadcast",
+            Self::CrossCheck => "cross-check",
+            Self::Opinion => "opinion",
+            Self::Price => "price",
+            Self::Discovery => "discovery",
+            Self::Proof => "proof",
+        }
+    }
+}
+
+/// Who a connection is for: a wallet, by its id (which is not secret), and
+/// a [`Purpose`]. Through Tor, connections for different circuits never
+/// share an exit, so a node cannot link two wallets, or one wallet's sync
+/// and its broadcast, by address.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Circuit {
+    wallet: String,
+    purpose: Purpose,
+}
+
+impl Circuit {
+    #[must_use]
+    pub fn new(wallet: &str, purpose: Purpose) -> Self {
+        Self {
+            wallet: wallet.to_owned(),
+            purpose,
+        }
+    }
+
+    /// For requests that belong to no wallet: the price, node checks.
+    #[must_use]
+    pub fn app(purpose: Purpose) -> Self {
+        Self::new("", purpose)
+    }
+
+    /// The SOCKS5 username and password for this circuit: a hash of the
+    /// wallet id and purpose, nothing secret, the same every time.
+    #[must_use]
+    pub fn socks_credentials(&self) -> (String, String) {
+        let mut hash = ring::digest::Context::new(&ring::digest::SHA256);
+        hash.update(b"kilonova-socks");
+        hash.update(&(self.wallet.len() as u64).to_le_bytes());
+        hash.update(self.wallet.as_bytes());
+        hash.update(self.purpose.tag().as_bytes());
+        let digest = hash.finish();
+        let bytes = digest.as_ref();
+        (hex::encode(&bytes[..12]), hex::encode(&bytes[12..24]))
+    }
+}
+
+/// A client builder that goes through the proxy from [`set_proxy`] with
+/// `circuit`'s credentials, or directly when none is set.
+pub(crate) fn client_builder(
+    target: &NodeUrl,
+    circuit: &Circuit,
+) -> Result<reqwest::ClientBuilder, SyncError> {
+    let state = PROXY.read().unwrap_or_else(PoisonError::into_inner);
+    match state.as_ref() {
+        None if target.is_onion() => Err(SyncError::NeedsProxy),
+        None => Ok(reqwest::Client::builder().no_proxy()),
+        Some(state) => {
+            let mut url =
+                reqwest::Url::parse(state.url.as_str()).map_err(|_| SyncError::BadProxyUrl)?;
+            // Credentials the owner put in the address are theirs to keep;
+            // a proxy known to refuse them gets none.
+            if url.username().is_empty() && state.isolates != Some(false) {
+                let (user, password) = circuit.socks_credentials();
+                url.set_username(&user)
+                    .and_then(|()| url.set_password(Some(&password)))
+                    .map_err(|()| SyncError::BadProxyUrl)?;
+            }
+            Ok(reqwest::Client::builder()
+                .proxy(reqwest::Proxy::all(url.as_str()).map_err(|_| SyncError::BadProxyUrl)?))
+        }
+    }
 }
 
 /// Community nodes shipped with the app, for `network`. Run by third
@@ -215,20 +355,14 @@ pub struct Http {
 
 /// The HTTP client every Kilonova network request to `target` uses: rustls
 /// on ring with Mozilla's roots, timeouts, no identifying user agent, and
-/// the proxy from [`set_proxy`] (system proxy settings are ignored, so
-/// traffic goes exactly where the user chose).
-pub(crate) fn http_client(target: &NodeUrl) -> Result<reqwest::Client, SyncError> {
-    let proxy = proxy();
-    if proxy.is_none() && target.is_onion() {
-        return Err(SyncError::NeedsProxy);
-    }
+/// the proxy from [`set_proxy`] with `circuit`'s credentials (system proxy
+/// settings are ignored, so traffic goes exactly where the user chose).
+pub(crate) fn http_client(
+    target: &NodeUrl,
+    circuit: &Circuit,
+) -> Result<reqwest::Client, SyncError> {
     let tls = crate::tls::config_for(target);
-    let builder = match proxy {
-        Some(p) => reqwest::Client::builder()
-            .proxy(reqwest::Proxy::all(p.as_str()).map_err(|_| SyncError::BadProxyUrl)?),
-        None => reqwest::Client::builder().no_proxy(),
-    };
-    builder
+    client_builder(target, circuit)?
         .tls_backend_preconfigured(tls)
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_mins(2))
@@ -238,12 +372,15 @@ pub(crate) fn http_client(target: &NodeUrl) -> Result<reqwest::Client, SyncError
 }
 
 impl Http {
+    /// A transport for `circuit`; every connection it opens uses that
+    /// circuit's proxy credentials.
+    ///
     /// # Errors
     ///
     /// Fails only if the TLS stack cannot be set up.
-    pub fn new(node: &NodeUrl) -> Result<Self, SyncError> {
+    pub fn new(node: &NodeUrl, circuit: &Circuit) -> Result<Self, SyncError> {
         Ok(Self {
-            client: http_client(node)?,
+            client: http_client(node, circuit)?,
             base: node.as_str().into(),
         })
     }
@@ -319,7 +456,7 @@ pub struct NodeStatus {
     pub test_chain: bool,
 }
 
-/// Connects to `node` and checks it serves `network`.
+/// Connects to `node` for `circuit` and checks it serves `network`.
 ///
 /// # Errors
 ///
@@ -328,6 +465,7 @@ pub struct NodeStatus {
 pub async fn connect(
     node: &NodeUrl,
     network: Network,
+    circuit: &Circuit,
 ) -> Result<(MoneroDaemon<Http>, NodeStatus), SyncError> {
     #[derive(Deserialize)]
     struct Info {
@@ -336,7 +474,8 @@ pub async fn connect(
         target_height: u64,
     }
 
-    let daemon = MoneroDaemon::new(Http::new(node)?).await?;
+    probe_proxy().await;
+    let daemon = MoneroDaemon::new(Http::new(node, circuit)?).await?;
     let raw = daemon.rpc_call("get_info", None, 64 * 1024).await?;
     let info: Info = serde_json::from_str(&raw)
         .map_err(|_| SyncError::Node("unexpected get_info response".into()))?;
@@ -391,6 +530,26 @@ mod tests {
     }
 
     #[test]
+    fn credentials_differ_by_wallet_and_purpose_only() {
+        let a = Circuit::new("wallet-a", Purpose::Sync).socks_credentials();
+        assert_eq!(
+            a,
+            Circuit::new("wallet-a", Purpose::Sync).socks_credentials()
+        );
+        assert_ne!(
+            a,
+            Circuit::new("wallet-b", Purpose::Sync).socks_credentials()
+        );
+        assert_ne!(
+            a,
+            Circuit::new("wallet-a", Purpose::Broadcast).socks_credentials()
+        );
+        assert_ne!(a, Circuit::app(Purpose::Sync).socks_credentials());
+        assert_eq!(a.0.len(), 24);
+        assert!(a.0.bytes().all(|b| b.is_ascii_hexdigit()));
+    }
+
+    #[test]
     fn bundled_lists_are_non_empty_for_every_network() {
         for network in [Network::Mainnet, Network::Stagenet, Network::Testnet] {
             assert!(!bundled_nodes(network).is_empty());
@@ -399,12 +558,14 @@ mod tests {
 }
 
 /// What a self-hosted server's pairing code names (see `tools/selfhost`):
-/// `kilonova-server:?network=mainnet&node=<url>&lws=<url>`.
+/// `kilonova-server:?network=mainnet&node=<url>&lws=<url>&push=<url>`.
+/// `push` (ntfy, for payment pushes) is optional and newer than the rest.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ServerPairing {
     pub network: Network,
     pub node: Option<NodeUrl>,
     pub lws: Option<NodeUrl>,
+    pub push: Option<NodeUrl>,
 }
 
 impl ServerPairing {
@@ -421,6 +582,7 @@ impl ServerPairing {
         let mut network = None;
         let mut node = None;
         let mut lws = None;
+        let mut push = None;
         for pair in query.split('&').filter(|p| !p.is_empty()) {
             let (key, value) = pair.split_once('=').ok_or(SyncError::BadNodeUrl)?;
             let value = percent_decode(value).ok_or(SyncError::BadNodeUrl)?;
@@ -435,6 +597,7 @@ impl ServerPairing {
                 }
                 "node" => node = Some(NodeUrl::parse(&value)?),
                 "lws" => lws = Some(NodeUrl::parse(&value)?),
+                "push" => push = Some(NodeUrl::parse(&value)?),
                 // Later versions may add fields; ignore what is not known.
                 _ => {}
             }
@@ -446,11 +609,12 @@ impl ServerPairing {
             network: network.ok_or(SyncError::BadNodeUrl)?,
             node,
             lws,
+            push,
         })
     }
 }
 
-fn percent_decode(text: &str) -> Option<String> {
+pub(crate) fn percent_decode(text: &str) -> Option<String> {
     let bytes = text.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
@@ -485,12 +649,22 @@ mod pairing_tests {
         );
         let lws = pairing.lws.unwrap();
         assert!(lws.is_onion() && lws.is_private_channel());
+        assert_eq!(pairing.push, None, "codes from before push stay valid");
+
+        let with_push = format!("{code}&push=http%3A%2F%2F{onion}");
+        let pairing = ServerPairing::parse(&with_push).unwrap();
+        assert_eq!(pairing.push.unwrap().as_str(), format!("http://{onion}"));
+        assert_eq!(
+            pairing.lws.unwrap().as_str(),
+            format!("http://{onion}:8443")
+        );
         for bad in [
             "monero:4abc",
             "kilonova-server:?network=mainnet",
             "kilonova-server:?network=moon&node=http%3A%2F%2Fa.onion%3A1",
             "kilonova-server:?node=http%3A%2F%2Fa.onion%3A1",
             "kilonova-server:?network=mainnet&node=%ZZ",
+            "kilonova-server:?network=mainnet&lws=http%3A%2F%2Fa.onion%3A1&push=ftp%3A%2F%2Fa",
         ] {
             assert!(ServerPairing::parse(bad).is_err(), "{bad}");
         }

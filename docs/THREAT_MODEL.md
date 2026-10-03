@@ -72,6 +72,17 @@ view key; full sync avoids them.
 Mitigations: TLS to nodes and LWS servers, optional certificate pinning,
 optional proxy.
 
+**A node or server linking wallets by IP address.** Without a proxy, every
+wallet on a device shares one address. Through Tor, each wallet and each
+purpose (sync, broadcast, cross-check, second opinion, proof, price, node
+discovery and tests) connects with its own SOCKS5 username and password,
+which Tor's default stream isolation turns into separate circuits
+(`kn-sync/src/node.rs`, `Circuit`). The credentials hash the wallet id and
+purpose only, never key material. What remains: timing (wallet A's sync
+and wallet B's sync starting together), a proxy that does not isolate by
+credentials (non-Tor SOCKS proxies, or Tor with `IsolateSOCKSAuth` turned
+off), and everything a single circuit's node sees about that one wallet.
+
 **A node that lies about the chain.** Once per sync run, full-mode wallets
 compare a block ten below the tip with a bundled node they do not use (over
 the proxy); a disagreement is shown to the user. Private test chains are
@@ -83,6 +94,25 @@ payments" on, each reported transaction is fetched from the network's node
 and compared output by output (one-time key and amount or commitment);
 payments the node contradicts are dropped and stay dropped. Off by default,
 because the node then learns which transactions the wallet looks up.
+
+**The push path (self-hosted, optional).** With payment pushes on
+(`tools/selfhost`, `push-register`), the owner's monero-lws calls the kit's
+relay for each payment to a registered wallet. The relay drops the webhook
+body and posts only the wallet's topic to the kit's ntfy, so a push carries
+no amount, address or transaction id (`tools/selfhost/test-push.sh` checks
+this on regtest). The topic is 16 random bytes, never derived from the
+address or view key; whoever learns it (from the code, the device, the
+phone's UnifiedPush app or the server) learns when that wallet receives
+payments and nothing else. A push only makes the wallet sync, so a forged
+or replayed push costs a sync and a misleading "something arrived"
+notification, never a wrong balance. On Android a UnifiedPush endpoint is
+bound at the relay only if it is on the wallet's own server
+(`kn-sync/src/push.rs`, `endpoint_topic`), so pushes never pass through a
+third-party push service; the relay and ntfy are reachable only through the
+onion address, and ntfy is set to forward nothing upstream. Desktops poll
+the topic through the proxy on the wallet's sync circuit, which the server
+could link to that wallet anyway. Anyone who can reach the relay and knows
+a topic can also bind their own endpoint to it and receive its pushes.
 
 **A watching wallet (or whoever controls it) talking to a cold wallet.** The
 cold wallet holds the spend key and never goes online. It reads payments,
@@ -100,9 +130,28 @@ Mitigations: wallet files are encrypted with Argon2id and
 XChaCha20-Poly1305; Android cloud backup and device transfer are disabled for
 app data.
 
+**Someone with a backup file.** A backup (Settings, Backup) can end up on a
+USB stick or in cloud storage. It holds each chosen wallet's file and sync
+cache exactly as stored, never decrypted (so nothing the locked wallet file
+does not hold, even if the wallet was unlocked when the backup was made),
+the wallet list entries and the node, server and pinned certificate
+settings. The whole bundle is sealed with its own passphrase through the
+same Argon2id and XChaCha20-Poly1305 envelope (`kn-store/src/bundle.rs`),
+so names, networks and settings are hidden too, and the wallet files inside
+still need their own passwords. Someone who guesses a weak backup
+passphrase learns that metadata and gets copies of the locked wallet files,
+the same as copying them off the device. The app requires 12 characters for the passphrase and cannot
+recover it. Restoring never replaces a wallet already on the device: a
+clashing id or name is restored next to it under a new id or "(restored)"
+name, and bundle contents are length-checked and fuzzed
+(`core/fuzz`, `backup_bundles`).
+
 **Someone with the device, unlocked and the wallet open.** Can spend.
 Mitigations: on Android every unlocked wallet is locked when the app leaves
-the foreground; showing the seed, changing the password and deleting a
+the foreground, and on desktops when the window is closed, unless the owner
+turns on background sync (Android) or syncing with the window closed (Linux
+and Windows; the app then stays in the system tray, or minimized where
+there is no tray, until quit from there); showing the seed, changing the password and deleting a
 wallet all ask for the password again; seed screens are kept out of screenshots
 and screen recording (`FLAG_SECURE` on Android, display affinity on Windows
 10 2004 and later; Linux has no equivalent). Sending, signing on a cold

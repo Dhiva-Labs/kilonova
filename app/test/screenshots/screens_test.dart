@@ -213,14 +213,16 @@ void main() {
           matching: find.text('Show transaction key'),
         ),
       );
+      // Matches the same 64-hex shape as the tx hash: addresses are base58
+      // and much longer, so they never satisfy this, even though they are
+      // selectable text too (they get a copy button of their own now).
+      bool isHexKey(String d) =>
+          RegExp(r'^[0-9a-f]{64}$').hasMatch(d) && d != sentTxHash;
       await pumpUntil(
         tester,
         () => find
             .byWidgetPredicate(
-              (w) =>
-                  w is SelectableText &&
-                  (w.data ?? '').length >= 64 &&
-                  w.data != sentTxHash,
+              (w) => w is SelectableText && isHexKey(w.data ?? ''),
             )
             .evaluate()
             .isNotEmpty,
@@ -229,7 +231,7 @@ void main() {
       sentTxKey = tester
           .widgetList<SelectableText>(find.byType(SelectableText))
           .map((w) => w.data ?? '')
-          .firstWhere((d) => d.length >= 64 && d != sentTxHash);
+          .firstWhere(isHexKey);
       await tester.tap(find.text('Close'));
       await tester.pumpAndSettle();
       await tester.pageBack();
@@ -259,6 +261,53 @@ void main() {
       await tester.tap(find.byTooltip('Wallet options'));
       await tester.pumpAndSettle();
       await _shot(tester, '10-wallet-menu');
+
+      await tester.tap(find.text('Show seed'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(PasswordField), 'regtest password');
+      // The dialog's title and its submit button both say "Show seed".
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(AlertDialog),
+              matching: find.text('Show seed'),
+            )
+            .last,
+      );
+      await pumpUntilFound(tester, find.text('Copy seed'));
+      await _shot(tester, '10a-seed-dialog');
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Wallet options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Show keys'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(PasswordField), 'regtest password');
+      // Same shape: title and submit button both say "Show keys".
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(AlertDialog),
+              matching: find.text('Show keys'),
+            )
+            .last,
+      );
+      // Eyebrow labels render upper case, so match the warning text above
+      // them instead.
+      await pumpUntilFound(
+        tester,
+        find.text(
+          'The spend key controls your funds. The view key shows every '
+          'payment you receive. Never share either.',
+        ),
+      );
+      await _shot(tester, '10b-keys-dialog');
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Wallet options'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Address book'));
       await tester.pumpAndSettle();
       await _shot(tester, '11-address-book');
@@ -305,9 +354,13 @@ void main() {
         ('Proxy and Tor', '15-proxy'),
         ('Prices', '16-prices'),
         ('Notifications and background', '17-background'),
+        ('Backup', '17a-backup'),
+        ('Restore from backup', '17b-restore-backup'),
         ('About Kilonova', '18-about'),
         ('Privacy policy', '19-privacy'),
       ]) {
+        // The list is lazy; later rows may be below the fold.
+        await tester.scrollUntilVisible(find.text(title), 200);
         await tester.tap(find.text(title));
         await tester.pumpAndSettle();
         await _shot(tester, name);
@@ -315,6 +368,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
+      await tester.scrollUntilVisible(find.text('Light wallet servers'), -200);
       await tester.tap(find.text('Light wallet servers'));
       await tester.pumpAndSettle();
       await _shot(tester, '14-lws');

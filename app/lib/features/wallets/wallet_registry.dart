@@ -5,7 +5,10 @@ import 'package:flutter/widgets.dart' show Locale;
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../platform/biometric_unlock.dart';
+import '../../platform/desktop_shell.dart';
 import '../../platform/notifications.dart';
+import '../../platform/push.dart';
+import '../../src/rust/api/push.dart' show removePushSubscription;
 import '../../src/rust/api/preferences.dart' as prefs;
 import '../../widgets/amount.dart';
 import '../settings/price_feed.dart';
@@ -14,6 +17,7 @@ import '../../src/rust/api/requests.dart';
 import '../../src/rust/api/sync.dart';
 import '../../src/rust/api/wallets.dart';
 import '../cold/cold_transport.dart';
+import '../settings/backup_files.dart';
 
 /// The wallet list and the wallets currently unlocked, shared by every
 /// screen. Unlocked wallets are locked when the app goes to the background.
@@ -22,24 +26,56 @@ class WalletRegistry extends ChangeNotifier {
     this.biometric = const BiometricUnlock(),
     this.notifier = const Notifier(),
     this.cold = const ColdTransport(),
+    this.backupFiles = const BackupFiles(),
+    this.push = const NoPush(),
     PriceFeed? price,
   }) : price = price ?? PriceFeed();
 
   final BiometricUnlock biometric;
   final Notifier notifier;
 
+  /// Payment pushes from the owner's own server.
+  final PushChannel push;
+
+  /// Desktop: closing the window can keep the app running (see
+  /// [windowClosing]), so leaving the screen never locks by itself when
+  /// the owner chose to keep syncing.
+  bool keepsSyncingHidden = false;
+
+  /// Desktop: whether the system shows tray icons.
+  bool hasTray = false;
+
   /// How scans and file saves move cold wallet messages; a fake in tests.
   final ColdTransport cold;
 
+  /// Where backups are saved and read from; a fake in tests.
+  final BackupFiles backupFiles;
+
   /// Notifications and background sync, both off until turned on.
-  prefs.Preferences preferences = const prefs.Preferences(
+  prefs.Preferences get preferences => _preferences;
+  set preferences(prefs.Preferences value) {
+    final changed = value.notifyIncoming != _preferences.notifyIncoming;
+    _preferences = value;
+    if (changed) _reportAnnouncing();
+  }
+
+  prefs.Preferences _preferences = const prefs.Preferences(
     notifyIncoming: false,
     backgroundSync: false,
     confirmLwsPayments: false,
   );
 
-  /// False while the app is not on screen (or its window is hidden).
-  bool foreground = true;
+  /// False while the app is not on screen (or its window is hidden). Sync
+  /// is told too, so wallets at the chain tip look for blocks less often
+  /// in the background.
+  bool get foreground => _foreground;
+  set foreground(bool value) {
+    if (value == _foreground) return;
+    _foreground = value;
+    setSyncPace(foreground: value);
+  }
+
+  bool _foreground = true;
 
   /// Incoming transactions each open wallet has already shown, so only new
   /// ones are announced.
@@ -56,6 +92,9 @@ class WalletRegistry extends ChangeNotifier {
   final Map<String, OpenWallet> _open = {};
   final Map<String, ValueNotifier<SyncEvent?>> _sync = {};
   final Map<String, StreamSubscription<SyncEvent>> _syncSubscriptions = {};
+
+  /// Every wallet, on every network, in creation order.
+  List<WalletSummary> get all => _all;
 
   List<WalletSummary> on(Network network) =>
       _all.where((w) => w.network == network).toList(growable: false);
@@ -152,9 +191,11 @@ class WalletRegistry extends ChangeNotifier {
 
   /// The app left the screen. Wallets lock, unless background sync is on
   /// (Android), in which case they keep syncing behind an ongoing
-  /// notification.
+  /// notification, or the owner keeps them syncing with the window closed
+  /// (desktop).
   void paused() {
     foreground = false;
+    if (preferences.backgroundSync && keepsSyncingHidden) return;
     if (preferences.backgroundSync &&
         notifier.supportsBackgroundSync &&
         _open.isNotEmpty) {
@@ -171,6 +212,56 @@ class WalletRegistry extends ChangeNotifier {
   void resumed() {
     foreground = true;
     notifier.stopKeepAlive();
+  }
+
+  /// Desktop: the owner closed the window. Wallets lock and the app quits,
+  /// unless they keep syncing with the window closed (the same setting as
+  /// Android's background sync); then the window hides to the tray, or
+  /// is minimized where there is no tray, and notifications follow the
+  /// usual rules for an app that is not in front.
+  CloseAction windowClosing({required bool hasTray}) {
+    final action = closeAction(
+      keepSyncing: preferences.backgroundSync,
+      hasTray: hasTray,
+    );
+    if (action == CloseAction.quit) {
+      lockAll();
+    } else {
+      foreground = false;
+    }
+    return action;
+  }
+
+  /// Desktop: the window is back on screen.
+  void windowOpened() => foreground = true;
+
+  /// Tells the push channel which wallets announce payments themselves.
+  void _reportAnnouncing() {
+    final ids = preferences.notifyIncoming ? _open.keys.toSet() : <String>{};
+    push.announcing(ids).catchError((Object _) {});
+  }
+
+  /// Starts listening for payment pushes from the owner's server.
+  Future<void> startPush() => push.start(pushArrived);
+
+  /// A push said something arrived for [walletId]. An unlocked wallet
+  /// syncs right away and announces what came as usual; for a locked one
+  /// (or with payment notifications off) a notification says only that
+  /// something arrived, since the push carries no amount.
+  void pushArrived(String walletId) {
+    final summary = find(walletId);
+    if (summary == null) return;
+    final open = _open.containsKey(walletId);
+    if (open) startSync(walletId);
+    if (push.notifiesItself || foreground) return;
+    if (open && preferences.notifyIncoming) return;
+    final l = lookupAppLocalizations(const Locale('en'));
+    notifier.payment(
+      id: walletId.hashCode & 0x7fffffff,
+      title: l.pushArrivedTitle(summary.name),
+      body: l.pushArrivedBody,
+      publicTitle: l.notifyPaymentPublic,
+    );
   }
 
   void _stopSync(String id) {
@@ -193,11 +284,13 @@ class WalletRegistry extends ChangeNotifier {
     _open[id] = wallet;
     startSync(id);
     await reload();
+    _reportAnnouncing();
   }
 
   void lock(String id) {
     _stopSync(id);
     _open.remove(id)?.lock();
+    _reportAnnouncing();
     notifyListeners();
   }
 
@@ -207,6 +300,7 @@ class WalletRegistry extends ChangeNotifier {
       _stopSync(id);
       _open.remove(id)!.lock();
     }
+    _reportAnnouncing();
     notifyListeners();
   }
 
@@ -214,12 +308,19 @@ class WalletRegistry extends ChangeNotifier {
     _stopSync(id);
     _open.remove(id)?.lock();
     await biometric.disable(id);
+    try {
+      await push.unsubscribe(id);
+      await removePushSubscription(walletId: id);
+    } on Object {
+      // The wallet is gone either way; a stale topic only goes unused.
+    }
     await reload();
   }
 
   @override
   void dispose() {
     lockAll();
+    push.dispose();
     price.dispose();
     super.dispose();
   }

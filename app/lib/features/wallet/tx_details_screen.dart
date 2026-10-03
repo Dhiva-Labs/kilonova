@@ -10,6 +10,7 @@ import '../../src/rust/api/wallets.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/amount.dart';
+import '../../widgets/copy_value.dart';
 import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
 import '../../widgets/kn_field.dart';
@@ -168,7 +169,7 @@ class _TxDetailsScreenState extends State<TxDetailsScreen> {
                                         contacts[p.address]!,
                                         style: text.bodyMedium,
                                       ),
-                                    Text(
+                                    SelectableText(
                                       p.address,
                                       style: monoStyle(
                                         context,
@@ -177,6 +178,14 @@ class _TxDetailsScreenState extends State<TxDetailsScreen> {
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+                              KnIconButton(
+                                icon: const Icon(Icons.copy_outlined),
+                                tooltip: l.copyAction,
+                                onPressed: () => _copy(
+                                  p.address,
+                                  l.copiedGeneric(l.addressCopyLabel),
                                 ),
                               ),
                               if (contacts[p.address] == null)
@@ -320,7 +329,7 @@ class _TxKeyDialogState extends State<_TxKeyDialog> {
                   children: [
                     Text(l.txKeyWarning),
                     const SizedBox(height: KnSpace.md),
-                    SelectableText(key, style: monoStyle(context, size: 12)),
+                    CopyValue(label: l.transactionKeyLabel, value: key),
                   ],
                 ),
               ),
@@ -332,11 +341,6 @@ class _TxKeyDialogState extends State<_TxKeyDialog> {
             onPressed: _revealWithBiometric,
           ),
         if (key == null) KnButton.text(l.txKeyShowAction, onPressed: _reveal),
-        if (key != null)
-          KnButton.text(
-            l.copyAction,
-            onPressed: () => Clipboard.setData(ClipboardData(text: key)),
-          ),
         KnButton.text(
           l.closeAction,
           onPressed: () => Navigator.of(context).pop(),

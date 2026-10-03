@@ -47,11 +47,12 @@ void main() {
     await tester.pumpWidget(await testApp(tester));
 
     await openSettings(tester);
-    await tester.ensureVisible(find.text('About Kilonova'));
+    // Settings is a lazy list; on a phone, About is below the fold.
+    await tester.scrollUntilVisible(find.text('About Kilonova'), 200);
     await tester.pumpAndSettle();
     await tester.tap(find.text('About Kilonova'));
     await tester.pumpAndSettle();
 
-    expect(find.text('0.1.0'), findsOneWidget);
+    expect(find.text('0.3.0'), findsOneWidget);
   });
 }

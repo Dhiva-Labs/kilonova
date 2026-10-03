@@ -11,7 +11,7 @@
 use std::sync::LazyLock;
 
 use kn_sync::{
-    NodeUrl, ProxyUrl, SyncError, bundled_nodes, check_lws, check_proxy, connect,
+    Circuit, NodeUrl, ProxyUrl, Purpose, SyncError, bundled_nodes, check_lws, check_proxy, connect,
     server_certificate, set_pins, set_proxy,
 };
 use rand_core::{OsRng, RngCore};
@@ -212,7 +212,11 @@ pub fn select_node(network: Network, url: String) -> Result<(), NodeError> {
 pub fn check_node(network: Network, url: String) -> Result<NodeHealth, NodeError> {
     let url = NodeUrl::parse(&url)?;
     let (_, status) = RUNTIME
-        .block_on(connect(&url, network.into()))
+        .block_on(connect(
+            &url,
+            network.into(),
+            &Circuit::app(Purpose::Discovery),
+        ))
         .map_err(|e| explain(&url, e))?;
     Ok(NodeHealth {
         height: status.height,
@@ -287,7 +291,11 @@ pub struct LwsHealth {
 pub fn check_lws_server(network: Network, url: String) -> Result<LwsHealth, NodeError> {
     let url = NodeUrl::parse_https_default(&url)?;
     let info = RUNTIME
-        .block_on(check_lws(&url, network.into()))
+        .block_on(check_lws(
+            &url,
+            network.into(),
+            &Circuit::app(Purpose::Discovery),
+        ))
         .map_err(|e| explain(&url, e))?;
     Ok(LwsHealth {
         height: info.height,
@@ -385,7 +393,7 @@ fn parse_fingerprint(text: &str) -> Option<[u8; 32]> {
     bytes.try_into().ok()
 }
 
-fn apply_saved_pins(settings: &crate::node_settings::Settings) {
+pub(crate) fn apply_saved_pins(settings: &crate::node_settings::Settings) {
     set_pins(
         settings
             .pins
@@ -402,6 +410,9 @@ pub struct ServerPaired {
     pub node: Option<String>,
     /// The light wallet server now set, if the code named one.
     pub lws: Option<String>,
+    /// The server's push service (ntfy), if the code named one; wallets on
+    /// this network can then turn on payment pushes (see `api::push`).
+    pub push: Option<String>,
     /// The addresses are onion services and no Tor proxy is set yet.
     pub needs_tor: bool,
 }
@@ -422,12 +433,16 @@ pub fn pair_with_server(code: String) -> Result<ServerPaired, NodeError> {
     if let Some(lws) = &pairing.lws {
         set_lws_server(network, lws.as_str().to_owned())?;
     }
+    if let Some(push) = &pairing.push {
+        super::push::remember_server(network, push)?;
+    }
     let onion = pairing.node.as_ref().is_some_and(NodeUrl::is_onion)
         || pairing.lws.as_ref().is_some_and(NodeUrl::is_onion);
     Ok(ServerPaired {
         network,
         node: pairing.node.map(|n| n.as_str().to_owned()),
         lws: pairing.lws.map(|n| n.as_str().to_owned()),
+        push: pairing.push.map(|n| n.as_str().to_owned()),
         needs_tor: onion && load()?.proxy.is_none(),
     })
 }
@@ -484,6 +499,8 @@ pub fn set_network_proxy(url: Option<String>) -> Result<Option<String>, NodeErro
     settings.proxy = parsed.as_ref().map(|p| p.as_str().to_owned());
     save(&settings)?;
     set_proxy(parsed);
+    // Learn early whether the proxy takes per-wallet credentials.
+    RUNTIME.spawn(kn_sync::probe_proxy());
     Ok(settings.proxy)
 }
 
@@ -509,6 +526,7 @@ pub(crate) fn apply_saved_network_settings() {
             .as_deref()
             .and_then(|p| ProxyUrl::parse(p).ok()),
     );
+    RUNTIME.spawn(kn_sync::probe_proxy());
     apply_saved_pins(&settings);
 }
 

@@ -173,7 +173,11 @@ async fn dishonest_outputs_and_spends_are_ignored() {
         ),
     ];
     let url = serve(routes).await;
-    let server = LwsServer::new(&NodeUrl::parse(&url).unwrap()).unwrap();
+    let server = LwsServer::new(
+        &NodeUrl::parse(&url).unwrap(),
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .unwrap();
 
     let mut state = SyncState::default();
     let report = lws_sync(&server, &keys, Network::Mainnet, &[3], 0, true, &mut state)
@@ -220,7 +224,11 @@ async fn invented_payments_are_dropped_once_a_node_is_asked() {
         ("get_address_txs", json!({"transactions": []})),
     ];
     let url = serve(routes).await;
-    let server = LwsServer::new(&NodeUrl::parse(&url).unwrap()).unwrap();
+    let server = LwsServer::new(
+        &NodeUrl::parse(&url).unwrap(),
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .unwrap();
     let mut state = SyncState::default();
     lws_sync(&server, &keys, Network::Mainnet, &[1], 0, true, &mut state)
         .await
@@ -230,6 +238,7 @@ async fn invented_payments_are_dropped_once_a_node_is_asked() {
     let (daemon, _) = kn_sync::connect(
         &NodeUrl::parse("http://127.0.0.1:18181").unwrap(),
         Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
     )
     .await
     .unwrap();

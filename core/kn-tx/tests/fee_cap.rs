@@ -27,7 +27,11 @@ async fn serve(body: &'static str) -> String {
 
 async fn fee_answer(body: &'static str) -> TxError {
     let url = serve(body).await;
-    let server = LwsServer::new(&NodeUrl::parse(&url).unwrap()).unwrap();
+    let server = LwsServer::new(
+        &NodeUrl::parse(&url).unwrap(),
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .unwrap();
     let (keys, _) = WalletKeys::generate(SeedFormat::Classic);
     let to = WalletKeys::generate(SeedFormat::Classic)
         .0

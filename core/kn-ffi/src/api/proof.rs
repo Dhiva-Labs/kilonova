@@ -5,7 +5,7 @@
 //! Arguments are owned because `flutter_rust_bridge` hands them over that way.
 #![allow(clippy::needless_pass_by_value)]
 
-use kn_sync::{ProofError, check_tx_key, connect};
+use kn_sync::{Circuit, ProofError, Purpose, check_tx_key, connect};
 
 use super::network::Network;
 use super::nodes::{RUNTIME, current_node};
@@ -60,7 +60,7 @@ pub fn check_payment(
         .ok_or(ProofFailure::BadTransactionId)?;
     let node = current_node(network).map_err(|_| ProofFailure::Unreachable)?;
     let result = RUNTIME.block_on(async {
-        let (daemon, _) = connect(&node, network.into())
+        let (daemon, _) = connect(&node, network.into(), &Circuit::app(Purpose::Proof))
             .await
             .map_err(|_| ProofFailure::Unreachable)?;
         Ok::<_, ProofFailure>(check_tx_key(&daemon, network.into(), hash, &tx_key, &address).await?)

@@ -8,12 +8,16 @@
 //! <id>.knc            the wallet's sync cache, sealed with the same key
 //! ```
 //!
+//! Wallets can be exported to, and restored from, a backup bundle encrypted
+//! with a passphrase of its own (see `bundle`).
+//!
 //! The registry holds no secrets, balances or addresses, so the app can list
 //! wallets before any of them is unlocked. Each wallet file has its own
 //! password; unlocking one never unlocks another.
 
 #![forbid(unsafe_code)]
 
+mod bundle;
 mod crypto;
 
 use std::{
@@ -28,6 +32,7 @@ use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
+pub use bundle::{BundleWallet, WalletSettings, open as open_bundle};
 pub use crypto::KdfParams;
 use crypto::SealingKey;
 
@@ -77,6 +82,30 @@ pub struct WalletEntry {
     /// syncs or contacts any server.
     #[serde(default)]
     pub cold: bool,
+    /// The id written inside the wallet file and its cache, when it is not
+    /// `id`: a wallet restored from a backup next to its original keeps
+    /// its file as it was and gets a new id in the registry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_id: Option<String>,
+}
+
+impl WalletEntry {
+    /// The id the wallet file and cache were sealed with.
+    fn sealed_id(&self) -> &str {
+        self.file_id.as_deref().unwrap_or(&self.id)
+    }
+}
+
+/// A wallet added from a backup bundle.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RestoredWallet {
+    /// Its entry as now in the registry.
+    pub entry: WalletEntry,
+    /// Its name in the bundle; differs from `entry.name` when a wallet of
+    /// that name already existed.
+    pub original_name: String,
+    /// The network settings it carried, for the caller to apply.
+    pub settings: WalletSettings,
 }
 
 /// What a wallet was created or restored from. This is what the encrypted
@@ -297,6 +326,7 @@ impl Store {
             view_only: keys.is_view_only(),
             created_at,
             cold: false,
+            file_id: None,
         };
         let wallet = UnlockedWallet {
             entry,
@@ -328,7 +358,7 @@ impl Store {
                 u16::try_from(data.version).unwrap_or(u16::MAX),
             ));
         }
-        if data.wallet_id != entry.id || data.network != entry.network {
+        if data.wallet_id != entry.sealed_id() || data.network != entry.network {
             return Err(StoreError::Corrupt(
                 "this file belongs to a different wallet",
             ));
@@ -382,7 +412,7 @@ impl Store {
     ///
     /// Returns an error on I/O failure.
     pub fn save_cache(&self, wallet: &UnlockedWallet, cache: &[u8]) -> Result<(), StoreError> {
-        let id = wallet.entry.id.as_bytes();
+        let id = wallet.entry.sealed_id().as_bytes();
         let mut plaintext = Zeroizing::new(Vec::with_capacity(id.len() + 1 + cache.len()));
         plaintext.extend_from_slice(id);
         plaintext.push(b'\n');
@@ -412,7 +442,7 @@ impl Store {
             .sealing
             .open(&file)
             .map_err(|_| StoreError::Corrupt("sync cache cannot be read"))?;
-        let id = wallet.entry.id.as_bytes();
+        let id = wallet.entry.sealed_id().as_bytes();
         if plaintext.len() <= id.len()
             || &plaintext[..id.len()] != id
             || plaintext[id.len()] != b'\n'
@@ -510,6 +540,99 @@ impl Store {
         }
     }
 
+    /// One wallet as a backup holds it: the wallet file and sync cache
+    /// exactly as stored (still encrypted with the wallet's password) and
+    /// its registry entry. Works on locked wallets; settings are left
+    /// empty for the caller to fill.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError::NotFound`] for an unknown id; I/O errors.
+    pub fn backup_wallet(&self, id: &str) -> Result<BundleWallet, StoreError> {
+        let entry = self.entry(id)?;
+        let file = fs::read(self.wallet_path(&entry.id))?;
+        let cache = match fs::read(self.cache_path(&entry.id)) {
+            Ok(bytes) => Some(bytes),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+            Err(e) => return Err(e.into()),
+        };
+        Ok(BundleWallet {
+            entry,
+            settings: WalletSettings::default(),
+            file,
+            cache,
+        })
+    }
+
+    /// Encrypts `wallets` into a backup bundle with `passphrase`, using
+    /// this store's key derivation parameters.
+    ///
+    /// # Errors
+    ///
+    /// Fails only if the key cannot be derived.
+    pub fn seal_bundle(
+        &self,
+        wallets: &[BundleWallet],
+        passphrase: &[u8],
+    ) -> Result<Vec<u8>, StoreError> {
+        bundle::seal(wallets, passphrase, self.kdf)
+    }
+
+    /// Adds the wallets from an opened bundle (see [`open_bundle`]). An
+    /// existing wallet is never replaced: a wallet whose id is taken gets a
+    /// new one, and one whose name is taken is renamed "Name (restored)".
+    ///
+    /// # Errors
+    ///
+    /// I/O errors; wallets added before the failure stay added.
+    pub fn restore_bundle(
+        &self,
+        wallets: Vec<BundleWallet>,
+    ) -> Result<Vec<RestoredWallet>, StoreError> {
+        let mut entries = self.list()?;
+        let mut restored = Vec::with_capacity(wallets.len());
+        for wallet in wallets {
+            let mut entry = wallet.entry;
+            let sealed_id = entry.sealed_id().to_owned();
+            let taken = |id: &str, entries: &[WalletEntry]| {
+                entries.iter().any(|e| e.id == id)
+                    || self.wallet_path(id).exists()
+                    || self.cache_path(id).exists()
+            };
+            if taken(&entry.id, &entries) {
+                let mut id = new_id();
+                while taken(&id, &entries) {
+                    id = new_id();
+                }
+                entry.id = id;
+            }
+            entry.file_id = (entry.id != sealed_id).then_some(sealed_id);
+            let original_name = entry.name.trim().to_owned();
+            entry.name.clone_from(&original_name);
+            let mut n = 1;
+            while entries.iter().any(|e| e.name == entry.name) {
+                entry.name = if n == 1 {
+                    format!("{original_name} (restored)")
+                } else {
+                    format!("{original_name} (restored {n})")
+                };
+                n += 1;
+            }
+            write_new(&self.wallet_path(&entry.id), &wallet.file)?;
+            if let Some(cache) = &wallet.cache {
+                write_new(&self.cache_path(&entry.id), cache)?;
+            }
+            entries.push(entry.clone());
+            self.write_registry(&entries)?;
+            restored.push(RestoredWallet {
+                entry,
+                original_name,
+                settings: wallet.settings,
+            });
+        }
+        Ok(restored)
+    }
+
     fn entry(&self, id: &str) -> Result<WalletEntry, StoreError> {
         self.list()?
             .into_iter()
@@ -584,6 +707,17 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), StoreError> {
     Ok(())
 }
 
+/// Writes a file that must not exist yet; never replaces one.
+fn write_new(path: &Path, bytes: &[u8]) -> Result<(), StoreError> {
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    Ok(())
+}
+
 fn new_id() -> String {
     let mut bytes = [0u8; 16];
     OsRng.fill_bytes(&mut bytes);
@@ -608,6 +742,13 @@ pub mod fuzzing {
     pub fn contents(data: &[u8]) {
         let _ = serde_json::from_slice::<super::WalletData>(data);
         let _ = serde_json::from_slice::<Vec<super::WalletEntry>>(data);
+    }
+
+    /// Reads a backup bundle's header and, as if it were decrypted, its
+    /// payload (decryption is too slow to fuzz).
+    pub fn bundle(data: &[u8]) {
+        let _ = super::bundle::parse_header(data);
+        let _ = super::bundle::parse_payload(data);
     }
 }
 

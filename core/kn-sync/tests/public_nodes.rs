@@ -16,7 +16,13 @@ async fn every_bundled_node_answers_on_its_network() {
     let mut failures = Vec::new();
     for network in [Network::Mainnet, Network::Stagenet, Network::Testnet] {
         for node in bundled_nodes(network) {
-            match connect(&node, network).await {
+            match connect(
+                &node,
+                network,
+                &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+            )
+            .await
+            {
                 Ok((_, status)) if status.height + 10 >= status.target_height => {}
                 Ok((_, status)) => failures.push(format!(
                     "{}: behind ({} of {})",
@@ -39,7 +45,13 @@ async fn every_bundled_node_answers_on_its_network() {
 #[ignore = "needs internet access"]
 async fn scans_recent_stagenet_blocks_from_a_public_node() {
     let node = &bundled_nodes(Network::Stagenet)[0];
-    let (daemon, status) = connect(node, Network::Stagenet).await.unwrap();
+    let (daemon, status) = connect(
+        node,
+        Network::Stagenet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap();
     let (keys, _) = WalletKeys::generate(SeedFormat::Polyseed);
     let mut state = SyncState::starting_at(status.height - 20);
     let mut reports = 0;
@@ -65,7 +77,12 @@ async fn scans_recent_stagenet_blocks_from_a_public_node() {
 async fn refuses_a_node_on_another_network() {
     let node = &bundled_nodes(Network::Stagenet)[0];
     assert!(matches!(
-        connect(node, Network::Mainnet).await,
+        connect(
+            node,
+            Network::Mainnet,
+            &kn_sync::Circuit::app(kn_sync::Purpose::Sync)
+        )
+        .await,
         Err(kn_sync::SyncError::WrongNetwork)
     ));
 }

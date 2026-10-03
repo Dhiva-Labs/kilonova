@@ -63,6 +63,8 @@ void main() {
     'mined funds show up as balance and history',
     (tester) async {
       useDesktopWindow(tester);
+      // History is a lazy list: tall enough that all 12 rows are built.
+      tester.view.physicalSize = const Size(1280, 2200);
       await tester.runAsync(() async {
         await selectNode(network: Network.mainnet, url: _node);
         final seed = await generateSeed(format: SeedFormat.classic);
@@ -103,6 +105,8 @@ void main() {
     'an LWS-mode wallet syncs through monero-lws after consent',
     (tester) async {
       useDesktopWindow(tester);
+      // History is a lazy list: tall enough that all 12 rows are built.
+      tester.view.physicalSize = const Size(1280, 2200);
       late String address;
       await tester.runAsync(() async {
         await setLwsServer(network: Network.mainnet, url: _lws);
@@ -319,6 +323,8 @@ void main() {
       );
 
       registry.foreground = false;
+      // Sync pace is process-wide; later tests expect the foreground pace.
+      addTearDown(() => registry.foreground = true);
       await tester.runAsync(() async {
         final send = await sender.prepareSend(
           payments: [
@@ -524,7 +530,9 @@ void main() {
   testWidgets(
     'a payment request is marked paid once its payment confirms',
     (tester) async {
-      final registry = WalletRegistry(price: PriceFeed(fetch: () async => null));
+      final registry = WalletRegistry(
+        price: PriceFeed(fetch: () async => null),
+      );
       late OpenWallet payer;
       late OpenWallet receiver;
       late RequestRow request;
@@ -564,9 +572,7 @@ void main() {
 
       await tester.runAsync(() async {
         final send = await payer.prepareSend(
-          payments: [
-            Payment(address: request.address, amount: request.amount),
-          ],
+          payments: [Payment(address: request.address, amount: request.amount)],
           priority: FeePriority.normal,
         );
         await payer.confirmSend(send: send, password: 'regtest password');

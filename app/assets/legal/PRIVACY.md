@@ -24,6 +24,21 @@ terms, what the app does with your information.
 We cannot see any of this, recover it, or reset your password. If you lose
 your seed and your password, nobody can restore your wallet.
 
+### Backups you make
+
+Settings, Backup saves the wallets you choose to one file, in a place you
+pick. The file holds each wallet's file and sync progress exactly as they
+are stored (still locked with that wallet's password, so the seed and keys
+inside stay encrypted with it), the wallet's name, network and sync mode,
+and the node, light wallet server and pinned certificates it used. Labels,
+the address book, notes and payment requests are inside the wallet file and
+come along with it. The whole file is encrypted again with a backup
+passphrase you choose (Argon2id and XChaCha20-Poly1305), separate from your
+wallet passwords. Without that passphrase nobody can read the file, not
+even which wallets are in it, and nobody can recover the passphrase for
+you. The app never sends a backup anywhere; Android's own cloud backup stays
+off for app data, so where the file goes is up to you.
+
 ## Who the app connects to
 
 ### Monero node (Full mode)
@@ -81,6 +96,30 @@ server on your own machine as a Tor onion service. Its pairing code holds the
 onion address; anyone who has it can use your server, so show it only to your
 own devices.
 
+### Payment pushes from your server (optional, off by default)
+
+The kit can also tell you when a payment reaches a wallet. You turn this on
+per wallet: `push-register` on your server makes a random topic (not
+derived from any key) and tells your light wallet server to call the kit's
+relay when a payment to that wallet arrives. The relay throws away what the
+light wallet server sends (amount, transaction id) and passes on only the
+topic. The push says "something arrived", nothing more; the app then syncs
+to show the amount.
+
+- **On Android**, pushes come through a UnifiedPush app you choose, such as
+  ntfy, set to use your own server's onion address. Kilonova gives your
+  server's relay the address that app was given, so the relay can pass
+  pushes on to it; it refuses any address that is not on your own server,
+  so no other push service is involved. Kilonova does not use Google's push
+  service. The UnifiedPush app learns the topic and when pushes arrive.
+- **On Linux and Windows**, Kilonova asks your server for new pushes about
+  once a minute while it runs, through your proxy.
+
+Your server learns when you are online (as it does when you sync) and when
+the wallet receives payments (which it already sees). Anyone who learns the
+topic, from the code or your device, learns when that wallet receives
+payments, not how much. The topic is kept in the app's private folder.
+
 ### Offline (cold) wallets
 
 A wallet marked offline never connects to anything. It signs for a
@@ -115,7 +154,14 @@ or font/CDN providers. Fonts and icons are bundled with the app.
 - Run your own Monero node, or your own monero-lws server.
 - Turn on Settings, Proxy and Tor. Every connection then goes through Tor (or
   your SOCKS5 proxy), host names are looked up through it, and onion nodes
-  can be used.
+  can be used. Each wallet, and each kind of request of a wallet (sync,
+  sending, checks against a second node, payment proofs, prices, testing
+  nodes), uses its own SOCKS username and password. Tor puts connections
+  with different credentials on different circuits, so a node cannot tell
+  from the exit address that two of your wallets, or one wallet's sync and
+  its payment, come from the same phone. The credentials are a hash of the
+  wallet's internal id and the kind of request, nothing secret; a proxy
+  that is not Tor and does not ask for a password is sent none.
 - Leave fiat prices off.
 
 ## Permissions
@@ -133,6 +179,10 @@ Kilonova does not ask for the microphone, contacts, location or shared storage.
   wallets stay unlocked when you leave the app so they keep syncing, behind an
   ongoing notification. Anyone who opens Kilonova on your phone during that
   time can use those wallets.
+- **Syncing with the window closed (Linux, Windows):** off by default. If you
+  turn it on, closing the window hides Kilonova in the system tray and
+  unlocked wallets stay unlocked and keep syncing until you quit from the
+  tray. Anyone using your computer meanwhile can open them from the tray.
 - **Network:** to reach the node, server or price service you configured.
 
 ## Downloads and app stores
@@ -159,6 +209,8 @@ Security issues: see SECURITY.md in the repository.
 
 Newest first.
 
+- 2026-10-03: payment pushes from your own server, and syncing with the window closed on desktops; both off by default.
+- 2026-10-03: backups you make; each wallet and kind of request gets its own Tor circuit.
 - 2026-10-03: offline wallets, the node check against a public node, confirming server payments, payment proofs, self-hosting and finding nodes on your network.
 - 2026-10-02: payment notifications and background sync, both off by default.
 - 2026-10-02: name the price service and say how often it is asked.

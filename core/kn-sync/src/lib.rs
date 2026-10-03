@@ -6,6 +6,7 @@
 
 #![forbid(unsafe_code)]
 
+mod blocks;
 mod crosscheck;
 mod discover;
 mod lws;
@@ -13,6 +14,7 @@ mod node;
 mod opinion;
 mod price;
 mod proof;
+pub mod push;
 mod restore_height;
 mod scan;
 mod state;
@@ -24,8 +26,8 @@ pub use discover::{FoundNode, discover, discover_at, local_ipv4};
 pub use lws::fuzzing;
 pub use lws::{LwsFees, LwsInfo, LwsReport, LwsServer, RandomOutput, check_lws, lws_sync};
 pub use node::{
-    Http, NodeStatus, NodeUrl, ProxyUrl, ServerPairing, bundled_nodes, check_proxy, connect, proxy,
-    set_proxy,
+    Circuit, Http, NodeStatus, NodeUrl, ProxyUrl, Purpose, ServerPairing, bundled_nodes,
+    check_proxy, connect, probe_proxy, proxy, set_proxy,
 };
 /// The node client sync and sending use.
 pub type MoneroDaemonHttp = monero_daemon_rpc::MoneroDaemon<Http>;
@@ -33,7 +35,7 @@ pub use opinion::{OPINION_DEPTH, Opinion, second_opinion};
 pub use price::{PRICE_CURRENCIES, PRICE_SOURCE, xmr_price};
 pub use proof::{ProofError, ProofResult, check_tx_key};
 pub use restore_height::approximate_height;
-pub use scan::{Progress, SUBADDRESS_LOOKAHEAD, sync};
+pub use scan::{Progress, SUBADDRESS_LOOKAHEAD, SyncCache, sync, sync_with};
 pub use state::{
     Balance, DEFAULT_LOCK_BLOCKS, Direction, HistoryEntry, MINER_LOCK_BLOCKS, OwnedOutput,
     PENDING_EXPIRY_BLOCKS, PoolPayment, Spend, SyncState,

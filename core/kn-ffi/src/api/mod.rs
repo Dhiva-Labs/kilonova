@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod book;
 pub mod coins;
 pub mod cold;
@@ -7,6 +8,7 @@ pub mod nodes;
 pub mod preferences;
 pub mod price;
 pub mod proof;
+pub mod push;
 pub mod requests;
 pub mod send;
 pub mod sync;

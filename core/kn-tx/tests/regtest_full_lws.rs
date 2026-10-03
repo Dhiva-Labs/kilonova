@@ -22,10 +22,14 @@ const LWS: &str = "http://127.0.0.1:18443";
 const XMR: u64 = 1_000_000_000_000;
 
 async fn daemon() -> monero_daemon_rpc::MoneroDaemon<kn_sync::Http> {
-    connect(&NodeUrl::parse(NODE).unwrap(), Network::Mainnet)
-        .await
-        .unwrap()
-        .0
+    connect(
+        &NodeUrl::parse(NODE).unwrap(),
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap()
+    .0
 }
 
 async fn mine(address: &str, blocks: usize) {
@@ -55,7 +59,11 @@ async fn tip() -> u64 {
 }
 
 fn server() -> LwsServer {
-    LwsServer::new(&NodeUrl::parse(LWS).unwrap()).unwrap()
+    LwsServer::new(
+        &NodeUrl::parse(LWS).unwrap(),
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .unwrap()
 }
 
 async fn full_sync(keys: &WalletKeys, state: &mut SyncState) {

@@ -13,6 +13,8 @@ this repository.
 Ordered by value for effort. Sizes: S (days), M (one to two weeks),
 L (several weeks).
 
+All eight shipped in 0.2.0. The next plan is in [ROADMAP-NEXT.md](ROADMAP-NEXT.md).
+
 ## 1. Phone as the cold wallet (L)
 
 Two Kilonova installs, one seed: the phone holds the spend key and never

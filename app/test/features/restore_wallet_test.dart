@@ -70,7 +70,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(vector['address'] as String), findsOneWidget);
 
-    // The next subaddress matches monero-wallet-rpc's 0/1.
+    // The next subaddress matches monero-wallet-rpc's 0/1. Copy buttons on
+    // the addresses push this further down, so bring it into view first.
+    await tester.ensureVisible(find.text('New address'));
     await tester.tap(find.text('New address'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Rent');
@@ -110,7 +112,11 @@ void main() {
   testWidgets('view-only restore rejects a view key for another address', (
     tester,
   ) async {
-    useDesktopWindow(tester);
+    // Taller than useDesktopWindow: the view-only form, with its paste
+    // buttons, no longer fits a 900px window above "Restore wallet".
+    tester.view.physicalSize = const Size(1280, 1300);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final vector = stagenetVector();
     await tester.pumpWidget(await testApp(tester));
     await openRestore(tester);

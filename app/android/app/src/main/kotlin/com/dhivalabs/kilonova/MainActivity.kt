@@ -7,6 +7,19 @@ import io.flutter.plugin.common.MethodChannel
 
 // A FragmentActivity, because BiometricPrompt needs one.
 class MainActivity : FlutterFragmentActivity() {
+    // Registered for its result while the activity is constructed.
+    private val saveDocument = SaveDocument(this)
+
+    override fun onResume() {
+        super.onResume()
+        visible = true
+    }
+
+    override fun onPause() {
+        visible = false
+        super.onPause()
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         // Screens that show a seed set FLAG_SECURE, which blocks screenshots,
@@ -29,5 +42,13 @@ class MainActivity : FlutterFragmentActivity() {
             .setMethodCallHandler(BiometricVault(this))
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kilonova/background")
             .setMethodCallHandler(BackgroundSync(this))
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kilonova/files")
+            .setMethodCallHandler(saveDocument)
+    }
+
+    companion object {
+        /// Whether Kilonova is on screen, so pushes need no notification.
+        @Volatile
+        var visible = false
     }
 }

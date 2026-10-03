@@ -8,7 +8,10 @@ fn plain_http_to_another_machine_is_refused() {
     for url in ["http://lws.example.org:8443", "http://192.168.1.10:8443"] {
         assert!(
             matches!(
-                LwsServer::new(&NodeUrl::parse(url).unwrap()),
+                LwsServer::new(
+                    &NodeUrl::parse(url).unwrap(),
+                    &kn_sync::Circuit::app(kn_sync::Purpose::Sync)
+                ),
                 Err(SyncError::InsecureLws)
             ),
             "{url}"
@@ -21,7 +24,11 @@ fn plain_http_to_another_machine_is_refused() {
         "http://[::1]:8443",
     ] {
         assert!(
-            LwsServer::new(&NodeUrl::parse(url).unwrap()).is_ok(),
+            LwsServer::new(
+                &NodeUrl::parse(url).unwrap(),
+                &kn_sync::Circuit::app(kn_sync::Purpose::Sync)
+            )
+            .is_ok(),
             "{url}"
         );
     }

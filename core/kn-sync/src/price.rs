@@ -5,7 +5,7 @@
 use serde_json::Value;
 
 use crate::SyncError;
-use crate::node::{NodeUrl, http_client, read_limited};
+use crate::node::{Circuit, NodeUrl, Purpose, http_client, probe_proxy, read_limited};
 
 /// Currencies offered, as ISO 4217 codes in lower case.
 pub const PRICE_CURRENCIES: &[&str] = &[
@@ -26,7 +26,8 @@ pub async fn xmr_price(source: &NodeUrl, currency: &str) -> Result<f64, SyncErro
     if !PRICE_CURRENCIES.contains(&currency) {
         return Err(SyncError::BadNodeUrl);
     }
-    let body = http_client(source)?
+    probe_proxy().await;
+    let body = http_client(source, &Circuit::app(Purpose::Price))?
         .get(format!(
             "{}/api/v3/simple/price?ids=monero&vs_currencies={currency}",
             source.as_str()

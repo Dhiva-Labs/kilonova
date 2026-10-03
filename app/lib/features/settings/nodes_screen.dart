@@ -5,6 +5,7 @@ import '../../src/rust/api/network.dart';
 import '../../src/rust/api/nodes.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/copy_value.dart';
 import '../../widgets/error_line.dart';
 import '../../widgets/kn_button.dart';
 import '../../widgets/kn_card.dart';
@@ -176,6 +177,7 @@ class _NodesScreenState extends State<NodesScreen> {
                           label: l.nodesAddLabel,
                           error: _addError,
                           onSubmitted: (_) => _addNode(),
+                          trailing: [PasteButton(controller: _add)],
                         )
                       : Expanded(
                           child: KnField(
@@ -183,6 +185,7 @@ class _NodesScreenState extends State<NodesScreen> {
                             label: l.nodesAddLabel,
                             error: _addError,
                             onSubmitted: (_) => _addNode(),
+                            trailing: [PasteButton(controller: _add)],
                           ),
                         ),
                   SizedBox(

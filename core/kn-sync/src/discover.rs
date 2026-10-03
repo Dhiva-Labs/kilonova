@@ -10,7 +10,7 @@ use kn_keys::Network;
 use tokio::net::TcpStream;
 use tokio::task::JoinSet;
 
-use crate::node::{NodeUrl, connect};
+use crate::node::{Circuit, NodeUrl, Purpose, connect};
 
 /// Ports monerod listens on for RPC: full and restricted, per network.
 const PORTS: &[(u16, Network)] = &[
@@ -110,8 +110,11 @@ pub async fn discover_at(hosts: &[Ipv4Addr], ports: &[(u16, Network)]) -> Vec<Fo
         let Ok(url) = NodeUrl::parse(&format!("http://{target}")) else {
             continue;
         };
-        if let Ok(Ok((_, status))) =
-            tokio::time::timeout(Duration::from_secs(5), connect(&url, expected)).await
+        if let Ok(Ok((_, status))) = tokio::time::timeout(
+            Duration::from_secs(5),
+            connect(&url, expected, &Circuit::app(Purpose::Discovery)),
+        )
+        .await
         {
             found.push(FoundNode {
                 url,

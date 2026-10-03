@@ -4,7 +4,9 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../platform/secure_window.dart';
 import '../../src/rust/api/wallets.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/copy_value.dart';
 import '../../widgets/kn_button.dart';
+import '../../widgets/kn_card.dart';
 import '../../widgets/kn_field.dart';
 import '../../widgets/password_fields.dart';
 import '../../widgets/seed_grid.dart';
@@ -80,6 +82,7 @@ enum _WalletAction {
   coins,
   checkPayment,
   showSeed,
+  showKeys,
   rename,
   changePassword,
   switchMode,
@@ -159,6 +162,11 @@ class _WalletMenuState extends State<WalletMenu> {
         await showDialog<void>(
           context: context,
           builder: (_) => _RevealSeedDialog(wallet: wallet),
+        );
+      case _WalletAction.showKeys:
+        await showDialog<void>(
+          context: context,
+          builder: (_) => _RevealKeysDialog(wallet: wallet),
         );
       case _WalletAction.rename:
         final name = await askForText(
@@ -271,7 +279,7 @@ class _WalletMenuState extends State<WalletMenu> {
       tooltip: l.walletMenuTooltip,
       icon: const Icon(Icons.more_vert),
       onSelected: (a) => _run(context, a),
-      itemBuilder: (_) => [
+      itemBuilder: (context) => [
         PopupMenuItem(
           value: _WalletAction.addressBook,
           child: Text(l.bookTitle),
@@ -281,10 +289,16 @@ class _WalletMenuState extends State<WalletMenu> {
           value: _WalletAction.checkPayment,
           child: Text(l.checkPaymentAction),
         ),
+        const PopupMenuDivider(),
         PopupMenuItem(
           value: _WalletAction.showSeed,
           child: Text(l.showSeedAction),
         ),
+        PopupMenuItem(
+          value: _WalletAction.showKeys,
+          child: Text(l.showKeysAction),
+        ),
+        const PopupMenuDivider(),
         PopupMenuItem(value: _WalletAction.rename, child: Text(l.renameAction)),
         PopupMenuItem(
           value: _WalletAction.changePassword,
@@ -319,8 +333,15 @@ class _WalletMenuState extends State<WalletMenu> {
                   value: _WalletAction.makeCold,
                   child: Text(l.coldUseAsOfflineAction),
                 ),
+        const PopupMenuDivider(),
         PopupMenuItem(value: _WalletAction.lock, child: Text(l.lockAction)),
-        PopupMenuItem(value: _WalletAction.delete, child: Text(l.deleteAction)),
+        PopupMenuItem(
+          value: _WalletAction.delete,
+          child: Text(
+            l.deleteAction,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
       ],
     );
   }
@@ -367,6 +388,7 @@ class _RevealSeedDialogState extends State<_RevealSeedDialog> {
     final words = _words;
     final Widget content;
     if (words != null) {
+      final height = widget.wallet.restoreHeight();
       content = SecureWindow(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -375,6 +397,32 @@ class _RevealSeedDialogState extends State<_RevealSeedDialog> {
             Text(l.seedWarning),
             const SizedBox(height: KnSpace.md),
             SeedGrid(words: words),
+            const SizedBox(height: KnSpace.md),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: KnButton.text(
+                l.copySeedAction,
+                onPressed: () => copyValue(
+                  context,
+                  label: l.copySeedAction,
+                  value: words.join(' '),
+                  sensitive: true,
+                ),
+              ),
+            ),
+            if (height != null && height > BigInt.zero) ...[
+              const SizedBox(height: KnSpace.lg),
+              CopyValue(
+                label: l.revealedRestoreHeightLabel,
+                value: height.toString(),
+                mono: true,
+              ),
+              const SizedBox(height: KnSpace.xs),
+              Text(
+                l.revealedRestoreHeightHelp,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ],
         ),
       );
@@ -411,6 +459,129 @@ class _RevealSeedDialogState extends State<_RevealSeedDialog> {
           ),
         KnButton.primary(
           revealed ? l.doneAction : l.showSeedAction,
+          onPressed: revealed ? () => Navigator.of(context).pop() : _reveal,
+        ),
+      ],
+    );
+  }
+}
+
+/// Asks for the password, then shows the address and secret keys for
+/// restoring this wallet elsewhere. The spend key is left out for
+/// view-only wallets, which have none.
+class _RevealKeysDialog extends StatefulWidget {
+  const _RevealKeysDialog({required this.wallet});
+
+  final OpenWallet wallet;
+
+  @override
+  State<_RevealKeysDialog> createState() => _RevealKeysDialogState();
+}
+
+class _RevealKeysDialogState extends State<_RevealKeysDialog> {
+  final _password = TextEditingController();
+  String? _error;
+  RevealedKeys? _keys;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _reveal() async {
+    try {
+      final keys = await widget.wallet.revealKeys(password: _password.text);
+      _password.clear();
+      setState(() {
+        _keys = keys;
+        _error = null;
+      });
+    } on WalletError catch (e) {
+      if (mounted) setState(() => _error = walletErrorMessage(context, e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final keys = _keys;
+    final Widget content;
+    if (keys != null) {
+      content = SecureWindow(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            KnCard(
+              child: Text(
+                l.showKeysWarning,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(height: KnSpace.lg),
+            CopyValue(label: l.revealedAddressLabel, value: keys.address),
+            const SizedBox(height: KnSpace.lg),
+            CopyValue(
+              label: l.secretViewKeyLabel,
+              value: keys.secretViewKey,
+              sensitive: true,
+            ),
+            if (keys.secretSpendKey != null) ...[
+              const SizedBox(height: KnSpace.lg),
+              CopyValue(
+                label: l.secretSpendKeyLabel,
+                value: keys.secretSpendKey!,
+                sensitive: true,
+              ),
+            ],
+            if (keys.restoreHeight != null &&
+                keys.restoreHeight! > BigInt.zero) ...[
+              const SizedBox(height: KnSpace.lg),
+              CopyValue(
+                label: l.revealedRestoreHeightLabel,
+                value: keys.restoreHeight.toString(),
+              ),
+              const SizedBox(height: KnSpace.xs),
+              Text(
+                l.revealedRestoreHeightHelp,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ),
+      );
+    } else {
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l.showKeysPrompt),
+          const SizedBox(height: KnSpace.md),
+          PasswordField(
+            controller: _password,
+            autofocus: true,
+            errorText: _error,
+            onSubmitted: (_) => _reveal(),
+          ),
+        ],
+      );
+    }
+    final revealed = keys != null;
+    return AlertDialog(
+      title: Text(l.showKeysAction),
+      content: SizedBox(
+        width: 560,
+        child: SingleChildScrollView(child: content),
+      ),
+      actions: [
+        if (!revealed)
+          KnButton.text(
+            l.cancelAction,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        KnButton.primary(
+          revealed ? l.doneAction : l.showKeysAction,
           onPressed: revealed ? () => Navigator.of(context).pop() : _reveal,
         ),
       ],

@@ -67,19 +67,50 @@ async fn self_signed_servers_need_a_pin() {
     );
 
     set_pins([]);
-    assert!(check_lws(&url, Network::Mainnet).await.is_err(), "no pin");
+    assert!(
+        check_lws(
+            &url,
+            Network::Mainnet,
+            &kn_sync::Circuit::app(kn_sync::Purpose::Sync)
+        )
+        .await
+        .is_err(),
+        "no pin"
+    );
 
     set_pins([(url.clone(), info.fingerprint)]);
-    let reply = check_lws(&url, Network::Mainnet).await.unwrap();
+    let reply = check_lws(
+        &url,
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap();
     assert_eq!(reply.server_type.as_deref(), Some("pinned"));
 
     // A different certificate under the same address is refused.
     set_pins([(url.clone(), [7; 32])]);
-    assert!(check_lws(&url, Network::Mainnet).await.is_err());
+    assert!(
+        check_lws(
+            &url,
+            Network::Mainnet,
+            &kn_sync::Circuit::app(kn_sync::Purpose::Sync)
+        )
+        .await
+        .is_err()
+    );
 
     // A pin applies to its address only.
     let other = NodeUrl::parse(&format!("https://127.0.0.1:{port}")).unwrap();
     set_pins([(url, info.fingerprint)]);
-    assert!(check_lws(&other, Network::Mainnet).await.is_err());
+    assert!(
+        check_lws(
+            &other,
+            Network::Mainnet,
+            &kn_sync::Circuit::app(kn_sync::Purpose::Sync)
+        )
+        .await
+        .is_err()
+    );
     set_pins([]);
 }

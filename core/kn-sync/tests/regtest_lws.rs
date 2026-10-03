@@ -51,9 +51,13 @@ async fn wallet_rpc(method: &str, params: Value) -> Value {
 }
 
 async fn mine(address: &str, blocks: usize) {
-    let (daemon, _) = connect(&NodeUrl::parse(NODE).unwrap(), Network::Mainnet)
-        .await
-        .unwrap();
+    let (daemon, _) = connect(
+        &NodeUrl::parse(NODE).unwrap(),
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap();
     let address = MoneroAddress::from_str(MoneroNetwork::Mainnet, address).unwrap();
     daemon.generate_blocks(&address, blocks).await.unwrap();
 }
@@ -70,7 +74,11 @@ async fn chain_height() -> u64 {
 
 /// Syncs from the LWS until it has scanned to the chain tip.
 async fn lws_until_caught_up(keys: &WalletKeys, state: &mut SyncState, accounts: &[u32]) {
-    let server = LwsServer::new(&NodeUrl::parse(LWS).unwrap()).unwrap();
+    let server = LwsServer::new(
+        &NodeUrl::parse(LWS).unwrap(),
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .unwrap();
     let tip = chain_height().await;
     for _ in 0..120 {
         let report = lws_sync(&server, keys, Network::Mainnet, accounts, 0, true, state)
@@ -99,9 +107,22 @@ fn other_address() -> String {
 #[ignore = "needs the regtest devnet; see the file header"]
 async fn lws_mode_matches_full_mode_and_monero_wallet_rpc() {
     let lws = NodeUrl::parse(LWS).unwrap();
-    assert!(check_lws(&lws, Network::Mainnet).await.is_ok());
+    assert!(
+        check_lws(
+            &lws,
+            Network::Mainnet,
+            &kn_sync::Circuit::app(kn_sync::Purpose::Sync)
+        )
+        .await
+        .is_ok()
+    );
     assert!(matches!(
-        check_lws(&lws, Network::Stagenet).await,
+        check_lws(
+            &lws,
+            Network::Stagenet,
+            &kn_sync::Circuit::app(kn_sync::Purpose::Sync)
+        )
+        .await,
         Err(kn_sync::SyncError::WrongNetwork)
     ));
 
@@ -119,9 +140,13 @@ async fn lws_mode_matches_full_mode_and_monero_wallet_rpc() {
 
     // Full mode over the same blocks.
     let mut full_state = SyncState::starting_at(start);
-    let (daemon, _) = connect(&NodeUrl::parse(NODE).unwrap(), Network::Mainnet)
-        .await
-        .unwrap();
+    let (daemon, _) = connect(
+        &NodeUrl::parse(NODE).unwrap(),
+        Network::Mainnet,
+        &kn_sync::Circuit::app(kn_sync::Purpose::Sync),
+    )
+    .await
+    .unwrap();
     sync(
         &daemon,
         &keys,

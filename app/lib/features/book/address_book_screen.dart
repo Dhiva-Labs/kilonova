@@ -101,6 +101,17 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
                                               text: contact.address,
                                             ),
                                           );
+                                          ScaffoldMessenger.of(context)
+                                            ..hideCurrentSnackBar()
+                                            ..showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  l.copiedGeneric(
+                                                    l.addressCopyLabel,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
                                         case 'delete':
                                           _delete(contact);
                                       }

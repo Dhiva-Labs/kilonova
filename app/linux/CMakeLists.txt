@@ -34,6 +34,18 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Profile" "Release")
 endif()
 
+# Reproducible builds: keep the checkout and pub cache paths out of the
+# compiled runner and plugins, so two checkouts build identical binaries.
+get_filename_component(KN_APP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+if(DEFINED ENV{PUB_CACHE})
+  set(KN_PUB_CACHE "$ENV{PUB_CACHE}")
+else()
+  set(KN_PUB_CACHE "$ENV{HOME}/.pub-cache")
+endif()
+add_compile_options(
+  "-ffile-prefix-map=${KN_APP_ROOT}=/kilonova/app"
+  "-ffile-prefix-map=${KN_PUB_CACHE}=/pub-cache")
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
