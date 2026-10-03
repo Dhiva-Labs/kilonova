@@ -115,17 +115,24 @@ After a cold boot with a PIN set, unlock the emulator once
 Android cannot start apps, and `flutter test` reports that the activity
 "does not exist".
 
-### Android notifications and background sync
+### Android notifications and background checks
 
-The test `Android: background sync service and payment notifications appear`
-posts a payment notification and starts the background sync service for 15
-seconds. Grant the permission first
+The test `Android: payment notifications appear` posts a payment
+notification. Grant the permission first
 (`adb shell pm grant com.dhivalabs.kilonova android.permission.POST_NOTIFICATIONS`
-after installing), then check both while it runs:
+after installing), then check it while it runs:
 
 ```sh
 adb shell dumpsys notification --noredact | grep android.title=
-adb shell dumpsys activity services com.dhivalabs.kilonova | grep isForeground
+```
+
+Background checks run in WorkManager. After turning them on in the app
+(Settings, Notifications and background), find the job and run it at once:
+
+```sh
+adb shell dumpsys jobscheduler | grep -B2 -A2 com.dhivalabs.kilonova
+adb shell cmd jobscheduler run -f com.dhivalabs.kilonova <job id>
+adb logcat -s KilonovaChecks
 ```
 
 ### Text and translations

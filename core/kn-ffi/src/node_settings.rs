@@ -37,10 +37,17 @@ pub(crate) struct Settings {
     /// Notify about incoming payments while the app is not in front.
     #[serde(default)]
     pub(crate) notify_incoming: bool,
-    /// Android: keep unlocked wallets syncing when the app leaves the
-    /// foreground, instead of locking them.
-    #[serde(default)]
+    /// Android: check the wallets the owner chose for payments while the
+    /// app is closed. Linux and Windows: keep syncing with the window
+    /// closed. Both only after the consent screen. Stored under a new name
+    /// so the old Android setting, which kept wallets unlocked in the
+    /// background, is off after upgrading and the owner opts in again.
+    #[serde(rename = "background_checks", default)]
     pub(crate) background_sync: bool,
+    /// The setting before background checks, read so it is not taken for
+    /// a network name and otherwise ignored.
+    #[serde(rename = "background_sync", default, skip_serializing)]
+    pub(crate) _old_background_sync: Option<serde::de::IgnoredAny>,
     /// LWS-mode wallets confirm each payment the server reports with the
     /// network's node, hidden among cover lookups. On by default; stored
     /// under a new name so the old key, which was saved as off by default
@@ -73,6 +80,7 @@ impl Default for Settings {
             price_currency: None,
             notify_incoming: false,
             background_sync: false,
+            _old_background_sync: None,
             confirm_lws_payments: on(),
             _old_confirm_lws_payments: None,
             broadcast_elsewhere: on(),
@@ -112,6 +120,25 @@ pub(crate) fn save(settings: &Settings) -> Result<(), NodeError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn background_sync_from_before_background_checks_is_off() {
+        let old = br#"{"mainnet": {"selected": "http://n:1", "custom": []},
+                       "background_sync": true, "notify_incoming": true}"#;
+        let settings: Settings = serde_json::from_slice(old).unwrap();
+        assert!(!settings.background_sync, "opt in again after upgrading");
+        assert!(settings.notify_incoming);
+        assert!(!settings.networks.contains_key("background_sync"));
+
+        let on = Settings {
+            background_sync: true,
+            ..Settings::default()
+        };
+        let saved = serde_json::to_vec(&on).unwrap();
+        assert!(!String::from_utf8_lossy(&saved).contains("\"background_sync\""));
+        let again: Settings = serde_json::from_slice(&saved).unwrap();
+        assert!(again.background_sync, "a choice made now is kept");
+    }
 
     #[test]
     fn confirming_lws_payments_is_on_even_for_settings_saved_with_it_off() {

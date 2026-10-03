@@ -90,25 +90,19 @@ void main() {
     expect(parsePaymentRequest(code.text!)!.payments.single.address, address);
   });
 
-  testWidgets(
-    'Android: background sync service and payment notifications appear',
-    (tester) async {
-      const notifier = Notifier();
-      await notifier.requestPermission();
-      await notifier.startKeepAlive(title: 'Kilonova is syncing', text: 'test');
-      await notifier.payment(
-        id: 7,
-        title: 'Payment received in Test',
-        body: '+1.5 XMR',
-        publicTitle: 'Kilonova: payment received',
-      );
-      // Long enough for `adb shell dumpsys notification` to see both; see
-      // CONTRIBUTING.md.
-      await Future<void>.delayed(const Duration(seconds: 15));
-      await notifier.stopKeepAlive();
-    },
-    skip: !Platform.isAndroid,
-  );
+  testWidgets('Android: payment notifications appear', (tester) async {
+    const notifier = Notifier();
+    await notifier.requestPermission();
+    await notifier.payment(
+      id: 7,
+      title: 'Payment received in Test',
+      body: '+1.5 XMR',
+      publicTitle: 'Kilonova: payment received',
+    );
+    // Long enough for `adb shell dumpsys notification` to see it; see
+    // CONTRIBUTING.md.
+    await Future<void>.delayed(const Duration(seconds: 15));
+  }, skip: !Platform.isAndroid);
 
   testWidgets('privacy policy renders from the bundled asset', (tester) async {
     await tester.pumpWidget(KilonovaApp(registry: registry));

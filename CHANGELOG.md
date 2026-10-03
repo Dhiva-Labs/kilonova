@@ -12,6 +12,18 @@ and Windows, "Keep syncing when the window is closed" keeps unlocked
 wallets syncing from the system tray. Long onion addresses no longer
 overflow the pairing screen.
 
+Checking for payments while the app is closed, on Android, replaces
+background sync. It is off by default; turning it on explains what it
+does, asks for the notification permission and for the password of each
+wallet you choose. Every 15 minutes or so, without starting the app or
+unlocking anything, Kilonova checks those wallets with their view keys
+(kept encrypted by the phone's secure hardware; never the seed or spend
+key) and notifies you of incoming payments. Leaving the app locks wallets
+again, as before background sync, and the always-on notification is gone.
+The update turns the old background sync setting off, on desktops too
+("Keep syncing when the window is closed"); turn it on again through the
+new consent screen.
+
 ## 0.3.0 (2026-10-03)
 
 Resource use: full sync makes about 35 times fewer requests to the node,

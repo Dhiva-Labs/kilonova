@@ -46,7 +46,7 @@ network: mainnet, stagenet or testnet.
 - Tor or SOCKS5 proxy for all traffic, onion nodes, pinned certificates for
   your own node.
 - Optional, off by default: prices in your currency, payment notifications,
-  background sync on Android.
+  checks for payments while the app is closed on Android.
 
 ## Download
 

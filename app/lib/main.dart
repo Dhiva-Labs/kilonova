@@ -31,8 +31,12 @@ Future<void> main() async {
   });
 
   final support = await getApplicationSupportDirectory();
-  await initWalletStore(dir: '${support.path}/wallets');
-  final registry = WalletRegistry(push: PushChannel.forPlatform());
+  final walletDir = '${support.path}/wallets';
+  await initWalletStore(dir: walletDir);
+  final registry = WalletRegistry(
+    push: PushChannel.forPlatform(),
+    walletDir: walletDir,
+  );
   await registry.reload();
   if (DesktopShell.supported) await DesktopShell(registry).start();
   // Pushes are only listened for once the owner turned them on for a

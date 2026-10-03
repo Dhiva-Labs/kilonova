@@ -329,7 +329,7 @@ impl SyncHandle {
 
 /// Where scanning starts without a cache: the restore height, else the
 /// Polyseed birthday, else genesis.
-fn starting_state(wallet: &UnlockedWallet) -> SyncState {
+pub(crate) fn starting_state(wallet: &UnlockedWallet) -> SyncState {
     let start = wallet.data.restore_height.unwrap_or_else(|| {
         wallet
             .data

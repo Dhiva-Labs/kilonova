@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/background.dart';
 import 'api/backup.dart';
 import 'api/book.dart';
 import 'api/coins.dart';
@@ -158,6 +159,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AddressRow dco_decode_address_row(dynamic raw);
+
+  @protected
+  BackgroundError dco_decode_background_error(dynamic raw);
 
   @protected
   BackupEntry dco_decode_backup_entry(dynamic raw);
@@ -508,6 +512,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AddressRow sse_decode_address_row(SseDeserializer deserializer);
+
+  @protected
+  BackgroundError sse_decode_background_error(SseDeserializer deserializer);
 
   @protected
   BackupEntry sse_decode_backup_entry(SseDeserializer deserializer);
@@ -889,6 +896,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_address_row(AddressRow self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_background_error(
+    BackgroundError self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_backup_entry(BackupEntry self, SseSerializer serializer);
