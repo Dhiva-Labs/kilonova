@@ -38,8 +38,17 @@ class WalletRegistry extends ChangeNotifier {
     confirmLwsPayments: false,
   );
 
-  /// False while the app is not on screen (or its window is hidden).
-  bool foreground = true;
+  /// False while the app is not on screen (or its window is hidden). Sync
+  /// is told too, so wallets at the chain tip look for blocks less often
+  /// in the background.
+  bool get foreground => _foreground;
+  set foreground(bool value) {
+    if (value == _foreground) return;
+    _foreground = value;
+    setSyncPace(foreground: value);
+  }
+
+  bool _foreground = true;
 
   /// Incoming transactions each open wallet has already shown, so only new
   /// ones are announced.

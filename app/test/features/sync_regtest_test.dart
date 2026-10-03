@@ -323,6 +323,8 @@ void main() {
       );
 
       registry.foreground = false;
+      // Sync pace is process-wide; later tests expect the foreground pace.
+      addTearDown(() => registry.foreground = true);
       await tester.runAsync(() async {
         final send = await sender.prepareSend(
           payments: [
@@ -528,7 +530,9 @@ void main() {
   testWidgets(
     'a payment request is marked paid once its payment confirms',
     (tester) async {
-      final registry = WalletRegistry(price: PriceFeed(fetch: () async => null));
+      final registry = WalletRegistry(
+        price: PriceFeed(fetch: () async => null),
+      );
       late OpenWallet payer;
       late OpenWallet receiver;
       late RequestRow request;
@@ -568,9 +572,7 @@ void main() {
 
       await tester.runAsync(() async {
         final send = await payer.prepareSend(
-          payments: [
-            Payment(address: request.address, amount: request.amount),
-          ],
+          payments: [Payment(address: request.address, amount: request.amount)],
           priority: FeePriority.normal,
         );
         await payer.confirmSend(send: send, password: 'regtest password');
