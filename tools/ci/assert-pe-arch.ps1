@@ -1,16 +1,19 @@
 # Fails unless every .exe and .dll under -Path (a folder, or one file) is built
 # for the given architecture (PE machine 0x8664 for x64, 0xAA64 for arm64) and
-# every -Required name is among them. With -Aot it also checks that the Dart
-# AOT snapshot data\app.so, which is an ELF file even on Windows, has the
-# matching ELF machine. CI runs it on the Flutter release folder, so
-# kn_ffi.dll (the Rust library) is checked along with the runner and plugins.
+# every -Required name is among them. -Exclude skips files by name pattern;
+# the Inno Setup uninstaller, unins000.exe, is an x86 program on every
+# architecture. With -Aot it also checks that the Dart AOT snapshot
+# data\app.so, which is an ELF file even on Windows, has the matching ELF
+# machine. CI runs it on the Flutter release folder, so kn_ffi.dll (the Rust
+# library) is checked along with the runner and plugins.
 #
-#   tools/ci/assert-pe-arch.ps1 -Path <folder> -Arch x64|arm64 -Aot -Required kilonova.exe,kn_ffi.dll
+#   tools/ci/assert-pe-arch.ps1 -Path <folder> -Arch x64|arm64 [-Aot] [-Required kilonova.exe,kn_ffi.dll] [-Exclude unins*.exe]
 param(
     [Parameter(Mandatory)][string]$Path,
     [Parameter(Mandatory)][ValidateSet('x64', 'arm64')][string]$Arch,
     [switch]$Aot,
-    [string[]]$Required = @()
+    [string[]]$Required = @(),
+    [string[]]$Exclude = @()
 )
 $ErrorActionPreference = 'Stop'
 
@@ -32,6 +35,9 @@ if (Test-Path -Path $Path -PathType Leaf) {
     $files = @(Get-Item -Path $Path)
 } else {
     $files = @(Get-ChildItem -Path $Path -Recurse -File -Include *.exe, *.dll)
+}
+if ($Exclude.Count -gt 0) {
+    $files = @($files | Where-Object { $name = $_.Name; -not ($Exclude | Where-Object { $name -like $_ }) })
 }
 foreach ($name in $Required) {
     if (-not ($files.Name -contains $name)) { throw "$name is missing from $Path" }

@@ -309,7 +309,7 @@ jobs:
           $installDir = Join-Path $env:RUNNER_TEMP 'kilonova-installed'
           $setup = Start-Process -FilePath "dist\$setupName" -Wait -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$installDir", "/LOG=$env:RUNNER_TEMP\setup.log"
           if ($setup.ExitCode -ne 0) { Get-Content "$env:RUNNER_TEMP\setup.log" -ErrorAction SilentlyContinue; throw "installer exited with code $($setup.ExitCode)" }
-          tools/ci/assert-pe-arch.ps1 -Path $installDir -Arch $env:ARCH -Aot -Required kilonova.exe,kn_ffi.dll
+          tools/ci/assert-pe-arch.ps1 -Path $installDir -Arch $env:ARCH -Aot -Required kilonova.exe,kn_ffi.dll -Exclude unins*.exe
           tools/ci/smoke-windows.ps1 -Exe "$installDir\kilonova.exe"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
