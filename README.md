@@ -1,8 +1,8 @@
 # Kilonova
 
 [![Rust core](https://github.com/Dhiva-Labs/kilonova/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/rust.yml)
-[![Linux](https://github.com/Dhiva-Labs/kilonova/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/linux.yml)
-[![Windows](https://github.com/Dhiva-Labs/kilonova/actions/workflows/windows.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/windows.yml)
+[![Linux x64 and arm64](https://github.com/Dhiva-Labs/kilonova/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/linux.yml)
+[![Windows x64 and arm64](https://github.com/Dhiva-Labs/kilonova/actions/workflows/windows.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/windows.yml)
 [![Android](https://github.com/Dhiva-Labs/kilonova/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/android.yml)
 [![Bindings](https://github.com/Dhiva-Labs/kilonova/actions/workflows/bindings.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/bindings.yml)
 [![Design lint](https://github.com/Dhiva-Labs/kilonova/actions/workflows/design.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/design.yml)
@@ -10,7 +10,9 @@
 [![Public nodes](https://github.com/Dhiva-Labs/kilonova/actions/workflows/nodes.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/nodes.yml)
 [![Fuzz](https://github.com/Dhiva-Labs/kilonova/actions/workflows/fuzz.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/fuzz.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-7A5B00)](LICENSE)
-[![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20Android-5A6275)](#build-from-source)
+![Linux x64 | arm64](https://img.shields.io/badge/Linux-x64%20%7C%20arm64-informational?logo=linux&logoColor=white)
+![Windows x64 | arm64](https://img.shields.io/badge/Windows-x64%20%7C%20arm64-informational?logo=windows&logoColor=white)
+![Android](https://img.shields.io/badge/Android-arm64--v8a%20%7C%20armeabi--v7a%20%7C%20x86__64-informational?logo=android&logoColor=white)
 
 An open-source Monero wallet for Linux, Windows and Android, by Dhiva Labs.
 
@@ -50,9 +52,22 @@ network: mainnet, stagenet or testnet.
 
 ## Download
 
-Builds for Android, Linux (.deb and tarball) and Windows (installer and zip)
-are on the [releases page](https://github.com/Dhiva-Labs/kilonova/releases),
-with `SHA256SUMS`. How releases are made is in
+Builds are on the [releases page](https://github.com/Dhiva-Labs/kilonova/releases),
+with `SHA256SUMS`. Linux and Windows come for x64 and for arm64:
+
+| Platform | Files |
+|---|---|
+| Android | `kilonova-<version>-android-<abi>.apk`, for arm64-v8a, armeabi-v7a and x86_64 |
+| Linux x64 | `kilonova_<version>_amd64.deb`, `kilonova-<version>-linux-x64.tar.gz` |
+| Linux arm64 | `kilonova_<version>_arm64.deb`, `kilonova-<version>-linux-arm64.tar.gz` |
+| Windows x64 | `kilonova-<version>-windows-x64-setup.exe`, `kilonova-<version>-windows-x64.zip` |
+| Windows arm64 | `kilonova-<version>-windows-arm64-setup.exe`, `kilonova-<version>-windows-arm64.zip` |
+
+Take the arm64 files on a 64-bit ARM computer, such as a Raspberry Pi
+running a 64-bit Linux, or a Windows on Arm PC. The Linux builds are made on
+Ubuntu 24.04, so an older distribution may be missing a library they need.
+On Windows on Arm the x64 installer also works, through emulation; the arm64
+one runs natively. How releases are made is in
 [docs/RELEASING.md](docs/RELEASING.md).
 
 ## How it is built
@@ -77,6 +92,13 @@ You need:
 - Linux: `clang`, `cmake`, `ninja-build`, `pkg-config`, `libgtk-3-dev`
 - Windows: Visual Studio 2022 with the "Desktop development with C++" workload
 - Android: Android SDK and NDK (Android Studio installs both)
+
+On an arm64 machine the same commands build for arm64. Flutter publishes no
+SDK archive for Linux or Windows on arm64, so clone it at the version
+above (`git clone --branch 3.44.6 https://github.com/flutter/flutter`). On
+Windows on Arm also add the "MSVC v143 - VS 2022 C++ ARM64/ARM64EC build
+tools" component to Visual Studio, and install Rust with the
+`aarch64-pc-windows-msvc` host so the Rust core builds natively.
 
 ```sh
 git clone https://github.com/Dhiva-Labs/kilonova
