@@ -11,6 +11,31 @@
    pre-release with the files and `SHA256SUMS`. Install at least the APK and
    one desktop build from the draft, then publish it.
 
+The draft holds, for version `X.Y.Z`:
+
+| Platform | Files |
+|---|---|
+| Android | `kilonova-X.Y.Z-android-arm64-v8a.apk`, `-armeabi-v7a.apk`, `-x86_64.apk` |
+| Linux x64 | `kilonova_X.Y.Z_amd64.deb`, `kilonova-X.Y.Z-linux-x64.tar.gz` |
+| Linux arm64 | `kilonova_X.Y.Z_arm64.deb`, `kilonova-X.Y.Z-linux-arm64.tar.gz` |
+| Windows x64 | `kilonova-X.Y.Z-windows-x64-setup.exe`, `kilonova-X.Y.Z-windows-x64.zip` |
+| Windows arm64 | `kilonova-X.Y.Z-windows-arm64-setup.exe`, `kilonova-X.Y.Z-windows-arm64.zip` |
+| All | `SHA256SUMS` |
+
+Each architecture is built on a runner of that architecture
+(`ubuntu-24.04`, `ubuntu-24.04-arm`, `windows-2025`, `windows-11-arm`), not
+cross-compiled. Every build job checks that the executables and libraries
+it made, `libkn_ffi.so` and `kn_ffi.dll` included, are for the right
+architecture, and starts the packaged app: the `.deb` is installed and run
+under Xvfb, and the Windows installer is run silently and the installed app
+started. The `draft` job fails if a file in the table is missing or an extra
+one is present.
+
+The same jobs run, without publishing anything, on pull requests that touch
+the packaging, and by hand from the Actions tab. Only the last step of the
+`draft` job, which creates the release, needs a tag. The Android job needs
+the release signing key and so runs on tags and by hand only.
+
 ## Android signing key
 
 Release APKs are signed with one key for the life of the app; Android refuses
@@ -39,16 +64,30 @@ can check it (`apksigner verify --print-certs <apk>`).
 ## Snap Store
 
 `snap/snapcraft.yaml` repackages the release's Linux tarball, so the snap
-and GitHub ship the same binary. After the GitHub release is published:
+and GitHub ship the same binary. It builds for amd64 and arm64. After the
+GitHub release is published:
 
-1. In `snap/snapcraft.yaml`, set `version`, the tarball URL and its
-   `source-checksum` (from the release's `SHA256SUMS`).
-2. Build and upload:
+1. In `snap/snapcraft.yaml`, set `version` and the two `sha256` values in
+   the `kilonova` part's `override-build` script, one per architecture
+   (from the release's `SHA256SUMS`: the `linux-x64` and `linux-arm64`
+   tarballs). The download URL is built from `version`. The arm64 value is
+   a placeholder of zeros until the first release that ships a
+   `linux-arm64` tarball; replace it then.
+2. Build and upload each architecture from a machine of that architecture
+   (or `snapcraft remote-build`, which builds on Launchpad):
 
    ```sh
    snapcraft pack --use-lxd
    snapcraft upload --release=stable kilonova_X.Y.Z_amd64.snap
+   snapcraft upload --release=stable kilonova_X.Y.Z_arm64.snap
    ```
+
+The `Release` workflow builds the snap on both architectures but never
+uploads it. The amd64 and arm64 builds use the Linux tarball that the same
+run just made, so they show what the commit would ship; a third build uses
+the recipe exactly as committed, which downloads and checks the published
+release. The first two are kept as workflow artifacts (`snap-amd64`,
+`snap-arm64`).
 
 New cryptocurrency wallet snaps go through manual review at the store
 before they appear, so the first upload waited for a reviewer. While a
@@ -65,9 +104,9 @@ files still differ. What is in place, inside `.github/workflows/release.yml`:
 - `SOURCE_DATE_EPOCH` is taken from the tagged commit's own timestamp
   (`git log -1 --format=%ct`), not "now", and used for the tarball's `tar
   --mtime` and the `.deb`'s staged file times.
-- The Linux tarball is built with `--sort=name --owner=0 --group=0
-  --numeric-owner` and piped through `gzip -n` so member order, ownership
-  and the gzip header are all fixed.
+- The Linux tarball (x64 and arm64 alike) is built with `--sort=name
+  --owner=0 --group=0 --numeric-owner` and piped through `gzip -n` so member
+  order, ownership and the gzip header are all fixed.
 - `RUSTFLAGS` (plain, for the Linux and Windows jobs) or
   `CARGO_ENCODED_RUSTFLAGS` (for Android, since cargokit's own NDK setup
   already uses that form and cargo refuses both being set at once) carries
@@ -82,13 +121,13 @@ files still differ. What is in place, inside `.github/workflows/release.yml`:
 Checking it:
 
 - **Locally, Linux only:** `tools/repro-check.sh` builds the Linux release
-  bundle twice, from two different temporary paths, and diffs the
+  bundle for the machine it runs on (x64 or arm64) twice, from two different temporary paths, and diffs the
   resulting tarballs (byte-for-byte if they match; with `diffoscope` if
   it's installed, otherwise a per-file sha256 comparison, if they don't).
   Needs about 6 GB of free disk; it cleans up its own git worktrees and
   build output on exit either way.
 - **In CI, both platforms:** `.github/workflows/reproducible.yml` builds
-  the Linux tarball and the arm64 APK on two separate runners (a real
+  the x64 Linux tarball and the arm64 APK on two separate runners (a real
   cross-machine test, not just cross-directory) and fails if the two
   runners' output differs. It runs on tags and by hand, and reports rather
   than blocking `release.yml`, since a newly-discovered nondeterminism
@@ -130,8 +169,9 @@ Flutter's own tooling, is not yet reproducible:
 ## Flatpak
 
 `packaging/flatpak/com.dhivalabs.kilonova.yml` repackages the release's
-Linux tarball (`type: archive`, with the URL and sha256 from that
-release's `SHA256SUMS`), the same way the Snap does, rather than building
+x64 Linux tarball (`type: archive`, with the URL and sha256 from that
+release's `SHA256SUMS`; there is no arm64 Flatpak yet), the same way the
+Snap does, rather than building
 from source inside the Flatpak sandbox. Update its `url` and `sha256`
 after each GitHub release, the same step as the Snap's `source-checksum`.
 `.github/workflows/flatpak.yml` builds the manifest (not a Flathub
@@ -167,7 +207,8 @@ lets F-Droid's own bot propose the version-bump MR for most releases.
 `KN_WIN_CERT_BASE64` is present in repository secrets, it signs
 `kilonova.exe` and `kn_ffi.dll` before zipping, and the installer `.exe`
 after Inno Setup builds it, both with `signtool /fd SHA256 /tr
-http://timestamp.digicert.com /td SHA256`. When the secret is absent, the
+http://timestamp.digicert.com /td SHA256`. The x64 and arm64 builds are
+signed the same way, with the same certificate. When the secret is absent, the
 step records that and skips signing entirely; the zip and installer ship
 unsigned, as they do today, and SmartScreen keeps warning until a
 certificate is added.

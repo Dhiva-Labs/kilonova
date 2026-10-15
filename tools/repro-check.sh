@@ -18,6 +18,16 @@ set -euo pipefail
 ref="${1:-HEAD}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Flutter names the bundle directory after the machine it builds on.
+case "$(uname -m)" in
+  x86_64) arch=x64 ;;
+  aarch64 | arm64) arch=arm64 ;;
+  *)
+    echo "error: unsupported machine '$(uname -m)' (x86_64 or aarch64)." >&2
+    exit 1
+    ;;
+esac
+
 need_gb=6
 avail_gb="$(df -Pk "$root" | awk 'NR==2 { print int($4/1024/1024) }')"
 if (( avail_gb < need_gb )); then
@@ -60,17 +70,17 @@ build_one() {
 
   local version="0.0.0-repro-check"
   mkdir -p "$dir/dist"
-  tar -C "$dir/src/app/build/linux/x64/release" \
+  tar -C "$dir/src/app/build/linux/$arch/release" \
     --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner \
     --transform "s,^bundle,kilonova-$version," \
-    -cf - bundle | gzip -n -9 > "$dir/dist/kilonova-$version-linux-x64.tar.gz"
+    -cf - bundle | gzip -n -9 > "$dir/dist/kilonova-$version-linux-$arch.tar.gz"
 }
 
 build_one "A" "$work/a"
 build_one "B" "$work/b"
 
-tar_a="$work/a/dist/kilonova-0.0.0-repro-check-linux-x64.tar.gz"
-tar_b="$work/b/dist/kilonova-0.0.0-repro-check-linux-x64.tar.gz"
+tar_a="$work/a/dist/kilonova-0.0.0-repro-check-linux-$arch.tar.gz"
+tar_b="$work/b/dist/kilonova-0.0.0-repro-check-linux-$arch.tar.gz"
 sha_a="$(sha256sum "$tar_a" | cut -d' ' -f1)"
 sha_b="$(sha256sum "$tar_b" | cut -d' ' -f1)"
 

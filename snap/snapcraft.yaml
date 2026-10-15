@@ -2,8 +2,8 @@
 #
 # The snap repackages the Linux build that the Release workflow made and
 # checksummed for this version, so the store and GitHub ship the same
-# binary. Bump `version` and the tarball URL and checksum together (the
-# checksum is in that release's SHA256SUMS). See docs/RELEASING.md.
+# binary. Bump `version`, both tarball URLs and both checksums together (the
+# checksums are in that release's SHA256SUMS). See docs/RELEASING.md.
 name: kilonova
 title: Kilonova
 base: core24
@@ -40,6 +40,7 @@ contact: reachout@dhivalabs.com
 
 platforms:
   amd64:
+  arm64:
 
 apps:
   kilonova:
@@ -59,10 +60,43 @@ apps:
       - desktop
 
 parts:
+  # Fetches the release tarball for the machine this snap is built for,
+  # checks it against the checksum recorded here, and unpacks it. Advanced
+  # grammar can choose a `source` by architecture but not a
+  # `source-checksum`, hence the script instead of the dump plugin. The URL
+  # comes from `version`, so a release bump changes `version` and the two
+  # checksums, nothing else.
+  #
+  # Version 0.4.0 shipped without an arm64 tarball, so the arm64 checksum is
+  # a placeholder of zeros and an arm64 build of this recipe fails until the
+  # release that ships the tarball replaces it. The Release workflow builds
+  # the arm64 snap meanwhile from the tarball it has just made
+  # (tools/ci/snap-local-tarball.py).
   kilonova:
-    plugin: dump
-    source: https://github.com/Dhiva-Labs/kilonova/releases/download/v0.4.0/kilonova-0.4.0-linux-x64.tar.gz
-    source-checksum: sha256/818611aeb3dbecff35ec412b761b6f2a119804850a5b4a7067a27741f1d83b08
+    plugin: nil
+    build-packages:
+      - curl
+    override-build: |
+      set -eu
+      case "$CRAFT_ARCH_BUILD_FOR" in
+        amd64)
+          arch=x64
+          sha256=818611aeb3dbecff35ec412b761b6f2a119804850a5b4a7067a27741f1d83b08
+          ;;
+        arm64)
+          arch=arm64
+          sha256=0000000000000000000000000000000000000000000000000000000000000000
+          ;;
+        *)
+          echo "error: no Linux build for $CRAFT_ARCH_BUILD_FOR" >&2
+          exit 1
+          ;;
+      esac
+      file="kilonova-$SNAPCRAFT_PROJECT_VERSION-linux-$arch.tar.gz"
+      curl --fail --location --silent --show-error --output "$file" \
+        "https://github.com/Dhiva-Labs/kilonova/releases/download/v$SNAPCRAFT_PROJECT_VERSION/$file"
+      echo "$sha256  $file" | sha256sum --check --strict -
+      tar -xzf "$file" --strip-components=1 --no-same-owner -C "$CRAFT_PART_INSTALL"
 
   desktop-entry:
     plugin: dump

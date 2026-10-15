@@ -5,13 +5,24 @@
 set -euo pipefail
 version="$1"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
-bundle="${2:-$root/app/build/linux/x64/release/bundle}"
+
+# The package is for the machine it is built on, because the bundle is.
+deb_arch="$(dpkg --print-architecture)"
+case "$deb_arch" in
+  amd64) flutter_arch=x64 ;;
+  arm64) flutter_arch=arm64 ;;
+  *)
+    echo "error: unsupported architecture '$deb_arch' (amd64 or arm64)" >&2
+    exit 1
+    ;;
+esac
+bundle="${2:-$root/app/build/linux/$flutter_arch/release/bundle}"
 out="${3:-$root/dist}"
 here="$root/packaging/linux"
 
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
-pkg="$stage/kilonova_${version}_amd64"
+pkg="$stage/kilonova_${version}_${deb_arch}"
 
 mkdir -p "$pkg/DEBIAN" "$pkg/opt/kilonova" "$pkg/usr/bin" \
   "$pkg/usr/share/applications" "$pkg/usr/share/metainfo"
@@ -37,7 +48,7 @@ installed_kb="$(du -sk "$pkg" | cut -f1)"
 cat > "$pkg/DEBIAN/control" <<CONTROL
 Package: kilonova
 Version: ${version}
-Architecture: amd64
+Architecture: ${deb_arch}
 Maintainer: Dhiva Labs <reachout@dhivalabs.com>
 Installed-Size: ${installed_kb}
 Depends: libgtk-3-0t64 | libgtk-3-0, libstdc++6
@@ -51,5 +62,5 @@ Description: Monero wallet for full nodes and light wallet servers
 CONTROL
 
 mkdir -p "$out"
-dpkg-deb --root-owner-group --build "$pkg" "$out/kilonova_${version}_amd64.deb"
-echo "$out/kilonova_${version}_amd64.deb"
+dpkg-deb --root-owner-group --build "$pkg" "$out/kilonova_${version}_${deb_arch}.deb"
+echo "$out/kilonova_${version}_${deb_arch}.deb"
