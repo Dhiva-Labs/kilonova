@@ -45,7 +45,7 @@ jobs:
             -keyalg RSA -keysize 2048 -validity 1 \
             -storepass reproCheck -keypass reproCheck \
             -dname "CN=Kilonova reproducible-builds check, O=Dhiva Labs"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: repro-keystore
           path: repro-check.jks
@@ -83,7 +83,7 @@ jobs:
             --transform 's,^bundle,kilonova,' \
             -cf - bundle | gzip -n -9 > dist/kilonova-linux-x64.tar.gz
           sha256sum dist/kilonova-linux-x64.tar.gz | tee dist/kilonova-linux-x64.tar.gz.sha256
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-${{ matrix.runner }}
           path: dist/
@@ -138,7 +138,7 @@ jobs:
           cp app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
             dist/kilonova-android-arm64-v8a.apk
           sha256sum dist/kilonova-android-arm64-v8a.apk | tee dist/kilonova-android-arm64-v8a.apk.sha256
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-${{ matrix.runner }}
           path: dist/
