@@ -1,0 +1,32 @@
+# Maintainer: Dhiva Labs <reachout@dhivalabs.com>
+#
+# AUR package. It repackages the .deb from the GitHub release, so Arch users
+# run the same build as every other distribution. packaging/arch/aur.sh
+# renders this file for each release (version and checksums) and checks it
+# with makepkg; the rendered PKGBUILD and .SRCINFO are what gets pushed to
+# the AUR.
+pkgname=@NAME@-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='@SUMMARY@'
+arch=('x86_64' 'aarch64')
+url='@HOMEPAGE@'
+license=('@LICENSE@')
+depends=(@ARCH_DEPENDS@)
+provides=('@NAME@')
+conflicts=('@NAME@')
+options=('!strip' '!debug')
+source=("LICENSE::https://raw.githubusercontent.com/@GITHUB_REPO@/@TAG@/LICENSE")
+source_x86_64=("@RELEASE_URL@/@DEB_AMD64@")
+source_aarch64=("@RELEASE_URL@/@DEB_ARM64@")
+sha256sums=('@SHA_LICENSE@')
+sha256sums_x86_64=('@SHA_AMD64@')
+sha256sums_aarch64=('@SHA_ARM64@')
+
+package() {
+  bsdtar -xf data.tar.* -C "$pkgdir"
+  # Built only because the release runner has a JDK, and never loaded on the
+  # desktop; it would need libjvm.so (see packaging/linux-distros/distro.conf).
+  rm -f "$pkgdir/opt/kilonova/lib/libdartjni.so"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
