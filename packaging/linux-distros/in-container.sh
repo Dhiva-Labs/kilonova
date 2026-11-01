@@ -17,7 +17,9 @@ case "$MODE" in
     dnf -y -q install file findutils which procps-ng "${pkgs[@]}"
     ;;
   rpm-suse)
-    pkgs=(); [ -z "${GUI_CMD:-}" ] || pkgs=(xvfb-run Mesa-dri dbus-1 "${extra[@]}")
+    # xvfb-run needs awk; dbus-run-session is not in dbus-1 there, so it is
+    # asked for by path.
+    pkgs=(); [ -z "${GUI_CMD:-}" ] || pkgs=(xvfb-run gawk Mesa-dri dbus-1 /usr/bin/dbus-run-session "${extra[@]}")
     zypper -n -q --gpg-auto-import-keys refresh
     zypper -n -q install file findutils which procps "${pkgs[@]}"
     ;;
@@ -38,8 +40,10 @@ case "$MODE" in
   rpm-suse) zypper -n install --allow-unsigned-rpm "$FILE"; files() { rpm -ql "$NAME"; } ;;
   pacman)   pacman -U --noconfirm "$FILE"; files() { pacman -Qlq "$NAME"; } ;;
   appimage)
-    # The libraries an AppImage expects from the host: GTK 3 and friends.
-    dnf -y -q install gtk3
+    # The libraries an AppImage expects from the host: GTK 3 and friends, and
+    # the EGL/GLES libraries Flutter's engine opens at run time (every
+    # desktop has them; the minimal container does not).
+    dnf -y -q install gtk3 libglvnd-egl libglvnd-gles
     cp "$FILE" /tmp/app.AppImage
     chmod +x /tmp/app.AppImage
     (cd /tmp && /tmp/app.AppImage --appimage-extract > /dev/null)
@@ -59,7 +63,7 @@ done)
 libdirs="$(for f in "${elfs[@]}"; do case "$f" in *.so|*.so.*) dirname "$f" ;; esac; done | sort -u | paste -sd:)"
 missing=0
 for f in "${elfs[@]}"; do
-  if LD_LIBRARY_PATH="$libdirs" ldd "$f" 2>&1 | grep -q 'not found'; then
+  if LD_LIBRARY_PATH="$libdirs" ldd "$f" 2>&1 | grep 'not found' > /dev/null; then
     echo "missing libraries for $f:"
     LD_LIBRARY_PATH="$libdirs" ldd "$f" | grep 'not found'
     missing=1
@@ -116,7 +120,7 @@ cat "$log"
 if grep -E 'error while loading shared libraries|cannot open shared object|undefined symbol' "$log"; then ok=0; fi
 [ "$ok" = 1 ]
 EOS
-  export HOME=/tmp/smoke-home
+  export HOME=/tmp/smoke-home SMOKE_SECONDS
   mkdir -p "$HOME"
   xvfb-run -a -s '-screen 0 1280x800x24' dbus-run-session -- bash /tmp/smoke.sh "${gui[@]}"
 fi

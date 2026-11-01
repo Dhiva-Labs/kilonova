@@ -40,7 +40,11 @@ cp "$deb_amd64" "$work/"
 cp "$here/../../$LICENSE_FILE" "$work/LICENSE"
 if grep -n '@[A-Z0-9_]*@' "$work/PKGBUILD"; then echo "unfilled placeholder" >&2; exit 1; fi
 
-docker run --rm -v "$work:/build" archlinux:latest bash -euo pipefail -c '
+# makepkg refuses to run as root, so the work directory goes to a build user
+# inside the container and comes back to this user on the way out.
+docker run --rm -v "$work:/build" -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+  archlinux:latest bash -euo pipefail -c '
+  trap "chown -R \"\$HOST_UID:\$HOST_GID\" /build" EXIT
   pacman -Syu --noconfirm --needed -q base-devel namcap
   useradd -m builder
   chown -R builder /build
