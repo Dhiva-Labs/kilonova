@@ -3,13 +3,34 @@ name: Release
 # Pushing a tag like v0.1.0 builds every platform and opens a draft release
 # with the files and their SHA-256 sums. A maintainer reviews the draft and
 # publishes it by hand.
+#
+# The build jobs also run by hand and on pull requests that touch the
+# packaging, so a change to it is proven on every architecture before a tag.
+# Those runs publish nothing: only the last step of the draft job needs a tag.
+# The Android job needs the release signing key, which pull requests cannot
+# read, so it runs on tags and by hand only.
 on:
   push:
     tags: ['v*']
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/actions/setup-flutter/**'
+      - 'tools/ci/**'
+      - 'packaging/linux/**'
+      - 'packaging/linux-distros/**'
+      - 'packaging/arch/**'
+      - 'packaging/flatpak/**'
+      - 'packaging/windows/**'
+      - 'snap/**'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: release-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   FLUTTER_VERSION: 3.44.6
@@ -35,6 +56,7 @@ env:
 jobs:
   android:
     name: Android APKs
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -85,33 +107,52 @@ jobs:
           done
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: android
+          name: release-android
           path: dist/
 
   linux:
-    name: Linux tarball and .deb
-    runs-on: ubuntu-24.04
+    name: Linux ${{ matrix.arch }} tarball and .deb
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            deb_arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            deb_arch: arm64
+            runner: ubuntu-24.04-arm
     env:
       # cargokit's desktop build makes no changes to the environment it is
       # launched with, so plain RUSTFLAGS reaches cargo unmodified here
       # (unlike the Android job, where cargokit's own NDK setup speaks
       # CARGO_ENCODED_RUSTFLAGS instead).
       RUSTFLAGS: --remap-path-prefix=${{ github.workspace }}=/build --remap-path-prefix=${{ github.workspace }}/.cargo-home=/cargo-home
+      ARCH: ${{ matrix.arch }}
+      DEB_ARCH: ${{ matrix.deb_arch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Linux build dependencies
+        # xvfb, xauth, xdotool and dbus-x11 are for the smoke run of the
+        # installed .deb below.
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev \
+            file xvfb xauth xdotool dbus-x11
+      - uses: ./.github/actions/setup-flutter
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
+          version: ${{ env.FLUTTER_VERSION }}
+          arch: ${{ matrix.arch }}
       - name: Install pinned toolchain
         working-directory: core
         run: rustup show active-toolchain || rustup toolchain install
       - working-directory: app
         run: flutter build linux --release
+      - name: Assert every ELF file in the bundle is ${{ matrix.arch }}
+        run: >
+          tools/ci/assert-elf-arch.sh app/build/linux/$ARCH/release/bundle $ARCH
+          kilonova lib/libkn_ffi.so lib/libapp.so lib/libflutter_linux_gtk.so
       - name: Package
         run: |
           version="${VERSION#v}"
@@ -122,37 +163,84 @@ jobs:
           # timestamp (-n). See tools/repro-check.sh and
           # docs/RELEASING.md#reproducibility.
           source_date_epoch="$(git log -1 --format=%ct)"
-          tar -C app/build/linux/x64/release \
+          tar -C app/build/linux/$ARCH/release \
             --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner \
             --transform "s,^bundle,kilonova-$version," \
-            -cf - bundle | gzip -n -9 > "dist/kilonova-$version-linux-x64.tar.gz"
+            -cf - bundle | gzip -n -9 > "dist/kilonova-$version-linux-$ARCH.tar.gz"
           SOURCE_DATE_EPOCH="$source_date_epoch" \
-            packaging/linux/build-deb.sh "$version" app/build/linux/x64/release/bundle dist
+            packaging/linux/build-deb.sh "$version" app/build/linux/$ARCH/release/bundle dist
+      - name: Check the packages
+        run: |
+          version="${VERSION#v}"
+          tarball="dist/kilonova-$version-linux-$ARCH.tar.gz"
+          deb="dist/kilonova_${version}_${DEB_ARCH}.deb"
+          ls -l dist
+          [ "$(ls dist | wc -l)" -eq 2 ]
+          [ -f "$tarball" ]
+          [ -f "$deb" ]
+          mkdir "$RUNNER_TEMP/tarball"
+          tar -xzf "$tarball" -C "$RUNNER_TEMP/tarball"
+          tools/ci/assert-elf-arch.sh "$RUNNER_TEMP/tarball/kilonova-$version" "$ARCH" \
+            kilonova lib/libkn_ffi.so lib/libapp.so
+          dpkg-deb --info "$deb"
+          [ "$(dpkg-deb --field "$deb" Architecture)" = "$DEB_ARCH" ]
+          sudo apt-get install -y "./$deb"
+          tools/ci/assert-elf-arch.sh /opt/kilonova "$ARCH" kilonova lib/libkn_ffi.so lib/libapp.so
+      - name: Smoke-run the installed app (Xvfb)
+        timeout-minutes: 5
+        run: xvfb-run -a -s "-screen 0 1280x800x24" dbus-run-session -- tools/ci/smoke-linux.sh kilonova
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: linux
+          name: release-linux-${{ matrix.arch }}
           path: dist/
 
   windows:
-    name: Windows zip and installer
-    runs-on: windows-2025
+    name: Windows ${{ matrix.arch }} zip and installer
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-2025
+          - arch: arm64
+            runner: windows-11-arm
     env:
       # Same remap as the Linux job, for the native kn_ffi.dll's debug
       # info and panic strings. This does not make the .zip or the
       # installer themselves byte-reproducible (Compress-Archive and Inno
       # Setup both embed file timestamps); see docs/RELEASING.md.
       RUSTFLAGS: --remap-path-prefix=${{ github.workspace }}=/build --remap-path-prefix=${{ github.workspace }}/.cargo-home=/cargo-home
+      ARCH: ${{ matrix.arch }}
+      RELEASE_DIR: app\build\windows\${{ matrix.arch }}\runner\Release
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      - uses: ./.github/actions/setup-flutter
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
+          version: ${{ env.FLUTTER_VERSION }}
+          arch: ${{ matrix.arch }}
+      - name: Install Rust (arm64)
+        # Not every Windows arm64 image carries rustup, and a rustup built for
+        # x64 would default to an x64 toolchain running under emulation. Use
+        # the native one, so cargo and cargokit build aarch64-pc-windows-msvc.
+        if: matrix.arch == 'arm64'
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) {
+            Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe -OutFile "$env:RUNNER_TEMP\rustup-init.exe"
+            & "$env:RUNNER_TEMP\rustup-init.exe" -y --default-host aarch64-pc-windows-msvc --default-toolchain none --profile minimal
+            Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.cargo\bin"
+            $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+          }
+          rustup --version
+          rustup set default-host aarch64-pc-windows-msvc
       - name: Install pinned toolchain
         working-directory: core
         run: rustup show active-toolchain; if ($LASTEXITCODE -ne 0) { rustup toolchain install }
       - working-directory: app
         run: flutter build windows --release
+      - name: Assert every PE file in the build is ${{ matrix.arch }}
+        run: tools/ci/assert-pe-arch.ps1 -Path $env:RELEASE_DIR -Arch $env:ARCH -Aot -Required kilonova.exe,kn_ffi.dll,flutter_windows.dll
       - name: Signing certificate
         # Optional: skipped cleanly (installers and the zip ship unsigned,
         # as RELEASING.md tells users to expect) when no certificate is in
@@ -178,8 +266,7 @@ jobs:
         run: |
           $signtool = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
             Where-Object { $_.FullName -match 'x64' } | Select-Object -First 1 -ExpandProperty FullName
-          $release = "app\build\windows\x64\runner\Release"
-          $targets = Get-ChildItem -Path $release -Recurse -Include *.exe, *.dll | ForEach-Object { $_.FullName }
+          $targets = Get-ChildItem -Path $env:RELEASE_DIR -Recurse -Include *.exe, *.dll | ForEach-Object { $_.FullName }
           & $signtool sign /f "$env:KN_CERT_PATH" /p "$env:KN_WIN_CERT_PASSWORD" `
             /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $targets
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -187,10 +274,9 @@ jobs:
         run: |
           $version = "$env:VERSION".TrimStart('v') -replace '~', '-'
           New-Item -ItemType Directory dist | Out-Null
-          $release = "app\build\windows\x64\runner\Release"
-          Compress-Archive -Path "$release\*" -DestinationPath "dist\kilonova-$version-windows-x64.zip"
+          Compress-Archive -Path "$env:RELEASE_DIR\*" -DestinationPath "dist\kilonova-$version-windows-$env:ARCH.zip"
           choco install innosetup --no-progress -y
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "/DSourceDir=$PWD\$release" "/DOutputDir=$PWD\dist" packaging\windows\kilonova.iss
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "/DArch=$env:ARCH" "/DSourceDir=$PWD\$env:RELEASE_DIR" "/DOutputDir=$PWD\dist" packaging\windows\kilonova.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Sign the installer
         if: env.KN_SIGN == '1'
@@ -201,20 +287,293 @@ jobs:
             Where-Object { $_.FullName -match 'x64' } | Select-Object -First 1 -ExpandProperty FullName
           $version = "$env:VERSION".TrimStart('v') -replace '~', '-'
           & $signtool sign /f "$env:KN_CERT_PATH" /p "$env:KN_WIN_CERT_PASSWORD" `
-            /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "dist\kilonova-$version-windows-x64-setup.exe"
+            /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "dist\kilonova-$version-windows-$env:ARCH-setup.exe"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Remove the signing certificate
         if: always()
         run: Remove-Item -Path "$env:RUNNER_TEMP\kn-signing.pfx" -ErrorAction SilentlyContinue
+      - name: Check the packages
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $version = "$env:VERSION".TrimStart('v') -replace '~', '-'
+          $zipName = "kilonova-$version-windows-$env:ARCH.zip"
+          $setupName = "kilonova-$version-windows-$env:ARCH-setup.exe"
+          Get-ChildItem dist | Format-Table Name, Length
+          if ((Get-ChildItem dist).Count -ne 2) { throw 'expected exactly one zip and one installer in dist' }
+          foreach ($n in $zipName, $setupName) { if (-not (Test-Path "dist\$n")) { throw "dist\$n is missing" } }
+
+          # The zip holds the same files as the build, so check its runner,
+          # the Rust library and the Dart snapshot in an extracted copy.
+          $unzipped = Join-Path $env:RUNNER_TEMP 'unzipped'
+          [IO.Compression.ZipFile]::ExtractToDirectory((Resolve-Path "dist\$zipName"), $unzipped)
+          tools/ci/assert-pe-arch.ps1 -Path $unzipped -Arch $env:ARCH -Aot -Required kilonova.exe,kn_ffi.dll
+
+          # Install it silently, then check and start what was installed.
+          $installDir = Join-Path $env:RUNNER_TEMP 'kilonova-installed'
+          $setup = Start-Process -FilePath "dist\$setupName" -Wait -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$installDir", "/LOG=$env:RUNNER_TEMP\setup.log"
+          if ($setup.ExitCode -ne 0) { Get-Content "$env:RUNNER_TEMP\setup.log" -ErrorAction SilentlyContinue; throw "installer exited with code $($setup.ExitCode)" }
+          tools/ci/assert-pe-arch.ps1 -Path $installDir -Arch $env:ARCH -Aot -Required kilonova.exe,kn_ffi.dll -Exclude unins*.exe
+          tools/ci/smoke-windows.ps1 -Exe "$installDir\kilonova.exe"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: windows
+          name: release-windows-${{ matrix.arch }}
           path: dist/
 
+  snap:
+    name: Snap ${{ matrix.arch }} (${{ matrix.source }})
+    # Built here to prove the recipe, never uploaded: the Snap Store upload
+    # is by hand after the release is published (docs/RELEASING.md).
+    needs: [linux]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The tarball this run built, so the snap shows what this commit packs.
+          - arch: amd64
+            flutter_arch: x64
+            runner: ubuntu-24.04
+            source: this run
+          - arch: arm64
+            flutter_arch: arm64
+            runner: ubuntu-24.04-arm
+            source: this run
+          # The recipe exactly as committed, which downloads the published
+          # release. Only amd64: no arm64 tarball is published yet.
+          - arch: amd64
+            flutter_arch: x64
+            runner: ubuntu-24.04
+            source: release
+    env:
+      ARCH: ${{ matrix.arch }}
+      FLUTTER_ARCH: ${{ matrix.flutter_arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: matrix.source == 'this run'
+        with:
+          name: release-linux-${{ matrix.flutter_arch }}
+          path: snap-input
+      - name: Use the tarball from this run
+        if: matrix.source == 'this run'
+        run: |
+          python3 -c 'import yaml' 2> /dev/null || sudo apt-get install -y python3-yaml
+          tarball="$(ls snap-input/kilonova-*-linux-$FLUTTER_ARCH.tar.gz)"
+          echo "tarball: $tarball"
+          tools/ci/snap-local-tarball.py snap/snapcraft.yaml "$tarball"
+          sed -n '/^parts:/,/^  desktop-entry:/p' snap/snapcraft.yaml
+      - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
+        id: build
+      - name: Assert the snap is ${{ matrix.arch }}
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: |
+          ls -l "$SNAP_FILE"
+          case "$SNAP_FILE" in
+            *_$ARCH.snap) ;;
+            *) echo "::error::unexpected snap file name $SNAP_FILE"; exit 1 ;;
+          esac
+          command -v unsquashfs > /dev/null || sudo apt-get install -y squashfs-tools
+          unsquashfs -q -d "$RUNNER_TEMP/snap" "$SNAP_FILE"
+          grep -A1 '^architectures:' "$RUNNER_TEMP/snap/meta/snap.yaml"
+          grep -qx -- "- $ARCH" "$RUNNER_TEMP/snap/meta/snap.yaml"
+          tools/ci/assert-elf-arch.sh "$RUNNER_TEMP/snap" "$FLUTTER_ARCH" kilonova lib/libkn_ffi.so lib/libapp.so
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: matrix.source == 'this run'
+        with:
+          name: snap-${{ matrix.arch }}
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error
+
+  distros:
+    name: Linux ${{ matrix.arch }} .rpm, Arch package and AppImage
+    # Repackages this run's .deb for Fedora, RHEL and openSUSE (.rpm), Arch
+    # (.pkg.tar.zst) and any other glibc distribution (AppImage), so every
+    # format ships the same files, then installs each one on the real
+    # distribution and starts it there (packaging/linux-distros/verify.sh).
+    needs: [linux]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            deb_arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            deb_arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      NFPM_VERSION: '2.48.0'
+      APPIMAGETOOL_VERSION: '1.9.1'
+      DEB_ARCH: ${{ matrix.deb_arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-linux-${{ matrix.arch }}
+          path: deb
+      - name: Install nfpm and appimagetool
+        # nfpm is checked against its release's checksums file.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          case "$(uname -m)" in
+            x86_64) nfpm_arch=x86_64; ai_arch=x86_64 ;;
+            aarch64) nfpm_arch=arm64; ai_arch=aarch64 ;;
+          esac
+          mkdir -p "$RUNNER_TEMP/bin"
+          cd "$RUNNER_TEMP/bin"
+          tarball="nfpm_${NFPM_VERSION}_Linux_${nfpm_arch}.tar.gz"
+          gh release download "v$NFPM_VERSION" -R goreleaser/nfpm -p "$tarball" -p checksums.txt
+          grep " $tarball\$" checksums.txt | sha256sum -c -
+          tar -xzf "$tarball" nfpm
+          gh release download "$APPIMAGETOOL_VERSION" -R AppImage/appimagetool \
+            -p "appimagetool-$ai_arch.AppImage" -O appimagetool
+          chmod +x appimagetool
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Package
+        run: |
+          version="${VERSION#v}"
+          dpkg-deb -x "deb/kilonova_${version}_${DEB_ARCH}.deb" "$RUNNER_TEMP/root"
+          # rpm and pacman versions cannot carry the `~` of a trial run's
+          # 0.0.0~<commit>; a tag's version has none.
+          VERSION="${version//\~/.}" packaging/linux-distros/pack.sh "$RUNNER_TEMP/root" "$DEB_ARCH" dist
+      - name: Install and run on Fedora, openSUSE and Arch
+        run: packaging/linux-distros/verify.sh dist "$DEB_ARCH"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-distros-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
+
+  aur:
+    name: AUR PKGBUILD
+    # The kilonova-bin recipe for the AUR: a PKGBUILD that repackages the
+    # release's .debs, rendered with this run's checksums and proven with
+    # makepkg on Arch. Pushing it to the AUR is by hand (docs/RELEASING.md).
+    needs: [linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release-linux-*
+          path: debs
+          merge-multiple: true
+      - name: Render and check the PKGBUILD
+        run: |
+          version="${VERSION#v}"
+          VERSION="${version//\~/.}" packaging/arch/aur.sh \
+            "debs/kilonova_${version}_amd64.deb" "debs/kilonova_${version}_arm64.deb" dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-aur
+          path: dist/
+          if-no-files-found: error
+
+  flatpak:
+    name: Flatpak ${{ matrix.fp_arch }} (${{ matrix.source }})
+    # Built here, like the snap, to prove the recipe; Flathub builds its own
+    # copy from the manifest (packaging/flatpak/README.md). The x86_64 and
+    # aarch64 builds use the tarball this run just made and give the .flatpak
+    # bundles attached to the release; a third builds the manifest exactly
+    # as committed, which downloads the published release (x64 only, as for
+    # the snap). Each bundle is installed, checked with ldd inside the
+    # sandbox and started under Xvfb.
+    needs: [linux]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            fp_arch: x86_64
+            runner: ubuntu-24.04
+            source: this run
+          - arch: arm64
+            fp_arch: aarch64
+            runner: ubuntu-24.04-arm
+            source: this run
+          - arch: x64
+            fp_arch: x86_64
+            runner: ubuntu-24.04
+            source: release
+    env:
+      ARCH: ${{ matrix.arch }}
+      FP_ARCH: ${{ matrix.fp_arch }}
+      APP_ID: com.dhivalabs.kilonova
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: matrix.source == 'this run'
+        with:
+          name: release-linux-${{ matrix.arch }}
+          path: packaging/flatpak/ci-input
+      - name: Use the tarball from this run
+        if: matrix.source == 'this run'
+        run: |
+          tarball="$(ls packaging/flatpak/ci-input/kilonova-*-linux-$ARCH.tar.gz)"
+          echo "tarball: $tarball"
+          tools/ci/flatpak-local-tarball.sh packaging/flatpak/$APP_ID.yml "$tarball"
+      - name: Bundle name
+        id: bundle
+        env:
+          SOURCE: ${{ matrix.source }}
+        run: |
+          version="${VERSION#v}"
+          if [ "$SOURCE" = release ]; then
+            file="kilonova-committed-manifest-$FP_ARCH.flatpak"
+          else
+            file="kilonova-${version//\~/.}-$FP_ARCH.flatpak"
+          fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
+        with:
+          manifest-path: packaging/flatpak/com.dhivalabs.kilonova.yml
+          bundle: ${{ steps.bundle.outputs.file }}
+          arch: ${{ matrix.fp_arch }}
+          cache: false
+          upload-artifact: ${{ matrix.source == 'this run' }}
+          artifact-name: release-flatpak-${{ matrix.arch }}
+      - name: Install the bundle and run it
+        timeout-minutes: 10
+        env:
+          BUNDLE: ${{ steps.bundle.outputs.file }}
+        run: |
+          for tool in flatpak xvfb-run dbus-run-session python3; do
+            printf '%-18s %s\n' "$tool" "$(command -v "$tool" || echo missing)"
+          done
+          flatpak install --system -y --noninteractive "./$BUNDLE"
+          flatpak info "$APP_ID"
+          # Every ELF file in the app finds its libraries inside the runtime.
+          flatpak run --command=sh "$APP_ID" -c '
+            missing=0
+            for f in /app/lib/kilonova/kilonova /app/lib/kilonova/lib/*.so; do
+              out="$(LD_LIBRARY_PATH=/app/lib/kilonova/lib ldd "$f")" || { echo "ldd failed on $f"; missing=1; continue; }
+              if printf "%s\n" "$out" | grep "not found"; then echo "  in $f"; missing=1; fi
+              echo "$f: ok"
+            done
+            [ "$missing" = 0 ]'
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg-runtime"
+          mkdir -p -m 700 "$XDG_RUNTIME_DIR"
+          xvfb-run -a -s "-screen 0 1280x800x24" dbus-run-session -- tools/ci/smoke-flatpak.sh "$APP_ID"
+
   draft:
-    name: Draft release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [android, linux, windows]
+    name: Checksums and draft release
+    # The Android job is skipped on pull requests; that must not stop the
+    # rest from being checked. A failed or cancelled job still does.
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') }}
+    needs: [android, linux, windows, snap, distros, aur, flatpak]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -222,15 +581,50 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
+          pattern: release-*
           path: dist
           merge-multiple: true
-      - name: Checksums and draft
+      - name: Checksums
+        run: |
+          version="${VERSION#v}"
+          wversion="${version//\~/-}"
+          pversion="${version//\~/.}"
+          expected="
+            kilonova-$version-linux-x64.tar.gz
+            kilonova_${version}_amd64.deb
+            kilonova-$version-linux-arm64.tar.gz
+            kilonova_${version}_arm64.deb
+            kilonova-$pversion-1.x86_64.rpm
+            kilonova-$pversion-1.aarch64.rpm
+            kilonova-$pversion-1-x86_64.pkg.tar.zst
+            kilonova-$pversion-1-aarch64.pkg.tar.zst
+            Kilonova-$pversion-x86_64.AppImage
+            Kilonova-$pversion-aarch64.AppImage
+            kilonova-$pversion-x86_64.flatpak
+            kilonova-$pversion-aarch64.flatpak
+            kilonova-bin-$pversion-aur.tar.gz
+            kilonova-$wversion-windows-x64.zip
+            kilonova-$wversion-windows-x64-setup.exe
+            kilonova-$wversion-windows-arm64.zip
+            kilonova-$wversion-windows-arm64-setup.exe"
+          if [ "${{ github.event_name }}" != pull_request ]; then
+            for abi in arm64-v8a armeabi-v7a x86_64; do
+              expected="$expected kilonova-$version-android-$abi.apk"
+            done
+          fi
+          printf '%s\n' $expected | sort > "$RUNNER_TEMP/expected"
+          ls -1 dist | sort > "$RUNNER_TEMP/actual"
+          diff "$RUNNER_TEMP/expected" "$RUNNER_TEMP/actual"
+          cd dist
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+          sha256sum --check SHA256SUMS
+      - name: Draft release
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cd dist
-          sha256sum * > SHA256SUMS
-          cat SHA256SUMS
           gh release create "$GITHUB_REF_NAME" * \
             --draft --prerelease \
             --title "Kilonova ${GITHUB_REF_NAME}" \

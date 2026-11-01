@@ -17,7 +17,7 @@ dependencies:
     sdk: flutter
   flutter_rust_bridge: 2.13.0
   flutter_zxing: ^3.1.0
-  intl: 0.20.3
+  intl: 0.20.2
   kn_ffi:
     path: rust_builder
   path_provider: ^2.1.6

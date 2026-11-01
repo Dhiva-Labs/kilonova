@@ -8,12 +8,16 @@ on:
       - 'core/**'
       - 'PRIVACY.md'
       - '.github/workflows/linux.yml'
+      - '.github/actions/setup-flutter/**'
+      - 'tools/ci/**'
   pull_request:
     paths:
       - 'app/**'
       - 'core/**'
       - 'PRIVACY.md'
       - '.github/workflows/linux.yml'
+      - '.github/actions/setup-flutter/**'
+      - 'tools/ci/**'
   workflow_dispatch:
 
 permissions:
@@ -29,18 +33,26 @@ env:
 
 jobs:
   linux:
-    name: Flutter (Linux)
-    runs-on: ubuntu-24.04
+    name: Flutter (Linux ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev xvfb
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      - uses: ./.github/actions/setup-flutter
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
+          version: ${{ env.FLUTTER_VERSION }}
+          arch: ${{ matrix.arch }}
       - name: Install pinned toolchain
         working-directory: core
         run: rustup show active-toolchain || rustup toolchain install
@@ -50,6 +62,8 @@ jobs:
       - name: Build Rust core for widget tests
         working-directory: core
         run: cargo build
+      - name: Assert the Rust library is ${{ matrix.arch }}
+        run: tools/ci/assert-elf-arch.sh core/target/debug/libkn_ffi.so ${{ matrix.arch }}
       - working-directory: app
         run: flutter pub get
       - working-directory: app
@@ -61,3 +75,7 @@ jobs:
         run: xvfb-run -a flutter test integration_test -d linux
       - working-directory: app
         run: flutter build linux --release
+      - name: Assert every ELF file in the bundle is ${{ matrix.arch }}
+        run: >
+          tools/ci/assert-elf-arch.sh app/build/linux/${{ matrix.arch }}/release/bundle ${{ matrix.arch }}
+          kilonova lib/libkn_ffi.so lib/libapp.so lib/libflutter_linux_gtk.so
