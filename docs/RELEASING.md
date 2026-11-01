@@ -20,6 +20,9 @@ The draft holds, for version `X.Y.Z`:
 | Linux arm64 | `kilonova_X.Y.Z_arm64.deb`, `kilonova-X.Y.Z-linux-arm64.tar.gz` |
 | Windows x64 | `kilonova-X.Y.Z-windows-x64-setup.exe`, `kilonova-X.Y.Z-windows-x64.zip` |
 | Windows arm64 | `kilonova-X.Y.Z-windows-arm64-setup.exe`, `kilonova-X.Y.Z-windows-arm64.zip` |
+| Fedora, RHEL, openSUSE | `kilonova-X.Y.Z-1.x86_64.rpm`, `kilonova-X.Y.Z-1.aarch64.rpm` |
+| Arch | `kilonova-X.Y.Z-1-x86_64.pkg.tar.zst`, `kilonova-X.Y.Z-1-aarch64.pkg.tar.zst`, `kilonova-bin-X.Y.Z-aur.tar.gz` (AUR recipe) |
+| Any Linux | `Kilonova-X.Y.Z-x86_64.AppImage`, `Kilonova-X.Y.Z-aarch64.AppImage`, `kilonova-X.Y.Z-x86_64.flatpak`, `kilonova-X.Y.Z-aarch64.flatpak` |
 | All | `SHA256SUMS` |
 
 Each architecture is built on a runner of that architecture
@@ -28,8 +31,10 @@ cross-compiled. Every build job checks that the executables and libraries
 it made, `libkn_ffi.so` and `kn_ffi.dll` included, are for the right
 architecture, and starts the packaged app: the `.deb` is installed and run
 under Xvfb, and the Windows installer is run silently and the installed app
-started. The `draft` job fails if a file in the table is missing or an extra
-one is present.
+started. The `.rpm`, Arch package, AppImage and Flatpak are made from the
+same run's `.deb` and tarball (next section) and installed and started on
+Fedora, openSUSE, Arch and in the Flatpak sandbox. The `draft` job fails if a
+file in the table is missing or an extra one is present.
 
 The same jobs run, without publishing anything, on pull requests that touch
 the packaging, and by hand from the Actions tab. Only the last step of the
@@ -166,17 +171,73 @@ Flutter's own tooling, is not yet reproducible:
   `SOURCE_DATE_EPOCH` for the archive's own timestamps, but this hasn't
   been verified end to end with two real builds the way the tarball has.
 
+## Other Linux distributions
+
+The `distros` job of the `Release` workflow unpacks each architecture's
+`.deb` and repackages exactly those files (`packaging/linux-distros/pack.sh`,
+with nfpm and appimagetool):
+
+- an `.rpm` for Fedora, RHEL and openSUSE. Its library dependencies come
+  from the ELF files as sonames, so one file serves both families, plus the
+  newest `GLIBC_` version the binaries use, so dnf and zypper refuse a
+  distribution that is too old instead of installing an app that cannot
+  start;
+- an Arch package, depending on `gtk3` and `gcc-libs`, as the `.deb` does on
+  GTK 3 and libstdc++;
+- an AppImage, with GTK 3 and glibc left to the host as in every GTK
+  AppImage.
+
+`packaging/linux-distros/verify.sh` then installs each one on the real
+distribution, in containers of the runner's own architecture: the `.rpm` on
+Fedora and openSUSE Tumbleweed, the Arch package on Arch Linux, the AppImage
+on Fedora. In each it runs `ldd` on every ELF file (a missing library fails
+the job) and `tools/ci/smoke-linux.sh`, the same smoke run as the `.deb`'s.
+Arch Linux ARM has no official container image, so the aarch64 Arch package
+gets a static check only (declared architecture, every ELF file aarch64).
+
+`lib/libdartjni.so` from the Flutter bundle is left out of these formats and
+of the Flatpak: it comes from the `jni` package the Android plugins pull in,
+is built only because the runner has a JDK, links to that JDK's `libjvm.so`
+and is never loaded on the desktop.
+
+The `aur` job renders `packaging/arch/PKGBUILD.in` into the `kilonova-bin`
+recipe (it repackages the release `.deb`s) with the version and checksums,
+checks it with `makepkg` and `namcap` on Arch and installs it. The draft
+carries it as `kilonova-bin-X.Y.Z-aur.tar.gz` (`PKGBUILD` and `.SRCINFO`).
+Publishing it on the AUR is by hand, from an AUR account: clone
+`ssh://aur@aur.archlinux.org/kilonova-bin.git`, copy the two files in, commit
+and push.
+
 ## Flatpak
 
 `packaging/flatpak/com.dhivalabs.kilonova.yml` repackages the release's
 x64 Linux tarball (`type: archive`, with the URL and sha256 from that
-release's `SHA256SUMS`; there is no arm64 Flatpak yet), the same way the
-Snap does, rather than building
+release's `SHA256SUMS`), the same way the Snap does, rather than building
 from source inside the Flatpak sandbox. Update its `url` and `sha256`
 after each GitHub release, the same step as the Snap's `source-checksum`.
-`.github/workflows/flatpak.yml` builds the manifest (not a Flathub
-submission) on any PR touching `packaging/flatpak/`, to catch a broken
-manifest or a stale checksum early.
+
+The `flatpak` job of the `Release` workflow builds the manifest three
+times, in the `flatpak-github-actions:gnome-51` image:
+
+- on x86_64 and on aarch64 with the tarball the same run made, swapped in
+  for the download by `tools/ci/flatpak-local-tarball.sh`. These give the
+  `.flatpak` bundles in the draft;
+- on x86_64 exactly as committed, which downloads the published release.
+  That catches a broken manifest or a stale checksum before either reaches
+  Flathub.
+
+Each bundle is installed, every ELF file in it is checked with `ldd` inside
+the sandbox, and it is started under Xvfb until its window and wallet folder
+appear (`tools/ci/smoke-flatpak.sh`). Users install a bundle with
+`flatpak install --user ./kilonova-X.Y.Z-<arch>.flatpak`; the GNOME 51
+runtime comes from Flathub.
+
+Until a published release carries the arm64 tarball, the manifest as
+committed is x86_64 only (a Flathub submission then needs a `flathub.json`
+with `"only-arches": ["x86_64"]`). With the first such release, give the
+archive source `only-arches: [x86_64]` and add a second one for
+`kilonova-X.Y.Z-linux-arm64.tar.gz` with `only-arches: [aarch64]`, both with
+their `SHA256SUMS` values.
 
 Submitting to Flathub is a one-time fork-and-PR against
 `flathub/flathub`, then routine version-bump PRs against the

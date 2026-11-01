@@ -11,6 +11,7 @@
 [![Fuzz](https://github.com/Dhiva-Labs/kilonova/actions/workflows/fuzz.yml/badge.svg?branch=main)](https://github.com/Dhiva-Labs/kilonova/actions/workflows/fuzz.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-7A5B00)](LICENSE)
 ![Linux x64 | arm64](https://img.shields.io/badge/Linux-x64%20%7C%20arm64-informational?logo=linux&logoColor=white)
+![Linux: deb | rpm | Arch | AppImage | Flatpak](https://img.shields.io/badge/Linux-deb%20%7C%20rpm%20%7C%20Arch%20%7C%20AppImage%20%7C%20Flatpak-informational?logo=linux&logoColor=white)
 ![Windows x64 | arm64](https://img.shields.io/badge/Windows-x64%20%7C%20arm64-informational?logo=windows&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-arm64--v8a%20%7C%20armeabi--v7a%20%7C%20x86__64-informational?logo=android&logoColor=white)
 
@@ -62,10 +63,35 @@ with `SHA256SUMS`. Linux and Windows come for x64 and for arm64:
 | Linux arm64 | `kilonova_<version>_arm64.deb`, `kilonova-<version>-linux-arm64.tar.gz` |
 | Windows x64 | `kilonova-<version>-windows-x64-setup.exe`, `kilonova-<version>-windows-x64.zip` |
 | Windows arm64 | `kilonova-<version>-windows-arm64-setup.exe`, `kilonova-<version>-windows-arm64.zip` |
+| Fedora, RHEL, openSUSE | `kilonova-<version>-1.x86_64.rpm`, `kilonova-<version>-1.aarch64.rpm` |
+| Arch, Manjaro, EndeavourOS | `kilonova-<version>-1-x86_64.pkg.tar.zst`, `kilonova-<version>-1-aarch64.pkg.tar.zst` |
+| Any Linux | `Kilonova-<version>-x86_64.AppImage`, `Kilonova-<version>-aarch64.AppImage`, `kilonova-<version>-x86_64.flatpak`, `kilonova-<version>-aarch64.flatpak` |
+
+The `.rpm`, Arch, AppImage and Flatpak files are attached to releases from
+the next release on. All of them hold the same build as the `.deb`:
+
+```sh
+sudo apt install ./kilonova_<version>_amd64.deb                          # Debian, Ubuntu
+sudo dnf install ./kilonova-<version>-1.x86_64.rpm                       # Fedora, RHEL
+sudo zypper install --allow-unsigned-rpm ./kilonova-<version>-1.x86_64.rpm  # openSUSE
+sudo pacman -U ./kilonova-<version>-1-x86_64.pkg.tar.zst                 # Arch
+chmod +x Kilonova-<version>-x86_64.AppImage && ./Kilonova-<version>-x86_64.AppImage
+flatpak install --user ./kilonova-<version>-x86_64.flatpak               # runtime from Flathub
+```
+
+The `.rpm` is not signed, hence `--allow-unsigned-rpm` on openSUSE; check it
+against `SHA256SUMS`. The AppImage needs GTK 3 from the system. Each release
+also carries `kilonova-bin-<version>-aur.tar.gz`, the recipe for an AUR
+`kilonova-bin` package, which is not on the AUR yet. The Flatpak gets no
+access to your files: wallets stay in its own data folder, and opening a QR
+code image goes through the desktop's file chooser.
 
 Take the arm64 files on a 64-bit ARM computer, such as a Raspberry Pi
 running a 64-bit Linux, or a Windows on Arm PC. The Linux builds are made on
-Ubuntu 24.04, so an older distribution may be missing a library they need.
+Ubuntu 24.04 (glibc 2.39), so they want a current distribution: Fedora 40
+or later, openSUSE Tumbleweed or current Arch, not RHEL 9 or openSUSE Leap
+15. The `.rpm` records the newest glibc version it needs, so dnf and zypper
+refuse it on a distribution that is too old.
 On Windows on Arm the x64 installer also works, through emulation; the arm64
 one runs natively. How releases are made is in
 [docs/RELEASING.md](docs/RELEASING.md).
