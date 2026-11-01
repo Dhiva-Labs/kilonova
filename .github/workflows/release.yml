@@ -18,6 +18,9 @@ on:
       - '.github/actions/setup-flutter/**'
       - 'tools/ci/**'
       - 'packaging/linux/**'
+      - 'packaging/linux-distros/**'
+      - 'packaging/arch/**'
+      - 'packaging/flatpak/**'
       - 'packaging/windows/**'
       - 'snap/**'
   workflow_dispatch:
@@ -382,12 +385,195 @@ jobs:
           path: ${{ steps.build.outputs.snap }}
           if-no-files-found: error
 
+  distros:
+    name: Linux ${{ matrix.arch }} .rpm, Arch package and AppImage
+    # Repackages this run's .deb for Fedora, RHEL and openSUSE (.rpm), Arch
+    # (.pkg.tar.zst) and any other glibc distribution (AppImage), so every
+    # format ships the same files, then installs each one on the real
+    # distribution and starts it there (packaging/linux-distros/verify.sh).
+    needs: [linux]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            deb_arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            deb_arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      NFPM_VERSION: '2.48.0'
+      APPIMAGETOOL_VERSION: '1.9.1'
+      DEB_ARCH: ${{ matrix.deb_arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-linux-${{ matrix.arch }}
+          path: deb
+      - name: Install nfpm and appimagetool
+        # nfpm is checked against its release's checksums file.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          case "$(uname -m)" in
+            x86_64) nfpm_arch=x86_64; ai_arch=x86_64 ;;
+            aarch64) nfpm_arch=arm64; ai_arch=aarch64 ;;
+          esac
+          mkdir -p "$RUNNER_TEMP/bin"
+          cd "$RUNNER_TEMP/bin"
+          tarball="nfpm_${NFPM_VERSION}_Linux_${nfpm_arch}.tar.gz"
+          gh release download "v$NFPM_VERSION" -R goreleaser/nfpm -p "$tarball" -p checksums.txt
+          grep " $tarball\$" checksums.txt | sha256sum -c -
+          tar -xzf "$tarball" nfpm
+          gh release download "$APPIMAGETOOL_VERSION" -R AppImage/appimagetool \
+            -p "appimagetool-$ai_arch.AppImage" -O appimagetool
+          chmod +x appimagetool
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Package
+        run: |
+          version="${VERSION#v}"
+          dpkg-deb -x "deb/kilonova_${version}_${DEB_ARCH}.deb" "$RUNNER_TEMP/root"
+          # rpm and pacman versions cannot carry the `~` of a trial run's
+          # 0.0.0~<commit>; a tag's version has none.
+          VERSION="${version//\~/.}" packaging/linux-distros/pack.sh "$RUNNER_TEMP/root" "$DEB_ARCH" dist
+      - name: Install and run on Fedora, openSUSE and Arch
+        run: packaging/linux-distros/verify.sh dist "$DEB_ARCH"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-distros-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
+
+  aur:
+    name: AUR PKGBUILD
+    # The kilonova-bin recipe for the AUR: a PKGBUILD that repackages the
+    # release's .debs, rendered with this run's checksums and proven with
+    # makepkg on Arch. Pushing it to the AUR is by hand (docs/RELEASING.md).
+    needs: [linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release-linux-*
+          path: debs
+          merge-multiple: true
+      - name: Render and check the PKGBUILD
+        run: |
+          version="${VERSION#v}"
+          VERSION="${version//\~/.}" packaging/arch/aur.sh \
+            "debs/kilonova_${version}_amd64.deb" "debs/kilonova_${version}_arm64.deb" dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-aur
+          path: dist/
+          if-no-files-found: error
+
+  flatpak:
+    name: Flatpak ${{ matrix.fp_arch }} (${{ matrix.source }})
+    # Built here, like the snap, to prove the recipe; Flathub builds its own
+    # copy from the manifest (packaging/flatpak/README.md). The x86_64 and
+    # aarch64 builds use the tarball this run just made and give the .flatpak
+    # bundles attached to the release; a third builds the manifest exactly
+    # as committed, which downloads the published release (x64 only, as for
+    # the snap). Each bundle is installed, checked with ldd inside the
+    # sandbox and started under Xvfb.
+    needs: [linux]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            fp_arch: x86_64
+            runner: ubuntu-24.04
+            source: this run
+          - arch: arm64
+            fp_arch: aarch64
+            runner: ubuntu-24.04-arm
+            source: this run
+          - arch: x64
+            fp_arch: x86_64
+            runner: ubuntu-24.04
+            source: release
+    env:
+      ARCH: ${{ matrix.arch }}
+      FP_ARCH: ${{ matrix.fp_arch }}
+      APP_ID: com.dhivalabs.kilonova
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: matrix.source == 'this run'
+        with:
+          name: release-linux-${{ matrix.arch }}
+          path: packaging/flatpak/ci-input
+      - name: Use the tarball from this run
+        if: matrix.source == 'this run'
+        run: |
+          tarball="$(ls packaging/flatpak/ci-input/kilonova-*-linux-$ARCH.tar.gz)"
+          echo "tarball: $tarball"
+          tools/ci/flatpak-local-tarball.sh packaging/flatpak/$APP_ID.yml "$tarball"
+      - name: Bundle name
+        id: bundle
+        env:
+          SOURCE: ${{ matrix.source }}
+        run: |
+          version="${VERSION#v}"
+          if [ "$SOURCE" = release ]; then
+            file="kilonova-committed-manifest-$FP_ARCH.flatpak"
+          else
+            file="kilonova-${version//\~/.}-$FP_ARCH.flatpak"
+          fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
+        with:
+          manifest-path: packaging/flatpak/com.dhivalabs.kilonova.yml
+          bundle: ${{ steps.bundle.outputs.file }}
+          arch: ${{ matrix.fp_arch }}
+          cache: false
+          upload-artifact: ${{ matrix.source == 'this run' }}
+          artifact-name: release-flatpak-${{ matrix.arch }}
+      - name: Install the bundle and run it
+        timeout-minutes: 10
+        env:
+          BUNDLE: ${{ steps.bundle.outputs.file }}
+        run: |
+          for tool in flatpak xvfb-run dbus-run-session python3; do
+            printf '%-18s %s\n' "$tool" "$(command -v "$tool" || echo missing)"
+          done
+          flatpak install --system -y --noninteractive "./$BUNDLE"
+          flatpak info "$APP_ID"
+          # Every ELF file in the app finds its libraries inside the runtime.
+          flatpak run --command=sh "$APP_ID" -c '
+            missing=0
+            for f in /app/lib/kilonova/kilonova /app/lib/kilonova/lib/*.so; do
+              out="$(LD_LIBRARY_PATH=/app/lib/kilonova/lib ldd "$f")" || { echo "ldd failed on $f"; missing=1; continue; }
+              if printf "%s\n" "$out" | grep "not found"; then echo "  in $f"; missing=1; fi
+              echo "$f: ok"
+            done
+            [ "$missing" = 0 ]'
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg-runtime"
+          mkdir -p -m 700 "$XDG_RUNTIME_DIR"
+          xvfb-run -a -s "-screen 0 1280x800x24" dbus-run-session -- tools/ci/smoke-flatpak.sh "$APP_ID"
+
   draft:
     name: Checksums and draft release
     # The Android job is skipped on pull requests; that must not stop the
     # rest from being checked. A failed or cancelled job still does.
     if: ${{ !cancelled() && !contains(needs.*.result, 'failure') }}
-    needs: [android, linux, windows, snap]
+    needs: [android, linux, windows, snap, distros, aur, flatpak]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -402,11 +588,21 @@ jobs:
         run: |
           version="${VERSION#v}"
           wversion="${version//\~/-}"
+          pversion="${version//\~/.}"
           expected="
             kilonova-$version-linux-x64.tar.gz
             kilonova_${version}_amd64.deb
             kilonova-$version-linux-arm64.tar.gz
             kilonova_${version}_arm64.deb
+            kilonova-$pversion-1.x86_64.rpm
+            kilonova-$pversion-1.aarch64.rpm
+            kilonova-$pversion-1-x86_64.pkg.tar.zst
+            kilonova-$pversion-1-aarch64.pkg.tar.zst
+            Kilonova-$pversion-x86_64.AppImage
+            Kilonova-$pversion-aarch64.AppImage
+            kilonova-$pversion-x86_64.flatpak
+            kilonova-$pversion-aarch64.flatpak
+            kilonova-bin-$pversion-aur.tar.gz
             kilonova-$wversion-windows-x64.zip
             kilonova-$wversion-windows-x64-setup.exe
             kilonova-$wversion-windows-arm64.zip
