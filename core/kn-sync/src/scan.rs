@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use kn_keys::WalletKeys;
-use monero_daemon_rpc::MoneroDaemon;
+use monero_daemon_rpc::{HttpTransport, MoneroDaemon};
 use monero_interface::{
     ProvidesBlockchain as _, ProvidesBlockchainMeta as _, ProvidesTransactions as _, ScannableBlock,
 };
@@ -12,7 +12,6 @@ use monero_wallet::{Scanner, address::SubaddressIndex, block::Block, transaction
 
 use crate::{
     SyncError,
-    node::Http,
     state::{OwnedOutput, PoolPayment, Spend, SyncState},
 };
 
@@ -66,8 +65,8 @@ struct PoolTx {
 ///
 /// [`SyncError::Cancelled`] if cancelled, otherwise node errors. `state`
 /// keeps everything scanned before the error.
-pub async fn sync(
-    daemon: &MoneroDaemon<Http>,
+pub async fn sync<T: HttpTransport>(
+    daemon: &MoneroDaemon<T>,
     keys: &WalletKeys,
     accounts: &[u32],
     state: &mut SyncState,
@@ -91,8 +90,8 @@ pub async fn sync(
 /// # Errors
 ///
 /// As [`sync`].
-pub async fn sync_with(
-    daemon: &MoneroDaemon<Http>,
+pub async fn sync_with<T: HttpTransport>(
+    daemon: &MoneroDaemon<T>,
     cache: &mut SyncCache,
     keys: &WalletKeys,
     accounts: &[u32],
@@ -190,7 +189,9 @@ pub async fn sync_with(
 }
 
 /// Height and hash of the node's newest block.
-async fn last_block(daemon: &MoneroDaemon<Http>) -> Result<(u64, [u8; 32]), SyncError> {
+async fn last_block<T: HttpTransport>(
+    daemon: &MoneroDaemon<T>,
+) -> Result<(u64, [u8; 32]), SyncError> {
     #[derive(serde::Deserialize)]
     struct Reply {
         block_header: Header,
@@ -289,8 +290,8 @@ const POOL_LIMIT: usize = 500;
 /// marks outputs that pool transactions spend (sent from another device
 /// with the same seed) as pending spends. Only transactions not seen on an
 /// earlier look are fetched.
-async fn scan_pool(
-    daemon: &MoneroDaemon<Http>,
+async fn scan_pool<T: HttpTransport>(
+    daemon: &MoneroDaemon<T>,
     cache: &mut SyncCache,
     scanner: &mut Scanner,
     state: &mut SyncState,
@@ -370,8 +371,8 @@ async fn scan_pool(
 }
 
 /// Fetches and scans pool transactions not seen before, into `cache`.
-async fn learn_pool_transactions(
-    daemon: &MoneroDaemon<Http>,
+async fn learn_pool_transactions<T: HttpTransport>(
+    daemon: &MoneroDaemon<T>,
     cache: &mut SyncCache,
     scanner: &mut Scanner,
     new: &[[u8; 32]],
@@ -437,8 +438,8 @@ async fn learn_pool_transactions(
 
 /// Compares the newest remembered block with the node's chain and rewinds
 /// to the last common block if they differ. Returns whether it rewound.
-async fn rewind_if_reorganized(
-    daemon: &MoneroDaemon<Http>,
+async fn rewind_if_reorganized<T: HttpTransport>(
+    daemon: &MoneroDaemon<T>,
     state: &mut SyncState,
 ) -> Result<bool, SyncError> {
     let mut rewound = false;

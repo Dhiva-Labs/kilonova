@@ -1,0 +1,439 @@
+/* Kilonova extension. Tokens, type scale and geometry follow docs/DESIGN.md
+   and docs/design/REDESIGN.md; the values are copied from
+   app/lib/theme/tokens.dart. */
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 400;
+  src: url('fonts/IBMPlexSans-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 500;
+  src: url('fonts/IBMPlexSans-Medium.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 400;
+  src: url('fonts/IBMPlexMono-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 500;
+  src: url('fonts/IBMPlexMono-Medium.ttf') format('truetype');
+}
+
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-raised: #eef0f4;
+  --border: #dde1e8;
+  --text: #121722;
+  --text-secondary: #5a6275;
+  --accent: #7a5b00;
+  --on-accent: #ffffff;
+  --accent-hover: #5e4600;
+  --received: #1e7346;
+  --error: #b3261e;
+  --testnet-strip: #006f80;
+  --on-testnet-strip: #ffffff;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0f17;
+    --surface: #131926;
+    --surface-raised: #1a2130;
+    --border: #1f2633;
+    --text: #e8ecf4;
+    --text-secondary: #9aa3b5;
+    --accent: #e8b931;
+    --on-accent: #0b0f17;
+    --accent-hover: #f2cc5c;
+    --received: #5fd39a;
+    --error: #ff8a80;
+    --testnet-strip: #4fd3e6;
+    --on-testnet-strip: #0b0f17;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 14px/20px var(--sans);
+}
+
+body {
+  width: 360px;
+  min-height: 540px;
+}
+
+/* Opened in a tab: same column, centered. */
+body.tab {
+  width: auto;
+  display: flex;
+  justify-content: center;
+  padding-top: 40px;
+}
+body.tab #app {
+  width: 360px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 540px;
+}
+
+.strip {
+  background: var(--testnet-strip);
+  color: var(--on-testnet-strip);
+  font: 500 12px/16px var(--sans);
+  padding: 6px 16px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wordmark {
+  font: 500 15px/20px var(--sans);
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 16px;
+}
+
+h1 {
+  margin: 0;
+  font: 500 18px/24px var(--sans);
+}
+
+p {
+  margin: 0;
+}
+
+.secondary {
+  color: var(--text-secondary);
+}
+
+.small {
+  font: 400 13px/18px var(--sans);
+}
+
+.eyebrow {
+  font: 500 12px/16px var(--sans);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.balance {
+  font: 500 28px/36px var(--mono);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.balance .tail {
+  color: var(--text-secondary);
+  font-size: 0.8em;
+}
+.balance .unit {
+  color: var(--text-secondary);
+  font: 400 15px/20px var(--sans);
+  margin-left: 6px;
+}
+/* The last decimals and the unit never wrap apart. */
+.balance .end {
+  white-space: nowrap;
+}
+
+.incoming {
+  color: var(--received);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.address {
+  font: 400 13px/18px var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+.actions > * {
+  flex: 1;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.end {
+  margin-top: auto;
+}
+
+button {
+  font: 500 14px/20px var(--sans);
+  border: 0;
+  cursor: pointer;
+}
+
+.btn {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.btn.primary:hover,
+.btn.primary:focus-visible {
+  background: var(--accent-hover);
+}
+.btn.secondary {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.btn.secondary:hover,
+.btn.secondary:focus-visible {
+  background: var(--border);
+}
+.btn:disabled {
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  cursor: default;
+}
+.btn.text {
+  background: none;
+  color: var(--accent);
+  height: auto;
+  padding: 8px 12px;
+}
+.btn.text:hover,
+.btn.text:focus-visible {
+  background: var(--surface-raised);
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn:hover,
+.icon-btn:focus-visible {
+  background: var(--surface-raised);
+}
+
+svg.icon {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: square;
+  fill: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.field label {
+  display: block;
+  font: 500 12px/16px var(--sans);
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.field input,
+.field textarea {
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font: 400 14px/20px var(--sans);
+}
+.field textarea {
+  font-family: var(--mono);
+  resize: none;
+  height: 112px;
+}
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  border: 2px solid var(--accent);
+  padding: 8px 11px;
+}
+.field .help {
+  font: 400 13px/18px var(--sans);
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+.field .help.error,
+.error {
+  color: var(--error);
+}
+
+.segments {
+  display: flex;
+  height: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.segments button {
+  flex: 1;
+  background: none;
+  color: var(--text);
+  font-weight: 400;
+}
+.segments button + button {
+  border-left: 1px solid var(--border);
+}
+.segments button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 500;
+}
+
+.seed {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 16px;
+  font: 400 13px/20px var(--mono);
+  counter-reset: word;
+  margin: 0;
+  padding: 12px 16px;
+  list-style: none;
+}
+.seed li::before {
+  counter-increment: word;
+  content: counter(word) '.';
+  display: inline-block;
+  width: 28px;
+  color: var(--text-secondary);
+}
+
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.check input {
+  accent-color: var(--accent);
+  margin: 2px 0 0;
+  width: 16px;
+  height: 16px;
+}
+
+.sync {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 400 13px/18px var(--mono);
+  color: var(--text-secondary);
+}
+.sync svg {
+  flex: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 12px;
+  background: none;
+  color: var(--text);
+  width: 100%;
+  text-align: left;
+  border-radius: var(--radius-sm);
+}
+.row:hover,
+.row:focus-visible {
+  background: var(--surface-raised);
+}
+.row[aria-current='true'] {
+  background: var(--surface-raised);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.row .mono {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.divider {
+  border-top: 1px solid var(--border);
+}
+
+.toast {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font: 400 13px/18px var(--sans);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .orbit-spin {
+    animation: orbit 1.6s linear infinite;
+    transform-origin: 50% 50%;
+  }
+}
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}

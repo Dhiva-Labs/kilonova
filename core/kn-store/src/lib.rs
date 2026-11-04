@@ -19,6 +19,7 @@
 
 mod bundle;
 mod crypto;
+mod sealed;
 
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -35,6 +36,7 @@ use zeroize::Zeroizing;
 pub use bundle::{BundleWallet, WalletSettings, open as open_bundle};
 pub use crypto::KdfParams;
 use crypto::SealingKey;
+pub use sealed::SealedWallet;
 
 const REGISTRY_FILE: &str = "wallets.json";
 const WALLET_EXTENSION: &str = "knw";
