@@ -69,6 +69,12 @@ def draw_monochrome(size: int) -> Image.Image:
     return out
 
 
+def write_extension_icons() -> None:
+    """Toolbar and store sizes for the browser extension."""
+    for px in (16, 32, 48, 128):
+        draw(px).save(Path("extension/icons") / f"icon-{px}.png")
+
+
 def main() -> None:
     app = Path("app")
     master = draw(MASTER)
@@ -84,6 +90,8 @@ def main() -> None:
         out = app / f"android/app/src/main/res/mipmap-{density}"
         draw_foreground(px).save(out / "ic_launcher_foreground.png")
         draw_monochrome(px).save(out / "ic_launcher_monochrome.png")
+
+    write_extension_icons()
 
     # The window icon the Linux runner loads at startup, and the About screen.
     icon_asset = app / "assets/icon"
