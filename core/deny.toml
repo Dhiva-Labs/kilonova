@@ -84,4 +84,5 @@ bitbucket = []
 [advisories]
 ignore = [
     { id = "RUSTSEC-2025-0056", reason = "adler v1.0.2 is an unmaintained-but-not-vulnerable transitive dependency pulled in by flutter_rust_bridge's backtrace -> miniz_oxide chain, not by kilonova's own crates. No safe upgrade exists upstream yet (adler2 is a rename, not a drop-in semver-compatible release for miniz_oxide 0.7). Revisit when flutter_rust_bridge bumps backtrace/miniz_oxide." },
+    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5.5 reaches kilonova only through monero-ed25519 0.1.0 (monero-oxide), which uses it in Point::biased_hash, Monero's hash-to-point. Its input is a public output key, so timing variation there reveals nothing secret. The fix is in 0.7.6 and there is no patched 0.5 release; monero-oxide pins 0.5. Revisit when monero-oxide moves to crypto-bigint 0.7." },
 ]
