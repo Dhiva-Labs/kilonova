@@ -1,0 +1,48 @@
+[package]
+name = "kn-wasm"
+description = "WebAssembly bindings for the Kilonova browser extension: keys, sealed storage, full-mode sync over fetch"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+console_error_panic_hook = "0.1"
+js-sys = "0.3"
+kn-keys = { path = "../kn-keys" }
+kn-store = { path = "../kn-store" }
+# Without `native`: the scanner and wallet state, no HTTP client of its own.
+kn-sync = { path = "../kn-sync", default-features = false }
+monero-daemon-rpc = { version = "=0.2.0", features = ["std"] }
+monero-interface = { version = "=0.2.0", features = ["std"] }
+# JavaScript values are not Send; wasm32 runs this module on one thread.
+send_wrapper = { version = "0.6", features = ["futures"] }
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "AbortSignal",
+    "ReadableStream",
+    "ReadableStreamDefaultReader",
+    "Request",
+    "RequestCache",
+    "RequestCredentials",
+    "RequestInit",
+    "RequestRedirect",
+    "Response",
+] }
+
+# Browsers have no OS random source; both getrandom generations in the tree
+# read crypto.getRandomValues instead.
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom-02 = { package = "getrandom", version = "0.2", features = ["js"] }
+getrandom-04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
+
+[lints]
+workspace = true
