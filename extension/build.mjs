@@ -13,6 +13,7 @@
 import { execFileSync } from 'node:child_process';
 import { build } from 'esbuild';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,7 +24,19 @@ const test = process.argv.includes('--test');
 const out = join(here, 'dist', firefox ? 'firefox' : 'chrome');
 const wasmOut = join(here, 'build', 'wasm');
 
-const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: 'inherit', env: { ...process.env, CARGO_INCREMENTAL: '0' } });
+// Panic messages carry source paths. Remapping the checkout and the cargo
+// home to fixed strings (as release.yml does for the app) keeps this
+// machine's paths out of the WebAssembly, so a build elsewhere is
+// byte-identical.
+const cargoHome = process.env.CARGO_HOME || join(homedir(), '.cargo');
+const rustflags = [
+  process.env.RUSTFLAGS,
+  `--remap-path-prefix=${repo}=/build`,
+  `--remap-path-prefix=${cargoHome}=/cargo-home`,
+].filter(Boolean).join(' ');
+
+const run = (cmd, args, cwd) =>
+  execFileSync(cmd, args, { cwd, stdio: 'inherit', env: { ...process.env, CARGO_INCREMENTAL: '0', RUSTFLAGS: rustflags } });
 
 run('cargo', ['build', '-p', 'kn-wasm', '--release', '--target', 'wasm32-unknown-unknown'], join(repo, 'core'));
 await rm(wasmOut, { recursive: true, force: true });
