@@ -12,7 +12,14 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-7A5B00)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20Android-5A6275)](#build-from-source)
 
-An open-source Monero wallet for Linux, Windows and Android, by Dhiva Labs.
+An open-source Monero wallet for Linux, Windows and Android, by Dhiva Labs:
+a Flutter app over a Rust core, with full-node and light-wallet-server sync,
+Tor/SOCKS5 support, offline signing and encrypted backups.
+
+> **Not audited, and every release so far is a pre-release.** Kilonova has
+> had no external security review. Do not keep more in it than you can
+> afford to lose. Stagenet and testnet are there to try it without risk.
+> What a reviewer would look at is in [docs/AUDIT-SCOPE.md](docs/AUDIT-SCOPE.md).
 
 Kilonova can sync two ways, chosen per wallet:
 
@@ -26,10 +33,8 @@ Kilonova can sync two ways, chosen per wallet:
 It holds multiple wallets side by side, and each wallet belongs to one
 network: mainnet, stagenet or testnet.
 
-> **Not audited.** Kilonova works end to end (sync, send, receive) and is
-> tested against Monero's reference wallet, but it has not had an external
-> security review. Do not keep more in it than you can afford to lose.
-> Stagenet and testnet are there to try it without risk.
+Kilonova works end to end (sync, send, receive) and is tested against
+Monero's reference wallet, but see the warning above.
 
 ## What it does
 
@@ -42,17 +47,58 @@ network: mainnet, stagenet or testnet.
   transaction pays before confirming with your password or fingerprint.
 - QR codes and amount requests; camera scanning on Android, image files on
   desktop.
+- Offline signing: a phone that never goes online holds the spend key and
+  signs for a view-only wallet, with the two exchanging QR codes or files.
 - Address book, transaction notes and payment proofs.
+- Backups of the wallets you choose to one file, encrypted with its own
+  passphrase.
 - Tor or SOCKS5 proxy for all traffic, onion nodes, pinned certificates for
   your own node.
 - Optional, off by default: prices in your currency, payment notifications,
   checks for payments while the app is closed on Android.
 
+## Engineering highlights
+
+- **A lying light-wallet server cannot add to your balance.** LWS mode
+  trusts the server only to find transactions. A test runs a fake server
+  that forges outputs and amounts and invents spends, and checks the wallet
+  keeps only what its own keys confirm:
+  [`kn-sync/tests/lws_dishonest_server.rs`](core/kn-sync/tests/lws_dishonest_server.rs).
+  The threat model covers the cross-check against a node.
+- **Secrets are wiped from memory.** Seeds and private keys sit in
+  `Zeroizing` containers, which clear them on drop, and `Debug` output does
+  not print them: [`kn-keys`](core/kn-keys/src/lib.rs). Key derivation is
+  checked against `monero-wallet-cli` test vectors in
+  [`kn-keys/tests`](core/kn-keys/tests).
+- **Tested against a real Monero network.** Regtest suites run monerod and
+  monero-lws from [`tools/devnet`](tools/devnet) and cover full sync, LWS
+  sync, sending in both modes, offline signing and broadcast fallback; they
+  run in [`regtest.yml`](.github/workflows/regtest.yml).
+- **Fuzzing of everything read from outside.** Targets for light wallet
+  server replies, addresses, wallet files and backup bundles, with a corpus,
+  run weekly in [`fuzz.yml`](.github/workflows/fuzz.yml). See
+  [`core/fuzz`](core/fuzz).
+- **Written threat model.** Assets, adversaries (lying nodes, a light wallet
+  server, network observers, someone holding a locked device or a backup)
+  and what is deliberately out of scope: [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
+  Decisions are recorded as [ADRs](docs/adr).
+- **Offline signing that reads the transaction.** The cold wallet checks
+  what the transaction it is asked to sign really pays before signing:
+  [`kn-tx/src/cold.rs`](core/kn-tx/src/cold.rs).
+- **One Rust core, two front ends.** The same core compiles to WebAssembly
+  for the browser extension in [`extension/`](extension) (unreleased; it
+  syncs and shows the balance but cannot send yet).
+- **Reproducibility check.** [`reproducible.yml`](.github/workflows/reproducible.yml)
+  builds the Linux tarball and arm64 APK on two runners on tags and compares
+  them. It reports and does not block a release.
+
 ## Download
 
 Builds for Android, Linux (.deb and tarball) and Windows (installer and zip)
 are on the [releases page](https://github.com/Dhiva-Labs/kilonova/releases),
-with `SHA256SUMS`. How releases are made is in
+with `SHA256SUMS`. The latest is
+[v0.4.0](https://github.com/Dhiva-Labs/kilonova/releases/tag/v0.4.0), marked
+as a pre-release. How releases are made is in
 [docs/RELEASING.md](docs/RELEASING.md).
 
 ## How it is built
@@ -87,11 +133,18 @@ flutter run -d linux      # or: -d windows, or an Android device id
 The Rust core is compiled automatically for the target platform on the first
 build, through cargokit.
 
-Run the checks CI runs:
+Run the checks CI runs (format, clippy, Rust and Flutter tests, design
+lint):
 
 ```sh
 tools/check.sh             # add --regtest with tools/devnet running
 ```
+
+To run only the Rust tests: `cd core && cargo test --workspace`. The
+regtest suites are marked `#[ignore]` and need the devnet from
+[`tools/devnet`](tools/devnet); `tools/check.sh --regtest` runs them with
+the exact commands CI uses. Fuzzing is described in
+[`core/fuzz/README.md`](core/fuzz/README.md).
 
 ## Contributing
 
