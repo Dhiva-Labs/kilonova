@@ -64,6 +64,18 @@ npm run build:test
 npm run test:e2e -- --shots /tmp/kn-shots          # add --dark for dark mode
 ```
 
+The Firefox end-to-end test needs no devnet: it runs the Firefox build in
+headless Firefox against a public mainnet node, through a logging proxy.
+It creates a wallet, connects through the same tab Firefox users see for
+the permission prompt, syncs to the node's tip, locks and unlocks, and
+checks that requests to the node carry no cookies, credentials or
+extension origin. A run takes 10-15 minutes. Checked on Firefox 158.
+
+```sh
+npm run build:firefox
+FIREFOX=/path/to/firefox node test/e2e-firefox.mjs  # NODE_URL=https://host:port for another node
+```
+
 ## Privacy
 
 - Keys never leave the WebAssembly module unsealed. Closing the popup or
@@ -84,6 +96,5 @@ npm run test:e2e -- --shots /tmp/kn-shots          # add --dark for dark mode
 - Sync runs while the popup or tab is open. Background sync needs an
   offscreen document (Chrome) or event page (Firefox).
 - Light wallet server mode.
-- Firefox has only been built, not run.
 - A CI job for the extension (it touches `.github/workflows`, so it comes in
   its own PR).

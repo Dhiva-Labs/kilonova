@@ -16,13 +16,15 @@ export async function stripOriginHeader(): Promise<void> {
       {
         id: RULE_ID,
         priority: 1,
+        // String values, not the RuleActionType / HeaderOperation /
+        // ResourceType enums: Firefox does not expose those objects.
         action: {
-          type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
-          requestHeaders: [{ header: 'origin', operation: chrome.declarativeNetRequest.HeaderOperation.REMOVE }],
+          type: 'modifyHeaders' as chrome.declarativeNetRequest.RuleActionType,
+          requestHeaders: [{ header: 'origin', operation: 'remove' as chrome.declarativeNetRequest.HeaderOperation }],
         },
         condition: {
           initiatorDomains: [self],
-          resourceTypes: [chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST],
+          resourceTypes: ['xmlhttprequest' as chrome.declarativeNetRequest.ResourceType],
         },
       },
     ],
