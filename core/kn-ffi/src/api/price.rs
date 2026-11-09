@@ -7,7 +7,7 @@ use flutter_rust_bridge::frb;
 use kn_sync::{NodeUrl, PRICE_CURRENCIES, PRICE_SOURCE, xmr_price};
 
 use super::nodes::{NodeError, RUNTIME};
-use crate::node_settings::{load, save};
+use crate::node_settings::{load, save, write_lock};
 
 /// Currencies prices can be shown in, as lower-case ISO 4217 codes.
 #[frb(sync)]
@@ -43,6 +43,7 @@ pub fn set_price_currency(currency: Option<String>) -> Result<(), NodeError> {
     {
         return Err(NodeError::BadUrl);
     }
+    let _write = write_lock();
     let mut settings = load()?;
     settings.price_currency = currency;
     save(&settings)
