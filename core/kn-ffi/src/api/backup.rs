@@ -19,7 +19,7 @@ use zeroize::Zeroizing;
 use super::network::Network;
 use super::nodes::apply_saved_pins;
 use super::wallets::{WalletError, store};
-use crate::node_settings::{Settings, key, load, save};
+use crate::node_settings::{Settings, key, load, save, write_lock};
 
 /// Shortest backup passphrase accepted for a new backup.
 const MIN_PASSPHRASE: usize = 12;
@@ -228,6 +228,7 @@ fn settings_for(settings: &Settings, network: Network) -> WalletSettings {
 /// Fills in node choices this device has not made from the restored
 /// wallets' settings; never changes a choice already made.
 fn apply_settings(restored: &[RestoredWallet]) -> Result<(), BackupError> {
+    let _write = write_lock();
     let mut settings = load().map_err(|_| BackupError::Storage)?;
     for wallet in restored {
         let network: Network = wallet.entry.network.into();
