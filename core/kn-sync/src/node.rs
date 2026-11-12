@@ -1,12 +1,17 @@
 //! Talking to a monerod node: the HTTP transport monero-oxide drives, and
 //! the bundled list of public nodes.
 
-use std::sync::{Arc, PoisonError, RwLock};
-use std::time::Duration;
+#[cfg(feature = "native")]
+use std::{
+    sync::{Arc, PoisonError, RwLock},
+    time::Duration,
+};
 
 use kn_keys::Network;
 use monero_daemon_rpc::{HttpTransport, MoneroDaemon};
-use monero_interface::{InterfaceError, ProvidesBlockchainMeta as _};
+#[cfg(feature = "native")]
+use monero_interface::InterfaceError;
+use monero_interface::ProvidesBlockchainMeta as _;
 use serde::Deserialize;
 
 use crate::SyncError;
@@ -28,7 +33,7 @@ impl NodeUrl {
         } else {
             format!("http://{input}")
         };
-        let parsed = reqwest::Url::parse(&with_scheme).map_err(|_| SyncError::BadNodeUrl)?;
+        let parsed = url::Url::parse(&with_scheme).map_err(|_| SyncError::BadNodeUrl)?;
         let scheme_ok = matches!(parsed.scheme(), "http" | "https");
         if !scheme_ok
             || parsed.host_str().is_none()
@@ -63,7 +68,7 @@ impl NodeUrl {
     }
 
     fn host(&self) -> Option<String> {
-        reqwest::Url::parse(&self.0)
+        url::Url::parse(&self.0)
             .ok()?
             .host_str()
             .map(|h| h.trim_end_matches('.').to_ascii_lowercase())
@@ -94,8 +99,10 @@ impl NodeUrl {
 
 /// A SOCKS5 proxy such as Tor, as `socks5h://host:port`.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg(feature = "native")]
 pub struct ProxyUrl(String);
 
+#[cfg(feature = "native")]
 impl ProxyUrl {
     /// Accepts `host:port` or a `socks5://` / `socks5h://` URL. Host names
     /// are always resolved by the proxy (`socks5h`), so DNS lookups do not
@@ -114,7 +121,7 @@ impl ProxyUrl {
             return Err(SyncError::BadProxyUrl);
         }
         let url = format!("socks5h://{rest}");
-        let parsed = reqwest::Url::parse(&url).map_err(|_| SyncError::BadProxyUrl)?;
+        let parsed = url::Url::parse(&url).map_err(|_| SyncError::BadProxyUrl)?;
         if parsed.host_str().is_none_or(str::is_empty)
             || parsed.port().is_none()
             || parsed.path() != "/" && !parsed.path().is_empty()
@@ -140,9 +147,10 @@ impl ProxyUrl {
 ///
 /// [`SyncError::Node`] if nothing answers or it is not a SOCKS5 proxy that
 /// accepts connections without a password of its own.
+#[cfg(feature = "native")]
 pub async fn check_proxy(proxy: &ProxyUrl) -> Result<(), SyncError> {
     use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
-    let url = reqwest::Url::parse(proxy.as_str()).map_err(|_| SyncError::BadProxyUrl)?;
+    let url = url::Url::parse(proxy.as_str()).map_err(|_| SyncError::BadProxyUrl)?;
     let host = url.host_str().ok_or(SyncError::BadProxyUrl)?;
     let port = url.port().ok_or(SyncError::BadProxyUrl)?;
     let unreachable = |e: std::io::Error| SyncError::Node(format!("proxy: {e}"));
@@ -178,6 +186,7 @@ pub async fn check_proxy(proxy: &ProxyUrl) -> Result<(), SyncError> {
 /// Learns whether the proxy set with [`set_proxy`] takes credentials, once
 /// per proxy, if that is not known yet. A proxy that does not answer is
 /// asked again next time.
+#[cfg(feature = "native")]
 pub async fn probe_proxy() {
     let unknown = PROXY
         .read()
@@ -190,6 +199,7 @@ pub async fn probe_proxy() {
     }
 }
 
+#[cfg(feature = "native")]
 struct ProxyState {
     url: ProxyUrl,
     /// Whether the proxy accepts a username and password; `None` until
@@ -197,11 +207,13 @@ struct ProxyState {
     isolates: Option<bool>,
 }
 
+#[cfg(feature = "native")]
 static PROXY: RwLock<Option<ProxyState>> = RwLock::new(None);
 
 /// Sends every later request, to nodes and light wallet servers alike,
 /// through `proxy`, or directly with `None`. Clients already built keep
 /// their setting; the app restarts sync after changing it.
+#[cfg(feature = "native")]
 pub fn set_proxy(proxy: Option<ProxyUrl>) {
     *PROXY.write().unwrap_or_else(PoisonError::into_inner) = proxy.map(|url| ProxyState {
         url,
@@ -211,6 +223,7 @@ pub fn set_proxy(proxy: Option<ProxyUrl>) {
 
 /// The proxy set with [`set_proxy`].
 #[must_use]
+#[cfg(feature = "native")]
 pub fn proxy() -> Option<ProxyUrl> {
     PROXY
         .read()
@@ -222,6 +235,7 @@ pub fn proxy() -> Option<ProxyUrl> {
 /// Why a connection is made. Each purpose of each wallet gets its own
 /// SOCKS credentials, and so its own Tor circuit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg(feature = "native")]
 pub enum Purpose {
     /// Following the chain, or the light wallet server's reports.
     Sync,
@@ -239,6 +253,7 @@ pub enum Purpose {
     Proof,
 }
 
+#[cfg(feature = "native")]
 impl Purpose {
     fn tag(self) -> &'static str {
         match self {
@@ -258,11 +273,13 @@ impl Purpose {
 /// share an exit, so a node cannot link two wallets, or one wallet's sync
 /// and its broadcast, by address.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg(feature = "native")]
 pub struct Circuit {
     wallet: String,
     purpose: Purpose,
 }
 
+#[cfg(feature = "native")]
 impl Circuit {
     #[must_use]
     pub fn new(wallet: &str, purpose: Purpose) -> Self {
@@ -295,6 +312,7 @@ impl Circuit {
 
 /// A client builder that goes through the proxy from [`set_proxy`] with
 /// `circuit`'s credentials, or directly when none is set.
+#[cfg(feature = "native")]
 pub(crate) fn client_builder(
     target: &NodeUrl,
     circuit: &Circuit,
@@ -305,7 +323,7 @@ pub(crate) fn client_builder(
         None => Ok(reqwest::Client::builder().no_proxy()),
         Some(state) => {
             let mut url =
-                reqwest::Url::parse(state.url.as_str()).map_err(|_| SyncError::BadProxyUrl)?;
+                url::Url::parse(state.url.as_str()).map_err(|_| SyncError::BadProxyUrl)?;
             // Credentials the owner put in the address are theirs to keep;
             // a proxy known to refuse them gets none.
             if url.username().is_empty() && state.isolates != Some(false) {
@@ -347,12 +365,14 @@ pub fn bundled_nodes(network: Network) -> Vec<NodeUrl> {
 }
 
 /// Test chains' stand-ins for the bundled nodes when broadcasting.
+#[cfg(feature = "native")]
 static BROADCAST_NODES: RwLock<Vec<(Network, Vec<NodeUrl>)>> = RwLock::new(Vec::new());
 
 /// Replaces the nodes [`broadcast_nodes`] offers for `network`, or restores
 /// the bundled list with `None`. For tests on private chains, where no
 /// bundled node can help; not a user setting.
 #[doc(hidden)]
+#[cfg(feature = "native")]
 pub fn set_broadcast_nodes_for_tests(network: Network, nodes: Option<Vec<NodeUrl>>) {
     let mut list = BROADCAST_NODES
         .write()
@@ -366,6 +386,7 @@ pub fn set_broadcast_nodes_for_tests(network: Network, nodes: Option<Vec<NodeUrl
 /// The nodes a transaction can be broadcast through instead of the sync
 /// node: the bundled ones for `network`.
 #[must_use]
+#[cfg(feature = "native")]
 pub fn broadcast_nodes(network: Network) -> Vec<NodeUrl> {
     BROADCAST_NODES
         .read()
@@ -378,6 +399,7 @@ pub fn broadcast_nodes(network: Network) -> Vec<NodeUrl> {
 /// One of `candidates` other than `avoid`, chosen uniformly at random, so
 /// no single bundled node sees every wallet's broadcasts or checks.
 #[must_use]
+#[cfg(feature = "native")]
 pub fn other_node(candidates: Vec<NodeUrl>, avoid: &NodeUrl) -> Option<NodeUrl> {
     let mut others: Vec<NodeUrl> = candidates.into_iter().filter(|n| n != avoid).collect();
     if others.is_empty() {
@@ -388,6 +410,7 @@ pub fn other_node(candidates: Vec<NodeUrl>, avoid: &NodeUrl) -> Option<NodeUrl> 
 
 /// The HTTP transport monero-oxide's daemon client runs on.
 #[derive(Clone)]
+#[cfg(feature = "native")]
 pub struct Http {
     client: reqwest::Client,
     base: Arc<str>,
@@ -397,6 +420,7 @@ pub struct Http {
 /// on ring with Mozilla's roots, timeouts, no identifying user agent, and
 /// the proxy from [`set_proxy`] with `circuit`'s credentials (system proxy
 /// settings are ignored, so traffic goes exactly where the user chose).
+#[cfg(feature = "native")]
 pub(crate) fn http_client(
     target: &NodeUrl,
     circuit: &Circuit,
@@ -411,6 +435,7 @@ pub(crate) fn http_client(
         .map_err(|e| SyncError::Node(format!("could not set up HTTP: {e}")))
 }
 
+#[cfg(feature = "native")]
 impl Http {
     /// A transport for `circuit`; every connection it opens uses that
     /// circuit's proxy credentials.
@@ -426,6 +451,7 @@ impl Http {
     }
 }
 
+#[cfg(feature = "native")]
 impl HttpTransport for Http {
     async fn post(
         &self,
@@ -466,6 +492,7 @@ impl HttpTransport for Http {
 
 /// Reads a response body, failing once it passes `limit` bytes instead of
 /// buffering whatever a server sends.
+#[cfg(feature = "native")]
 pub(crate) async fn read_limited(
     mut response: reqwest::Response,
     limit: usize,
@@ -502,11 +529,29 @@ pub struct NodeStatus {
 ///
 /// [`SyncError::WrongNetwork`] if it serves another network, otherwise
 /// [`SyncError::Node`] when it cannot be reached or answers nonsense.
+#[cfg(feature = "native")]
 pub async fn connect(
     node: &NodeUrl,
     network: Network,
     circuit: &Circuit,
 ) -> Result<(MoneroDaemon<Http>, NodeStatus), SyncError> {
+    probe_proxy().await;
+    let daemon = MoneroDaemon::new(Http::new(node, circuit)?).await?;
+    let status = node_status(&daemon, network).await?;
+    Ok((daemon, status))
+}
+
+/// Checks that `daemon` serves `network` and reports how far along it is.
+/// [`connect`] runs this; other transports (the browser extension's) call
+/// it themselves.
+///
+/// # Errors
+///
+/// As [`connect`].
+pub async fn node_status<T: HttpTransport>(
+    daemon: &MoneroDaemon<T>,
+    network: Network,
+) -> Result<NodeStatus, SyncError> {
     #[derive(Deserialize)]
     struct Info {
         nettype: String,
@@ -514,8 +559,6 @@ pub async fn connect(
         target_height: u64,
     }
 
-    probe_proxy().await;
-    let daemon = MoneroDaemon::new(Http::new(node, circuit)?).await?;
     let raw = daemon.rpc_call("get_info", None, 64 * 1024).await?;
     let info: Info = serde_json::from_str(&raw)
         .map_err(|_| SyncError::Node("unexpected get_info response".into()))?;
@@ -532,14 +575,11 @@ pub async fn connect(
     let height = u64::try_from(daemon.latest_block_number().await?)
         .map_err(|_| SyncError::Node("height out of range".into()))?
         + 1;
-    Ok((
-        daemon,
-        NodeStatus {
-            height: height.max(info.height),
-            target_height: info.target_height.max(height),
-            test_chain: info.nettype == "fakechain",
-        },
-    ))
+    Ok(NodeStatus {
+        height: height.max(info.height),
+        target_height: info.target_height.max(height),
+        test_chain: info.nettype == "fakechain",
+    })
 }
 
 #[cfg(test)]

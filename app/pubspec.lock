@@ -133,10 +133,10 @@ packages:
     dependency: "direct main"
     description:
       name: dbus
-      sha256: f7db8504e715b835f5ebe5fe74604ccd961d504c73389a5d8e81bafc2e2f3612
+      sha256: a48d5da28e89bd02196e80d81ed8d7954923d00a0f4a68cc20b575038f023383
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.0"
+    version: "0.7.15"
   fake_async:
     dependency: transitive
     description:
@@ -247,26 +247,26 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_local_notifications_linux
-      sha256: "2d60f9cd94cf866d5ed0d350815fbe382ab47670173794e194daba45331fe3c6"
+      sha256: "9ca97e63776f29ab1b955725c09999fc2c150523269db150c39274f2a43c5a8b"
       url: "https://pub.dev"
     source: hosted
-    version: "9.0.0-dev.2"
+    version: "8.0.1"
   flutter_local_notifications_platform_interface:
     dependency: transitive
     description:
       name: flutter_local_notifications_platform_interface
-      sha256: c52ce1df03185a6c28c8de6b065cb23702941362c33c916ec30e1ea6635c945c
+      sha256: "43c3761d916c9bd3d5c7ebbc44d82f4990329840c0c5d62ad5260cc1b5d399bd"
       url: "https://pub.dev"
     source: hosted
-    version: "13.0.0-dev.1"
+    version: "12.2.0"
   flutter_local_notifications_windows:
     dependency: "direct main"
     description:
       name: flutter_local_notifications_windows
-      sha256: "9eea91aec421b65a6d324734255dd4994d13a3ff6f5f00dd67fe65273b7a870b"
+      sha256: "6f43bdd03b171b7a90f22647506fea33e2bb12294b7c7c7a3d690e960a382945"
       url: "https://pub.dev"
     source: hosted
-    version: "4.0.0-dev.2"
+    version: "3.1.1"
   flutter_localizations:
     dependency: "direct main"
     description: flutter

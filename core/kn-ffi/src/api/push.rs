@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use super::network::Network;
 use super::nodes::{NodeError, RUNTIME};
 use super::wallets::store;
-use crate::node_settings::key;
+use crate::node_settings::{key, write_lock};
 
 const SETTINGS: &str = "push";
 
@@ -100,6 +100,7 @@ fn save(stored: &Stored) -> Result<(), PushError> {
 
 /// Remembers the push server a pairing code named for `network`.
 pub(crate) fn remember_server(network: Network, server: &NodeUrl) -> Result<(), NodeError> {
+    let _write = write_lock();
     let mut stored = load().map_err(|_| NodeError::Storage)?;
     stored
         .servers
@@ -137,6 +138,7 @@ pub fn set_push_subscription(
     code: String,
 ) -> Result<PushSubscription, PushError> {
     let code = PushCode::parse(&code).map_err(|_| PushError::BadCode)?;
+    let _write = write_lock();
     let mut stored = load()?;
     let server = match code.server {
         Some(server) => server.as_str().to_owned(),
@@ -162,6 +164,7 @@ pub fn set_push_subscription(
 ///
 /// Fails if the settings cannot be saved.
 pub fn remove_push_subscription(wallet_id: String) -> Result<(), PushError> {
+    let _write = write_lock();
     let mut stored = load()?;
     if stored.wallets.remove(&wallet_id).is_some() {
         save(&stored)?;

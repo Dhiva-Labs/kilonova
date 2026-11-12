@@ -1,0 +1,22 @@
+{
+  "name": "kilonova-extension",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Kilonova as a browser extension: the Rust wallet core in WebAssembly, full-mode sync against a node you choose.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:firefox": "node build.mjs --firefox",
+    "build:test": "node build.mjs --test",
+    "check": "tsc --noEmit",
+    "test": "node --test test/unit/*.test.ts",
+    "test:e2e": "node test/e2e.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "puppeteer-core": "^25.16.0",
+    "@types/chrome": "^0.3.7",
+    "typescript": "^7.0.2"
+  }
+}
