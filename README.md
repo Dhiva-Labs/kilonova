@@ -17,6 +17,8 @@
 
 An open-source Monero wallet for Linux, Windows and Android, by Dhiva Labs.
 
+**Documentation:** step-by-step guides at [learn.dhivalabs.com](https://learn.dhivalabs.com/apps/kilonova/): [install](https://learn.dhivalabs.com/apps/kilonova/install) · [beginner guide](https://learn.dhivalabs.com/apps/kilonova/getting-started) · [troubleshooting](https://learn.dhivalabs.com/apps/kilonova/faq). New to the topic? Try the [Crypto wallets](https://learn.dhivalabs.com/tracks/crypto/) learning track.
+
 Kilonova can sync two ways, chosen per wallet:
 
 - **Full mode:** the app scans the blockchain itself against a Monero node,

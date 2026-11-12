@@ -17,7 +17,7 @@ use kn_sync::{
 use rand_core::{OsRng, RngCore};
 
 use super::network::Network;
-use crate::node_settings::{key, load, save};
+use crate::node_settings::{key, load, save, write_lock};
 
 /// One runtime for all network I/O, so blocking calls from Dart's worker
 /// threads and the background sync share connections and timers.
@@ -88,6 +88,7 @@ pub struct NodeHealth {
 /// The node `network` syncs from. On first use one of the bundled nodes is
 /// picked at random and remembered, so users spread across them.
 pub(crate) fn current_node(network: Network) -> Result<NodeUrl, NodeError> {
+    let _write = write_lock();
     let mut settings = load()?;
     let entry = settings
         .networks
@@ -149,6 +150,7 @@ pub fn nodes(network: Network) -> Result<Vec<NodeChoice>, NodeError> {
 /// http(s) URL.
 pub fn add_node(network: Network, url: String) -> Result<String, NodeError> {
     let url = NodeUrl::parse(&url)?.as_str().to_owned();
+    let _write = write_lock();
     let mut settings = load()?;
     let entry = settings
         .networks
@@ -169,6 +171,7 @@ pub fn add_node(network: Network, url: String) -> Result<String, NodeError> {
 ///
 /// Fails if the settings cannot be written.
 pub fn remove_node(network: Network, url: String) -> Result<(), NodeError> {
+    let _write = write_lock();
     let mut settings = load()?;
     let entry = settings
         .networks
@@ -190,6 +193,7 @@ pub fn select_node(network: Network, url: String) -> Result<(), NodeError> {
     let parsed = NodeUrl::parse(&url)?;
     let url = parsed.as_str().to_owned();
     let bundled = bundled_nodes(network.into()).contains(&parsed);
+    let _write = write_lock();
     let mut settings = load()?;
     let entry = settings
         .networks
@@ -250,6 +254,7 @@ pub fn set_lws_server(network: Network, url: String) -> Result<String, NodeError
         return Err(NodeError::InsecureLws);
     }
     let url = parsed.as_str().to_owned();
+    let _write = write_lock();
     let mut settings = load()?;
     settings
         .networks
@@ -266,6 +271,7 @@ pub fn set_lws_server(network: Network, url: String) -> Result<String, NodeError
 ///
 /// Fails if the settings cannot be written.
 pub fn clear_lws_server(network: Network) -> Result<(), NodeError> {
+    let _write = write_lock();
     let mut settings = load()?;
     settings
         .networks
@@ -353,6 +359,7 @@ pub fn server_certificate_info(url: String) -> Result<CertificateDetails, NodeEr
 pub fn trust_certificate(url: String, fingerprint: String) -> Result<(), NodeError> {
     let url = NodeUrl::parse(&url)?;
     let pin = parse_fingerprint(&fingerprint).ok_or(NodeError::BadUrl)?;
+    let _write = write_lock();
     let mut settings = load()?;
     settings
         .pins
@@ -369,6 +376,7 @@ pub fn trust_certificate(url: String, fingerprint: String) -> Result<(), NodeErr
 /// Fails if the settings cannot be saved.
 pub fn forget_certificate(url: String) -> Result<(), NodeError> {
     let url = NodeUrl::parse(&url)?;
+    let _write = write_lock();
     let mut settings = load()?;
     settings.pins.remove(url.as_str());
     save(&settings)?;
@@ -495,6 +503,7 @@ pub fn network_proxy() -> Result<Option<String>, NodeError> {
 /// [`NodeError::BadProxy`] for an invalid address.
 pub fn set_network_proxy(url: Option<String>) -> Result<Option<String>, NodeError> {
     let parsed = url.as_deref().map(ProxyUrl::parse).transpose()?;
+    let _write = write_lock();
     let mut settings = load()?;
     settings.proxy = parsed.as_ref().map(|p| p.as_str().to_owned());
     save(&settings)?;

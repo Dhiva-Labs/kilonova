@@ -19,8 +19,12 @@ use monero_wallet::{
     ed25519::{Point, Scalar},
 };
 use polyseed::{Language as PolyseedLanguage, Polyseed};
-use rand_core::OsRng;
+use rand_core::{OsRng, RngCore as _};
 use zeroize::Zeroizing;
+
+/// A Polyseed carries 150 secret bits: 19 bytes, the last holding 6.
+const POLYSEED_SECRET_BYTES: usize = 19;
+const POLYSEED_LAST_BYTE_MASK: u8 = 0x3f;
 
 /// The Monero network a wallet's addresses belong to.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -144,8 +148,25 @@ impl fmt::Debug for WalletKeys {
 
 impl WalletKeys {
     /// Creates a new wallet with a fresh seed from the OS random source.
+    ///
+    /// Reads the system clock for a Polyseed's birthday; where there is no
+    /// clock (WebAssembly in a browser) use [`generate_at`](Self::generate_at).
     #[must_use]
     pub fn generate(format: SeedFormat) -> (Self, Mnemonic) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        Self::generate_at(format, now)
+    }
+
+    /// [`generate`](Self::generate) with the current time given, in seconds
+    /// since the Unix epoch. Only a Polyseed records it, as its birthday.
+    ///
+    /// # Panics
+    ///
+    /// Never: masked entropy with no features is always a valid Polyseed.
+    #[must_use]
+    pub fn generate_at(format: SeedFormat, now: u64) -> (Self, Mnemonic) {
         match format {
             SeedFormat::Classic => {
                 let seed = ClassicSeed::new(&mut OsRng, ClassicLanguage::English);
@@ -158,7 +179,13 @@ impl WalletKeys {
                 (keys, mnemonic)
             }
             SeedFormat::Polyseed => {
-                let seed = Polyseed::new(&mut OsRng, PolyseedLanguage::English);
+                // What `Polyseed::new` does, with the birthday passed in:
+                // 150 secret bits, the rest of the 32 bytes cleared.
+                let mut entropy = Zeroizing::new([0u8; 32]);
+                OsRng.fill_bytes(&mut entropy[..POLYSEED_SECRET_BYTES]);
+                entropy[POLYSEED_SECRET_BYTES - 1] &= POLYSEED_LAST_BYTE_MASK;
+                let seed = Polyseed::from(PolyseedLanguage::English, 0, now, entropy)
+                    .expect("masked entropy and no features always make a valid Polyseed");
                 Self::from_polyseed(&seed)
             }
         }

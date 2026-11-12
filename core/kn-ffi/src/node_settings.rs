@@ -2,6 +2,7 @@
 //! `api` so the bridge generator does not export these internals.
 
 use std::collections::BTreeMap;
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +11,13 @@ use crate::api::nodes::NodeError;
 use crate::api::wallets::store;
 
 const SETTINGS: &str = "nodes";
+
+/// Held across every read-change-write of the stored settings, so two
+/// writers never overwrite each other's change. Plain reads do not need it.
+pub(crate) fn write_lock() -> MutexGuard<'static, ()> {
+    static WRITE: Mutex<()> = Mutex::new(());
+    WRITE.lock().unwrap_or_else(PoisonError::into_inner)
+}
 
 #[derive(Default, Serialize, Deserialize)]
 pub(crate) struct PerNetwork {
