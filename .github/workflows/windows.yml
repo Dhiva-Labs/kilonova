@@ -8,12 +8,16 @@ on:
       - 'core/**'
       - 'PRIVACY.md'
       - '.github/workflows/windows.yml'
+      - '.github/actions/setup-flutter/**'
+      - 'tools/ci/**'
   pull_request:
     paths:
       - 'app/**'
       - 'core/**'
       - 'PRIVACY.md'
       - '.github/workflows/windows.yml'
+      - '.github/actions/setup-flutter/**'
+      - 'tools/ci/**'
   workflow_dispatch:
 
 permissions:
@@ -29,23 +33,60 @@ env:
 
 jobs:
   windows:
-    name: Flutter (Windows)
-    runs-on: windows-2025
+    name: Flutter (Windows ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-2025
+          - arch: arm64
+            runner: windows-11-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      - uses: ./.github/actions/setup-flutter
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
+          version: ${{ env.FLUTTER_VERSION }}
+          arch: ${{ matrix.arch }}
+      - name: Install Rust (arm64)
+        # Not every Windows arm64 image carries rustup, and a rustup built for
+        # x64 would default to an x64 toolchain running under emulation. Use
+        # the native one, so cargo and cargokit build aarch64-pc-windows-msvc.
+        if: matrix.arch == 'arm64'
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) {
+            Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe -OutFile "$env:RUNNER_TEMP\rustup-init.exe"
+            & "$env:RUNNER_TEMP\rustup-init.exe" -y --default-host aarch64-pc-windows-msvc --default-toolchain none --profile minimal
+            Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.cargo\bin"
+            $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+          }
+          rustup --version
+          rustup set default-host aarch64-pc-windows-msvc
       - name: Install pinned toolchain
         working-directory: core
         run: rustup show active-toolchain; if ($LASTEXITCODE -ne 0) { rustup toolchain install }
+      - name: Show the Rust host
+        working-directory: core
+        run: |
+          rustc -vV
+          $hostLine = rustc -vV | Select-String '^host: (.+)$'
+          $expected = @{ x64 = 'x86_64-pc-windows-msvc'; arm64 = 'aarch64-pc-windows-msvc' }['${{ matrix.arch }}']
+          if ($hostLine.Matches[0].Groups[1].Value -ne $expected) { throw "rustc host is not $expected" }
       - name: Build Rust core for widget tests
         working-directory: core
         run: cargo build
+      - name: Assert the Rust library is ${{ matrix.arch }}
+        run: tools/ci/assert-pe-arch.ps1 -Path core\target\debug\kn_ffi.dll -Arch ${{ matrix.arch }}
       - working-directory: app
         run: flutter pub get
       - working-directory: app
         run: flutter test
       - working-directory: app
         run: flutter build windows --release
+      - name: Assert every PE file in the build is ${{ matrix.arch }}
+        run: tools/ci/assert-pe-arch.ps1 -Path app\build\windows\${{ matrix.arch }}\runner\Release -Arch ${{ matrix.arch }} -Aot -Required kilonova.exe,kn_ffi.dll,flutter_windows.dll
+      - name: Smoke-run the release build
+        timeout-minutes: 5
+        run: tools/ci/smoke-windows.ps1 -Exe app\build\windows\${{ matrix.arch }}\runner\Release\kilonova.exe

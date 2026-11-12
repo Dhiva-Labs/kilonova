@@ -77,11 +77,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Rent');
     await tester.tap(find.text('Save'));
-    await pumpUntilFound(tester, find.text('Rent'));
-    // The row and the dismissed dialog's field both say Rent; the row is a KnRow.
-    await tester.tap(
-      find.descendant(of: find.byType(KnRow), matching: find.text('Rent')).last,
+    // The row and the dismissed dialog's field both say Rent; the row is a
+    // KnRow. Wait for the row itself: the field can match before it exists.
+    final row = find.descendant(
+      of: find.byType(KnRow),
+      matching: find.text('Rent'),
     );
+    await pumpUntilFound(tester, row);
+    await tester.tap(row.last);
     await tester.pumpAndSettle();
     final sub = (vector['subaddresses'] as List)
         .cast<Map<String, dynamic>>()
