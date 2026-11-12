@@ -2,6 +2,19 @@
 
 Release notes for each version are in [docs/release-notes](docs/release-notes).
 
+## Unreleased
+
+Browser extension, first version: Kilonova for Chrome and Firefox
+(`extension/`). The Rust core runs as WebAssembly and syncs in Full mode
+against a community node or your own, with wallets sealed in the app's own
+file format. It creates and restores wallets and shows the balance and
+receive address; it cannot send yet. A new wallet's first sync starts near
+the node's tip instead of a month back.
+
+Core: kn-sync builds without its networking (`native` feature) for the
+extension, and `WalletKeys::generate_at` takes the time for a Polyseed
+birthday on platforms without a clock.
+
 ## 0.4.0 (2026-10-04)
 
 Backups: Settings, Your data saves the wallets you choose, with their sync

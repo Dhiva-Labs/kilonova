@@ -184,11 +184,13 @@ impl SyncState {
         self.cross_checked.get(&hex::encode(tx)).copied()
     }
 
+    #[cfg(feature = "native")]
     pub(crate) fn record_cross_check(&mut self, tx: [u8; 32], agrees: bool) {
         self.cross_checked.insert(hex::encode(tx), agrees);
     }
 
     /// Removes outputs of transactions a node contradicted.
+    #[cfg(feature = "native")]
     pub(crate) fn drop_contradicted(&mut self) {
         let checked = &self.cross_checked;
         self.outputs
@@ -279,6 +281,7 @@ impl SyncState {
 
     /// Pending spends by key image, to carry across a rebuild of the output
     /// list (LWS mode replaces it on every sync).
+    #[cfg(feature = "native")]
     pub(crate) fn pending_spends(&self) -> Vec<([u8; 32], Spend)> {
         self.outputs
             .iter()

@@ -15,7 +15,7 @@
 
 use std::ops::RangeInclusive;
 
-use monero_daemon_rpc::MoneroDaemon;
+use monero_daemon_rpc::{HttpTransport, MoneroDaemon};
 use monero_epee::{Epee, EpeeEntry, EpeeError};
 use monero_interface::{
     ProvidesScannableBlocks as _, ProvidesTransactions as _, ScannableBlock, TransactionsError,
@@ -25,7 +25,7 @@ use monero_wallet::{
     transaction::{Pruned, Transaction},
 };
 
-use crate::{SyncError, node::Http};
+use crate::SyncError;
 
 /// Upper bound on a `get_blocks.bin` response. Nodes older than 0.18.4.3
 /// ignore the block count asked for and send up to 1000 blocks, so this
@@ -43,8 +43,8 @@ struct RawBlock {
 /// Blocks `range` (block numbers), checked like monero-oxide's
 /// `contiguous_scannable_blocks`: numbered as asked, each building on the
 /// previous, and every transaction matching its block's list.
-pub(crate) async fn scannable_blocks(
-    daemon: &MoneroDaemon<Http>,
+pub(crate) async fn scannable_blocks<T: HttpTransport>(
+    daemon: &MoneroDaemon<T>,
     range: RangeInclusive<usize>,
 ) -> Result<Vec<ScannableBlock>, SyncError> {
     let (mut start, end) = range.into_inner();

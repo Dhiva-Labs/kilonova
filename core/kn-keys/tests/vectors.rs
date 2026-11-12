@@ -220,6 +220,25 @@ fn generated_wallets_round_trip_through_their_mnemonic() {
 }
 
 #[test]
+fn polyseed_birthday_is_the_time_given() {
+    // 2026-11-05 00:00 UTC. Polyseed stores the birthday in steps of a
+    // twelfth of a year, so it reads back as the start of that step.
+    let now = 1_793_836_800;
+    let (keys, mnemonic) = WalletKeys::generate_at(SeedFormat::Polyseed, now);
+    let birthday = mnemonic.birthday.unwrap();
+    assert!(birthday <= now && now - birthday < 2_629_746, "{birthday}");
+    let (restored, again) = WalletKeys::from_mnemonic(&mnemonic.words).unwrap();
+    assert_eq!(again.birthday, Some(birthday));
+    assert_eq!(
+        restored.primary_address(Network::Mainnet),
+        keys.primary_address(Network::Mainnet)
+    );
+    // Fresh entropy every time.
+    let (_, other) = WalletKeys::generate_at(SeedFormat::Polyseed, now);
+    assert_ne!(other.words.as_str(), mnemonic.words.as_str());
+}
+
+#[test]
 fn debug_output_hides_secrets() {
     let (keys, mnemonic) = WalletKeys::generate(SeedFormat::Classic);
     let spend = keys.secret_spend_key_hex().unwrap();

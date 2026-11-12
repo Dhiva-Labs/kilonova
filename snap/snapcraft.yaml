@@ -33,7 +33,9 @@ grade: stable
 confinement: strict
 license: MIT
 icon: packaging/linux/icons/256x256/com.dhivalabs.kilonova.png
-website: https://github.com/Dhiva-Labs/kilonova
+website:
+  - https://github.com/Dhiva-Labs/kilonova
+  - https://learn.dhivalabs.com/apps/kilonova/
 source-code: https://github.com/Dhiva-Labs/kilonova
 issues: https://github.com/Dhiva-Labs/kilonova/issues
 contact: reachout@dhivalabs.com

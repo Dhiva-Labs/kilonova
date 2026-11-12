@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["kn-ffi", "kn-keys", "kn-store", "kn-sync", "kn-tx"]
+members = ["kn-ffi", "kn-keys", "kn-store", "kn-sync", "kn-tx", "kn-wasm"]
 # Needs nightly; see fuzz/README.md.
 exclude = ["fuzz"]
 

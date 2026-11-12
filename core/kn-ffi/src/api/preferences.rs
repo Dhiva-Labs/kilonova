@@ -4,7 +4,7 @@
 //! (both on).
 
 use super::nodes::NodeError;
-use crate::node_settings::{load, save};
+use crate::node_settings::{load, save, write_lock};
 
 // Independent on/off choices, not states of one thing.
 #[allow(clippy::struct_excessive_bools)]
@@ -45,6 +45,7 @@ pub fn preferences() -> Result<Preferences, NodeError> {
 ///
 /// Fails if the settings cannot be saved.
 pub fn set_preferences(preferences: Preferences) -> Result<(), NodeError> {
+    let _write = write_lock();
     let mut settings = load()?;
     settings.notify_incoming = preferences.notify_incoming;
     settings.background_sync = preferences.background_sync;
