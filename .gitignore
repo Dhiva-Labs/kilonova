@@ -15,3 +15,6 @@ core/fuzz/target/
 core/fuzz/artifacts/
 core/fuzz/coverage/
 *.snap
+
+# Flatpak builds in CI (the release tarball the Release workflow hands the manifest)
+packaging/flatpak/ci-input/

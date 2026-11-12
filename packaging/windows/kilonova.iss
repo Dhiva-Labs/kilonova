@@ -1,9 +1,14 @@
 ; Inno Setup script for the Windows installer.
-;   iscc /DAppVersion=0.1.0 /DSourceDir=<release dir> /DOutputDir=<dist> packaging\windows\kilonova.iss
-; SourceDir is app\build\windows\x64\runner\Release after `flutter build windows --release`.
+;   iscc /DAppVersion=0.1.0 /DArch=x64 /DSourceDir=<release dir> /DOutputDir=<dist> packaging\windows\kilonova.iss
+; Arch is x64 (the default) or arm64. SourceDir is
+; app\build\windows\<Arch>\runner\Release after `flutter build windows --release`
+; on a machine of that architecture.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
+#endif
+#ifndef Arch
+  #define Arch "x64"
 #endif
 
 [Setup]
@@ -17,13 +22,18 @@ DefaultGroupName=Kilonova
 DisableProgramGroupPage=yes
 LicenseFile=..\..\LICENSE
 OutputDir={#OutputDir}
-OutputBaseFilename=kilonova-{#AppVersion}-windows-x64-setup
+OutputBaseFilename=kilonova-{#AppVersion}-windows-{#Arch}-setup
 SetupIconFile=..\..\app\windows\runner\resources\app_icon.ico
 UninstallDisplayIcon={app}\kilonova.exe
 Compression=lzma2
 SolidCompression=yes
+#if Arch == "arm64"
+ArchitecturesAllowed=arm64
+ArchitecturesInstallIn64BitMode=arm64
+#else
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+#endif
 PrivilegesRequiredOverridesAllowed=dialog
 WizardStyle=modern
 

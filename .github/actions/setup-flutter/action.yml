@@ -1,0 +1,65 @@
+name: Set up Flutter
+description: >
+  Flutter from the cached flutter-action on x64 runners. Flutter publishes no
+  SDK archive for Linux or Windows on arm64, so there the release tag is
+  cloned and the Dart SDK for the host is fetched on first use.
+
+inputs:
+  version:
+    description: Flutter release tag, for example 3.44.6
+    required: true
+  arch:
+    description: Runner architecture, x64 or arm64
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Flutter from flutter-action
+      if: inputs.arch == 'x64'
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      with:
+        flutter-version: ${{ inputs.version }}
+        cache: true
+
+    - name: Flutter from the release tag (Linux arm64)
+      if: inputs.arch == 'arm64' && runner.os == 'Linux'
+      shell: bash
+      env:
+        FLUTTER_VERSION: ${{ inputs.version }}
+      run: |
+        uname -m
+        git clone --depth 1 --branch "$FLUTTER_VERSION" \
+          https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+        echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+    - name: Flutter from the release tag (Windows arm64)
+      if: inputs.arch == 'arm64' && runner.os == 'Windows'
+      shell: pwsh
+      env:
+        FLUTTER_VERSION: ${{ inputs.version }}
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        "PROCESSOR_ARCHITECTURE=$env:PROCESSOR_ARCHITECTURE"
+        git clone --depth 1 --branch $env:FLUTTER_VERSION `
+          https://github.com/flutter/flutter.git "$env:RUNNER_TEMP\flutter"
+        Add-Content -Path $env:GITHUB_PATH -Value "$env:RUNNER_TEMP\flutter\bin"
+
+    - name: Fetch the host tools (Linux arm64)
+      if: inputs.arch == 'arm64' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        flutter config --no-analytics --enable-linux-desktop
+        flutter precache --linux
+        flutter --version
+        dart --version
+
+    - name: Fetch the host tools (Windows arm64)
+      if: inputs.arch == 'arm64' && runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        flutter config --no-analytics --enable-windows-desktop
+        flutter precache --windows
+        flutter --version
+        dart --version
